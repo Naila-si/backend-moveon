@@ -1,0 +1,886 @@
+/* =========================================================
+   Base tokens
+   ========================================================= */
+:root{
+  --blue:#9ecbff;
+  --yellow:#ffd24f66;
+  --ink:#243b53;
+  --bg:#f7fbff;
+  --white:#fff;
+  --line:#e3f0ff;
+  --shadow: 0 10px 24px rgba(36,59,83,.12), 0 6px 12px rgba(36,59,83,.06);
+  --col-no-w: 56px;
+  --col-aksi-w: 96px;
+  --chrome-h: 180px;
+  --ring-gap: 8px;     
+  --orbit-gap: 28px;    
+  --ring-size: 32px;    
+}
+
+*{ box-sizing:border-box; }
+body{ background:var(--bg); font-family:"Poppins","Segoe UI",system-ui,sans-serif; }
+
+/* =========================================================
+   Layout (page shell, header, card, buttons)
+   ========================================================= */
+.iwkl-wrap{
+  position:relative; min-height:100dvh; padding:16px;
+  background:linear-gradient(180deg, var(--bg), #eef6ff);
+  max-width:1100px; margin:0 auto; padding-inline: 16px;
+}
+.iwkl-bg{
+  position:absolute; inset:0; pointer-events:none; opacity:.35; filter:blur(12px);
+  background:
+    radial-gradient(120px 60px at 10% 8%, var(--blue) 15%, transparent 60%),
+    radial-gradient(160px 70px at 80% 12%, var(--yellow) 20%, transparent 62%),
+    radial-gradient(180px 80px at 25% 85%, var(--yellow) 25%, transparent 65%),
+    radial-gradient(200px 100px at 85% 80%, var(--blue) 22%, transparent 66%);
+}
+
+.iwkl-header{ position:relative; z-index:1; display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; }
+.iwkl-header .title{ display:flex; align-items:center; gap:8px; }
+.iwkl-header .emoji{ font-size:26px; }
+.iwkl-header h1{ margin:0; color:var(--ink); font-size:22px; }
+
+.actions{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.search{
+  border:2px solid var(--blue); border-radius:14px; padding:10px 12px; width:280px; background:#fff;
+  box-shadow: inset 0 -3px 0 #00000008, 0 2px 0 #00000006;
+}
+
+.btn{
+  border:2px solid var(--blue); background:#fff; color:#1f2d3d;
+  padding:10px 14px; border-radius:14px; font-weight:700; cursor:pointer; box-shadow:0 4px 0 #00000010;
+  transition: box-shadow .08s ease, transform .08s ease;
+}
+.btn:hover{ box-shadow:0 6px 0 #00000010; }
+.btn:active{ transform: translateY(1px); }
+.btn.primary{ background:linear-gradient(0deg, var(--blue), #bfe0ff); }
+.btn.ghost{ background:#fff; }
+.btn.xs{ padding:6px 10px; font-size:12px; border-radius:10px; }
+
+.card{
+  position:relative; z-index:1;
+  width:100%;
+  background:linear-gradient(180deg, var(--white), #fffaf2);
+  border:2px solid var(--blue); border-radius:18px; box-shadow:var(--shadow);
+  padding:12px;
+}
+
+@media (max-width: 980px){
+  .search{ width:190px; }
+}
+
+/* =========================================================
+   Table (scroll container, table, form controls)
+   ========================================================= */
+.table-scroll::-webkit-scrollbar{ height:14px; width:14px; }
+.table-scroll::-webkit-scrollbar-thumb{ background:#93c5fd; border-radius:999px; }
+.table-scroll::-webkit-scrollbar-track{ background:#e0f2fe; border-radius:999px; }
+
+.kawaii-table{
+  width:100%; min-width:fit-content; border-collapse:separate; border-spacing:0; table-layout:auto;
+  font-size:13px;
+}
+.kawaii-table thead th{
+  position:sticky; top:0; z-index:5;
+  background:linear-gradient(180deg,#e0f2fe,#f0f9ff);
+  padding:10px; text-align:left; border-bottom:2px solid var(--blue);
+  color:#0a1e2f; font-weight:800;
+}
+.kawaii-table th, .kawaii-table td{
+  padding:8px 10px; font-size:12px; vertical-align:top; word-break:break-word; white-space:normal;
+  border-bottom:1px dashed #cbd5e1;
+}
+.kawaii-table tbody td{ padding:8px; border-bottom:1px solid var(--line); vertical-align:top; }
+.kawaii-table tbody tr:nth-child(odd){ background:#ffffff; }
+.kawaii-table tbody tr:nth-child(even){ background:#fcfeff; }
+
+/* Inputs */
+.kawaii-table input[type="text"],
+.kawaii-table input[type="tel"],
+.kawaii-table input[type="date"],
+.kawaii-table select{
+  width:100%; max-width:220px;
+  border:2px solid var(--blue); border-radius:10px; padding:8px 10px; background:#fff; outline:none;
+  box-shadow: inset 0 -3px 0 #00000008;
+}
+.kawaii-table input[type="number"]{
+  width:100%; max-width:120px; /* angka lebih ramping */
+  border:2px solid var(--blue); border-radius:10px; padding:8px 10px; background:#fff; outline:none;
+  box-shadow: inset 0 -3px 0 #00000008;
+}
+.kawaii-table input:focus, .kawaii-table select:focus{ box-shadow:0 0 0 4px var(--yellow); }
+
+/* Utility cell styles */
+.num{ text-align:right; font-variant-numeric: tabular-nums; }
+.strong{ font-weight:800; }
+.hint{ color:#5b6b7a; font-size:11px; margin-top:4px; }
+
+/* Remove number spinners (webkit) */
+.kawaii-table input[type=number]::-webkit-outer-spin-button,
+.kawaii-table input[type=number]::-webkit-inner-spin-button{ -webkit-appearance: none; margin: 0; }
+.kawaii-table input[type=number]{ -moz-appearance: textfield; }
+
+.empty{ text-align:center; color:#677; padding:18px; }
+
+/* =========================================================
+   Modal
+   ========================================================= */
+.modal-backdrop{
+  position:fixed; inset:0; background:rgba(7,14,30,.35);
+  display:flex; align-items:center; justify-content:center; z-index:1000;
+}
+.modal-card{
+  width:min(540px,92%); background:#fff; border:2px solid var(--blue); border-radius:16px; padding:16px; box-shadow:var(--shadow); position: relative; z-index: 10001;
+}
+.modal-card h3{ margin:0 0 8px; color:#0b273b; }
+.modal-card .stack{ display:flex; flex-direction:column; gap:6px; font-weight:600; color:#415a77; margin-top:8px; }
+.modal-card input{
+  border:2px solid var(--blue); border-radius:12px; padding:10px; outline:none; background:#fff;
+  box-shadow: inset 0 -3px 0 #00000008;
+}
+.modal-actions{ margin-top:14px; display:flex; justify-content:flex-end; gap:10px; }
+
+/* =========================================================
+   Header controls (label pill, inline rename)
+   ========================================================= */
+.th-hasmenu{ position:relative; display:inline-flex; align-items:center; gap:6px; }
+.th-toggle{
+  appearance:none; background:#fff; color:#0a1e2f;
+  border:2px solid var(--blue); border-radius:10px; padding:6px 10px;
+  font-weight:800; cursor:pointer; box-shadow:0 2px 0 #00000012;
+  transition: transform .08s ease, box-shadow .08s ease, background .2s ease;
+  position:relative; z-index:2;
+}
+.th-toggle:hover{ box-shadow:0 4px 0 #00000012; }
+.th-toggle:active{ transform:translateY(1px); }
+.th-toggle[aria-expanded="true"]{ background:linear-gradient(0deg, #e6f2ff, #fff); }
+
+.th-rename input{
+  border:2px solid var(--blue); border-radius:10px; padding:6px 8px; background:#fff;
+  box-shadow: inset 0 -2px 0 #00000008; font-weight:700; min-width:140px;
+}
+
+/* =========================================================
+   Ring control (around pill)
+   ========================================================= */
+.th-ring.pretty{
+  position:absolute;
+  left: calc(-1 * var(--ring-gap));
+  top:  calc(-1 * var(--ring-gap));
+  right: calc(-1 * var(--ring-gap));
+  bottom: calc(-1 * var(--ring-gap));
+  pointer-events:none; z-index:1; display:block;
+}
+.th-ring.pretty .ring-aura{
+  position:absolute; inset:6px; border-radius:999px; pointer-events:none;
+  background: radial-gradient(60% 60% at 50% 50%, rgba(147,197,253,.35), transparent 70%);
+  box-shadow: 0 0 0 6px rgba(191,225,255,.45) inset, 0 10px 30px rgba(30,64,175,.15);
+}
+
+.th-ring.pretty, .th-orbit{ will-change: transform; }
+
+.th-ring.pretty, .th-orbit{ pointer-events: auto; }
+.th-ring.pretty .ring-aura{ pointer-events: none; }
+
+.ring-btn{
+  pointer-events:auto; width:var(--ring-size); height:var(--ring-size);
+  display:grid; place-items:center;
+  border-radius:999px; border:1.5px solid #bae6fd;
+  background: linear-gradient(180deg, rgba(255,255,255,.85), rgba(255,255,255,.65));
+  backdrop-filter: blur(6px);
+  box-shadow: 0 6px 20px rgba(30,58,138,.18), inset 0 -4px 10px rgba(59,130,246,.08);
+  font-weight:800; color:#0a1e2f; cursor:pointer;
+  transition: transform .1s ease, box-shadow .15s ease, background .2s ease;
+}
+.ring-btn:hover{ transform:translateY(-1px); box-shadow:0 10px 28px rgba(30,58,138,.22); }
+.ring-btn:active{ transform:translateY(0); box-shadow:0 6px 18px rgba(30,58,138,.2) inset; }
+
+.ring-left  { position:absolute; top:50%; left:0;   transform: translate(calc(-50% - var(--ring-gap)), -50%); }
+.ring-right { position:absolute; top:50%; right:0;  transform: translate(calc( 50% + var(--ring-gap)), -50%); }
+.ring-top   { position:absolute; left:50%; top:0;   transform: translate(-50%, calc(-50% - var(--ring-gap))); }
+.ring-bottom{ position:absolute; left:50%; bottom:0;transform: translate(-50%, calc( 50% + var(--ring-gap))); }
+
+.th-orbit{
+  position:absolute;
+  left: calc(-1 * var(--orbit-gap));
+  top:  calc(-1 * var(--orbit-gap));
+  right: calc(-1 * var(--orbit-gap));
+  bottom: calc(-1 * var(--orbit-gap));
+  pointer-events:none; z-index:0;
+}
+.ring-chip{
+  position:absolute; pointer-events:auto;
+  padding:8px 12px; border-radius:999px;
+  border:1.5px solid #a5d8ff; background:linear-gradient(180deg,#ffffff,#f8fbff);
+  box-shadow: 0 10px 24px rgba(36,59,83,.14);
+  font-weight:800; font-size:12px; color:#0a1e2f; cursor:pointer;
+  transition: transform .1s ease, box-shadow .15s ease, background .2s ease;
+}
+.ring-chip:hover{ transform: translateY(-1px); box-shadow:0 14px 30px rgba(36,59,83,.2); }
+.ring-rename{ left: 0; bottom: 0; transform: translate(-50%, 50%); }
+.ring-delete{ right: 0; bottom: 0; transform: translate(50%, 50%); }
+.ring-delete:hover{ background:#fff1f0; }
+
+/* ===========================
+   IWKL-style TABLE ONLY patch
+   =========================== */
+
+/* Scroll container: tinggi fleksibel + scrollbar empuk */
+.table-scroll::-webkit-scrollbar{ height:14px; width:14px; }
+.table-scroll::-webkit-scrollbar-thumb{ background:#93c5fd; border-radius:999px; }
+.table-scroll::-webkit-scrollbar-track{ background:#e0f2fe; border-radius:999px; }
+
+/* Table: lebar mengikuti isi (tanpa angka fixed), layout natural */
+.kawaii-table{
+  width:max-content;         /* melebar sesuai kolom */
+  min-width:100%;            /* minimal selebar container */
+  border-collapse:separate;
+  border-spacing:0;
+  table-layout:auto;         /* biar kolom atur lebar natural */
+  font-size:13px;
+}
+
+/* Header: gradient biru susu + bold */
+.kawaii-table thead th{
+  position:sticky; top:0; z-index:5;
+  background:linear-gradient(180deg,#e0f2fe,#f0f9ff);
+  padding:10px 14px;
+  text-align:left;
+  border-bottom:2px solid var(--blue);
+  color:#0a1e2f;
+  font-weight:800;
+  white-space:nowrap;        /* judul kolom tidak membungkus */
+  line-height:1.3;
+}
+
+/* Body rows: zebra, garis halus */
+.kawaii-table th,
+.kawaii-table td{
+  padding:10px 12px;
+  font-size:12px;
+  vertical-align:top;
+  word-break:break-word;
+  white-space:normal;
+  border-bottom:1px dashed #cbd5e1;
+}
+.kawaii-table tbody td{ border-bottom:1px solid var(--line); }
+.kawaii-table tbody tr:nth-child(odd){ background:#ffffff; }
+.kawaii-table tbody tr:nth-child(even){ background:#fcfeff; }
+
+/* Form controls (sel): sama seperti IWKL */
+.kawaii-table input[type="text"],
+.kawaii-table input[type="tel"],
+.kawaii-table input[type="date"],
+.kawaii-table select{
+  width:100%;
+  max-width:220px;
+  border:2px solid var(--blue);
+  border-radius:10px;
+  padding:8px 10px;
+  background:#fff;
+  outline:none;
+  box-shadow: inset 0 -3px 0 #00000008;
+}
+.kawaii-table input[type="number"]{
+  width:100%;
+  max-width:120px;           /* angka lebih ramping */
+  border:2px solid var(--blue);
+  border-radius:10px;
+  padding:8px 10px;
+  background:#fff;
+  outline:none;
+  box-shadow: inset 0 -3px 0 #00000008;
+}
+.kawaii-table input:focus,
+.kawaii-table select:focus{
+  box-shadow:0 0 0 4px var(--yellow);
+}
+
+/* Utilities */
+.num{ text-align:right; font-variant-numeric:tabular-nums; }
+.strong{ font-weight:800; }
+.hint{ color:#5b6b7a; font-size:11px; margin-top:4px; }
+
+/* “Tidak ada data” style */
+.kawaii-table .empty{
+  padding:24px 10px !important;
+  text-align:center;
+  background:#f9fbff;
+  font-weight:600;
+  border-top:1px dashed var(--line);
+}
+
+/* Optional: hilangkan spinner number (biar sama) */
+.kawaii-table input[type=number]::-webkit-outer-spin-button,
+.kawaii-table input[type=number]::-webkit-inner-spin-button{
+  -webkit-appearance:none; margin:0;
+}
+.kawaii-table input[type=number]{ -moz-appearance:textfield; }
+
+/* isi yang ikut scroll (tabel + pager) */
+.scroll-inner{
+  width: max-content;    /* ikut lebar kolom */
+  min-width: 100%;       /* tapi tidak kurang dari container */
+}
+
+/* pager umum */
+.pager{
+  display:flex;
+  justify-content:flex-end;
+  align-items:center;
+  gap:10px;
+  padding:10px 12px;
+}
+
+/* bikin pager nempel di bawah area yang di-scroll */
+.pager-sticky{
+  position: sticky;
+  bottom: 0;            /* lengket ke bawah scroll container */
+  left: 0;
+  background: linear-gradient(180deg, rgba(255,255,255,0), #ffffff 40%);
+  border-top: 1px solid var(--line);
+  box-shadow: 0 -6px 12px rgba(147,197,253,.12);
+}
+
+/* konten yang melebar mengikuti kolom */
+.scroll-inner{
+  width:max-content;
+  min-width:100%;
+}
+
+/* pager di luar, rata kanan */
+.pager{
+  display:flex;
+  justify-content:flex-end;
+  align-items:center;
+  gap:10px;
+  padding:10px 6px 0;     /* beri jarak dari box scroll */
+}
+
+/* opsional: garis tipis biar terasa di bawah tabel */
+.pager{ border-top: 0; }  /* atau hapus kalau nggak mau garis */
+
+/* Susun isi card menumpuk ke bawah */
+.card{
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;   /* anak-anaknya full width */
+}
+
+/* area tabel mengisi lebar penuh */
+.card > .table-scroll{
+  flex: 1 1 auto;
+  display: block;         /* pastikan bukan inline/inline-block */
+  width: 100%;
+}
+
+/* pager di baris bawah, rata kanan, dan tidak nempel float */
+.card > .pager{
+  flex: 0 0 auto;
+  align-self: flex-end;   /* tombolnya di kanan */
+  clear: both;            /* jaga-jaga kalau ada float di atas */
+  padding-top: 10px;
+}
+
+.row-detail td {
+  background:#f8fbff;
+}
+
+.detail-grid{
+  display:grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 2fr);
+  gap:16px;
+}
+
+.detail-grid section h4{
+  margin:0 0 8px;
+  font-size:13px;
+  font-weight:700;
+  color:#0b273b;
+}
+
+.detail-fields{
+  display:grid;
+  grid-template-columns: repeat(auto-fit,minmax(180px,1fr));
+  gap:10px;
+}
+
+.detail-fields label,
+.month-grid label{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  font-size:11px;
+  font-weight:600;
+  color:#415a77;
+}
+
+.month-grid{
+  display:grid;
+  grid-template-columns: repeat(auto-fit,minmax(120px,1fr));
+  gap:8px;
+}
+
+/* ================================
+   HEADER FILTER (tahun, dll) - IWKL
+   ================================ */
+.iwkl-header select,
+.actions select,
+.select-filter-iwkl {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+
+  background: var(--white) !important;
+  color: var(--ink) !important;
+
+  border: 2px solid var(--blue);
+  border-radius: 14px;
+
+  padding: 8px 38px 8px 12px;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1;
+
+  cursor: pointer;
+  box-shadow:
+    inset 0 -3px 0 #00000008,
+    0 4px 0 #00000010;
+
+  min-width: 90px;   /* cocok buat tahun */
+  height: 36px;
+  transition: .15s ease;
+}
+
+.iwkl-header select:hover,
+.actions select:hover,
+.select-filter-iwkl:hover{
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 -3px 0 #00000008,
+    0 6px 0 #00000010;
+}
+
+.iwkl-header select:focus,
+.actions select:focus,
+.select-filter-iwkl:focus{
+  outline: none;
+  box-shadow:
+    0 0 0 4px var(--yellow),
+    inset 0 -3px 0 #00000008,
+    0 4px 0 #00000010;
+}
+
+/* panah biru kecil */
+.iwkl-header select,
+.actions select,
+.select-filter-iwkl{
+  background-image:
+    linear-gradient(45deg, transparent 50%, #3b82f6 50%),
+    linear-gradient(135deg, #3b82f6 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) 50%,
+    calc(100% - 12px) 50%;
+  background-size:
+    6px 6px,
+    6px 6px;
+  background-repeat: no-repeat;
+}
+
+.iwkl-header select option,
+.actions select option{
+  background:#fff;
+  color:var(--ink);
+  font-weight:700;
+}
+/* ================================
+   Header actions 2 baris
+   ================================ */
+.actions-col{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  align-items:flex-end; /* rata kanan */
+  width:100%;
+}
+
+.actions-row{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+  width:100%;
+}
+
+/* row atas: search agak panjang */
+.actions-row.top .search{
+  width:280px;
+  height:36px;
+}
+
+/* row bawah: tahun */
+.actions-row.bottom{
+  justify-content:flex-end;
+}
+
+/* kecil tapi matching */
+.year-select{
+  min-width:90px;
+  height:36px;
+}
+
+/* mobile turun rapi */
+@media (max-width:640px){
+  .actions-col{ align-items:stretch; }
+  .actions-row{ justify-content:flex-start; }
+  .actions-row.top .search{
+    width:100%;
+    flex:1 1 100%;
+  }
+}
+
+/* ================================
+   Card column + pager di bawah tabel
+   ================================ */
+.card{
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+}
+
+.card > .table-scroll{
+  width:100%;
+  flex:1 1 auto;
+  display:block;
+}
+
+.card > .pager{
+  width:100%;                 /* biar jadi baris sendiri */
+  display:flex;
+  justify-content:flex-end;   /* tombol rata kanan */
+  align-items:center;
+  gap:12px;
+  margin-top:10px;
+}
+
+/* ================================
+   HEADER: search sedang + tombol sejajar
+   tahun di bawah
+   ================================ */
+
+.actions-col{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  align-items:flex-end;
+}
+
+.actions-row{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  width:100%;
+  justify-content:flex-end;
+}
+
+.actions-row.top{
+  flex-wrap:nowrap;   /* biar sejajar rapi */
+}
+
+/* SEARCH ukuran sedang, gak ngamuk */
+.actions-row.top .search{
+  width:200px !important;
+  max-width:200px !important;
+  height:36px;
+  flex:0 0 auto;
+}
+
+/* dropdown tahun bawah kanan */
+.actions-row.bottom{
+  justify-content:flex-end;
+}
+
+/* mobile: search turun full */
+@media (max-width:640px){
+  .actions-col{ width:100%; align-items:stretch; }
+  .actions-row.top{ flex-wrap:wrap; }
+  .actions-row.top .search{
+    width:100% !important;
+    max-width:100% !important;
+    flex:1 1 100%;
+  }
+}
+
+/* penting: inner ikut lebar tabel, tapi minimal container */
+.scroll-inner{
+  width:max-content;
+  min-width:100%;
+}
+
+/* tabel boleh melebar */
+.kawaii-table{
+  width:max-content;
+  min-width:100%;
+  table-layout:auto;
+  border-collapse:separate;
+  border-spacing:0;
+}
+
+
+/* ================================
+   PAGER: selalu di bawah scroll
+   ================================ */
+.card{
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+}
+
+.card > .table-scroll{
+  flex: 1 1 auto;
+  display:block;
+}
+
+.card > .pager{
+  flex: 0 0 auto;
+  width:100%;
+  margin-top:10px;
+  display:flex;
+  justify-content:flex-end;
+  align-items:center;
+  gap:12px;
+}
+
+/* ================================
+   FINAL LOCK IWKL CSS (ANTI NGILANG)
+   taruh PALING BAWAH
+   ================================ */
+
+/* ---------- HEADER ACTIONS 2 BARIS ---------- */
+.iwkl-header h1{
+  white-space: nowrap;
+}
+
+.actions.actions-col,
+.actions-col{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  align-items:flex-end;
+  width:100%;
+}
+
+.actions-row{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  width:100%;
+  justify-content:flex-end;
+}
+
+.actions-row.top{
+  flex-wrap:nowrap; /* search + tombol sejajar */
+}
+
+/* search sedang, gak ngamuk */
+.actions-row.top .search,
+.search{
+  width:200px !important;
+  max-width:200px !important;
+  height:36px;
+  flex:0 0 auto;
+}
+
+/* dropdown tahun di bawah kanan */
+.actions-row.bottom{
+  justify-content:flex-end;
+}
+
+.year-select{
+  min-width:90px;
+  height:36px;
+}
+
+/* mobile: biar turun rapi */
+@media (max-width:640px){
+  .actions-col{ width:100%; align-items:stretch; }
+  .actions-row.top{ flex-wrap:wrap; }
+  .actions-row.top .search{
+    width:100% !important;
+    max-width:100% !important;
+    flex:1 1 100%;
+  }
+}
+
+
+/* ---------- CARD + SCROLL TABLE ---------- */
+.card{
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:stretch !important;
+  gap:10px;
+}
+
+/* hanya tabel yang scroll */
+.card > .table-scroll{
+  width:100% !important;
+  flex:1 1 auto !important;
+  display:block !important;
+  overflow:auto !important;           /* penting */
+  max-height:calc(100dvh - var(--chrome-h)) !important;
+  position:relative !important;
+}
+
+/* inner wajib ada buat horizontal scroll */
+.card .scroll-inner{
+  width:max-content !important;
+  min-width:100% !important;
+}
+
+/* tabel boleh melebar sesuai isi */
+.card .kawaii-table{
+  width:max-content !important;
+  min-width:100% !important;
+  table-layout:auto !important;
+  border-collapse:separate;
+  border-spacing:0;
+}
+
+/* header tabel jangan wrap (biar rapi) */
+.card .kawaii-table thead th{
+  white-space:nowrap;
+}
+
+
+/* ---------- PAGER DI LUAR SCROLL ---------- */
+.card > .pager{
+  flex:0 0 auto !important;
+  width:100% !important;
+  display:flex !important;
+  justify-content:flex-end !important;
+  align-items:center !important;
+  gap:12px;
+  margin-top:10px !important;
+}
+.select-filter{
+  padding:6px 8px;
+  border-radius:8px;
+  border:1px solid #ddd;
+  background:#fff;
+  font-size:14px;
+}
+
+/* ===============================
+   SELECT DISAMAIN DENGAN INPUT
+   =============================== */
+
+.input-like {
+  width: 100%;
+  height: 38px;                 /* samain tinggi */
+  padding: 8px 10px;
+  font-size: 14px;
+  border-radius: 10px;
+  border: 2px solid #9fc5ff;    /* warna biru lembut */
+  background-color: #fff;
+  color: #203040;
+  outline: none;
+  appearance: none;             /* HILANGKAN STYLE BAWAAN */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+
+/* efek fokus */
+.input-like:focus {
+  border-color: #6fa8ff;
+  box-shadow: 0 0 0 2px rgba(111,168,255,.25);
+}
+
+/* caret dropdown custom */
+.input-like {
+  background-image:
+    linear-gradient(45deg, transparent 50%, #607080 50%),
+    linear-gradient(135deg, #607080 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) 16px,
+    calc(100% - 12px) 16px;
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+  padding-right: 28px; /* ruang panah */
+}
+
+/* ===============================
+   FINAL FIX: INPUT & SELECT SERAGAM
+   =============================== */
+
+.kawaii-table select.input-like,
+.kawaii-table input.input-like {
+  width: 100%;
+  height: 38px;
+  padding: 8px 10px;
+  font-size: 14px;
+
+  border-radius: 12px;
+  border: 2px solid #9fc5ff;
+
+  background-color: #fff;
+  color: #203040;
+
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+
+  box-shadow:
+    inset 0 -3px 0 rgba(0,0,0,.08),
+    0 1px 0 rgba(0,0,0,.05);
+}
+
+/* fokus */
+.kawaii-table select.input-like:focus,
+.kawaii-table input.input-like:focus {
+  border-color: #6fa8ff;
+  box-shadow:
+    0 0 0 3px rgba(111,168,255,.3),
+    inset 0 -3px 0 rgba(0,0,0,.08);
+}
+
+/* caret dropdown */
+.kawaii-table select.input-like {
+  background-image:
+    linear-gradient(45deg, transparent 50%, #607080 50%),
+    linear-gradient(135deg, #607080 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) 50%,
+    calc(100% - 12px) 50%;
+  background-size: 6px 6px;
+  background-repeat: no-repeat;
+  padding-right: 28px;
+}
+
+.loket-input-wrap {
+  position: relative;
+}
+
+.loket-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  background: #fff;
+  border: 1px solid #ddd;
+  max-height: 200px;
+  overflow-y: auto;
+  border-radius: 6px;
+}
+
+.loket-item {
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.loket-item:hover {
+  background: #f2f6ff;
+}

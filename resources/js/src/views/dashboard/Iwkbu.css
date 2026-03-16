@@ -1,0 +1,620 @@
+:root{
+  --blue:#9ecbff;
+  --blue-2:#bfe0ff;
+  --yellow:#ffd24f66;
+  --ink:#243b53;
+  --bg:#f7fbff;
+  --white:#fff;
+  --shadow: 0 10px 24px rgba(36,59,83,.12), 0 6px 12px rgba(36,59,83,.06);
+  --line:#e3f0ff;
+  --chrome-h: 200px;
+}
+
+*{ box-sizing: border-box; }
+body{ background:var(--bg); font-family: "Poppins","Segoe UI",system-ui,sans-serif; }
+
+.iwkbu-wrap{
+  padding:16px;
+  position:relative;
+  min-height:100dvh;
+  background:linear-gradient(180deg, var(--bg), #eef6ff);
+}
+.iwkbu-clouds{
+  position:absolute; inset:0; pointer-events:none; opacity:.35; filter:blur(12px);
+  background:
+    radial-gradient(120px 60px at 10% 8%, var(--blue) 15%, transparent 60%),
+    radial-gradient(160px 70px at 80% 12%, var(--yellow) 20%, transparent 62%),
+    radial-gradient(180px 80px at 25% 85%, var(--yellow) 25%, transparent 65%),
+    radial-gradient(200px 100px at 85% 80%, var(--blue) 22%, transparent 66%);
+}
+
+.iwkbu-header{
+  position:relative; z-index:1;
+  display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px;
+}
+.iwkbu-header .title{ display:flex; align-items:center; gap:8px; }
+.iwkbu-header .title .emoji{ font-size:28px; }
+.iwkbu-header h1{ margin:0; font-size:22px; color:var(--ink); }
+.iwkbu-header .actions{ display:flex; gap:10px; align-items:center; }
+.search input{
+  border: 1.5px solid var(--blue); border-radius:14px; padding:10px 12px; width:200px; background:#fff;
+  box-shadow: inset 0 -3px 0 #00000008, 0 2px 0 #00000006; font-size: 13px;
+}
+.btn{ border:2px solid var(--blue); background:#fff; color:#1f2d3d; padding:10px 14px; border-radius:14px; font-weight:700; cursor:pointer; box-shadow:0 4px 0 #00000010; }
+.btn:hover{ box-shadow:0 6px 0 #00000010; }
+.btn:active{ transform: translateY(1px); }
+.btn.primary{ background: linear-gradient(0deg, var(--blue), var(--blue-2)); }
+
+.table-card{
+  position:relative; z-index:1;
+  background:linear-gradient(180deg, var(--white), #fffaf2);
+  border:2px solid var(--blue); border-radius:18px; box-shadow:var(--shadow);
+  padding:12px;
+}
+.table-scroll{ overflow:auto; max-width:100%; }
+
+.kawaii-table{
+  border-collapse: separate; border-spacing:0; width:100%; font-size:13px; min-width:fit-content; table-layout:auto;
+}
+.kawaii-table thead th{
+  position:sticky; top:0; background:#eef6ff; z-index:2; background:linear-gradient(180deg,#e0f2fe,#f0f9ff);
+  border-bottom:2px solid var(--blue); color:#0b273b; text-align:left; padding:10px;
+}
+.kawaii-table tbody td{ padding:8px; border-bottom:1px solid var(--line); vertical-align:top; }
+.kawaii-table tbody tr:nth-child(odd){ background: #ffffff; }
+.kawaii-table tbody tr:nth-child(even){ background: #fcfeff; }
+
+.kawaii-table input[type="text"],
+.kawaii-table input[type="tel"],
+.kawaii-table input[type="date"],
+.kawaii-table input[type="number"],
+.kawaii-table select{
+  width: 100%; max-width:220px;
+  border:2px solid var(--blue); background:#fff; border-radius:10px; padding:8px 10px; outline:none;
+  box-shadow: inset 0 -3px 0 #00000008;
+}
+.kawaii-table input:focus, .kawaii-table select:focus{ box-shadow:0 0 0 4px var(--yellow); }
+
+.kawaii-table .num{ text-align:right; }
+
+.nopol .nopol-badge{
+  display:inline-block; padding:6px 10px; border:2px solid #111; background:#ffe66d; border-radius:8px; font-weight:800; letter-spacing:.5px;
+}
+
+.link-btn{
+  border:2px dashed var(--blue); background:#fff; border-radius:10px; padding:6px 10px; cursor:pointer; font-weight:700;
+}
+.link-btn:hover{ background:#f4faff; }
+
+.hint{ font-size:12px; color:#6b7d92; margin-top:4px; }
+
+.empty{ text-align:center; color:#677; padding:18px; }
+
+.pager{
+  display:flex; justify-content:flex-end; align-items:center; gap:10px; padding:10px 6px 0;
+}
+.page-info{ font-weight:700; color:#415a77; }
+
+/* ==== Modal ==== */
+.modal-backdrop{
+  position:fixed; inset:0; background:rgba(7, 14, 30, .35);
+  display:flex; align-items:center; justify-content:center; z-index:1000;
+}
+.modal-card{
+  width:min(560px, 92%); background:#fff; border:2px solid var(--blue); border-radius:16px; padding:16px; box-shadow:var(--shadow); position: relative; z-index: 10001;
+}
+.modal-card h3{ margin:0 0 8px; color:#0b273b; }
+.modal-card .grid{
+  display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:8px;
+}
+.modal-card label{ display:flex; flex-direction:column; gap:6px; font-weight:600; color:#415a77; }
+.modal-card input, .modal-card select{
+  border:2px solid var(--blue); border-radius:12px; padding:10px; outline:none; background:#fff;
+  box-shadow: inset 0 -3px 0 #00000008;
+}
+.modal-actions{ margin-top:12px; display:flex; justify-content:flex-end; gap:10px; }
+
+@media (max-width: 980px){
+  .modal-card .grid{ grid-template-columns:1fr; }
+  .search input{ width: 180px; }
+}
+
+/* ==== PERBAIKAN: hanya tabel yang melebar, bukan seluruh halaman ==== */
+
+/* Kotak tabel full lebar container */
+.table-card{
+  width: 100%;
+  overflow: hidden;
+}
+
+/* Scroll area di dalam kartu (bisa geser kanan kiri) */
+.table-scroll{
+  width: 100%;
+  overflow-x: auto;      
+  overflow-y: auto;      
+  max-height: calc(100dvh - var(--chrome-h));
+  padding-bottom: 8px;
+  border-radius: 14px;
+}
+
+/* TABEL DILEBARIN SENDIRI — halaman gak ikut melar */
+.kawaii-table{
+  width: max-content;
+  min-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: auto;
+  font-size: 13px;
+}
+
+/* Header lebih rapi, tidak nabrak */
+.kawaii-table thead th{
+  white-space: nowrap;
+  text-align: left;
+  padding: 12px 14px;
+  line-height: 1.3;
+  background: #eef6ff;
+  border-bottom: 2px solid var(--blue);
+}
+
+/* Isi tabel kasih ruang */
+.kawaii-table tbody td{
+  padding: 10px 12px;
+  vertical-align: top;
+  line-height: 1.4;
+  border-bottom: 1px solid var(--line);
+  word-break: break-word;
+}
+
+/* Form control tetap full di sel tapi gak meledak */
+.kawaii-table input[type="text"],
+.kawaii-table input[type="tel"],
+.kawaii-table input[type="date"],
+.kawaii-table input[type="number"],
+.kawaii-table select{
+  width: 100%;
+  max-width: 240px;
+  box-sizing: border-box;
+}
+
+/* Baris “Tidak ada data” biar kelihatan jelas */
+.kawaii-table .empty{
+  padding: 24px 10px !important;
+  text-align: center;
+  background: #f9fbff;
+  font-weight: 600;
+  border-top: 1px dashed var(--line);
+}
+
+/* Scrollbar halus */
+.table-scroll::-webkit-scrollbar{ height: 10px; width: 10px; }
+.table-scroll::-webkit-scrollbar-thumb{ background:#93c5fd; border-radius:999px; }
+.table-scroll::-webkit-scrollbar-track{ background:#e0f2fe; border-radius:999px; }
+
+/* modal grid default 2 kolom, responsif */
+.modal-card .grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+@media (max-width: 980px){
+  .modal-card .grid { grid-template-columns: 1fr; }
+}
+.modal-card .hint { display:block; margin-top:4px; font-size:12px; color:#6b7d92; }
+
+/* =========================================================
+   Header controls (label pill, inline rename)
+   ========================================================= */
+.th-hasmenu{ position:relative; display:inline-flex; align-items:center; gap:6px; }
+.th-toggle{
+  appearance:none; background:#fff; color:#0a1e2f;
+  border:2px solid var(--blue); border-radius:10px; padding:6px 10px;
+  font-weight:800; cursor:pointer; box-shadow:0 2px 0 #00000012;
+  transition: transform .08s ease, box-shadow .08s ease, background .2s ease;
+  position:relative; z-index:2;
+}
+.th-toggle:hover{ box-shadow:0 4px 0 #00000012; }
+.th-toggle:active{ transform:translateY(1px); }
+.th-toggle[aria-expanded="true"]{ background:linear-gradient(0deg, #e6f2ff, #fff); }
+
+.th-rename input{
+  border:2px solid var(--blue); border-radius:10px; padding:6px 8px; background:#fff;
+  box-shadow: inset 0 -2px 0 #00000008; font-weight:700; min-width:140px;
+}
+
+/* =========================================================
+   Ring control (around pill)
+   ========================================================= */
+.th-ring.pretty{
+  position:absolute;
+  left: calc(-1 * var(--ring-gap));
+  top:  calc(-1 * var(--ring-gap));
+  right: calc(-1 * var(--ring-gap));
+  bottom: calc(-1 * var(--ring-gap));
+  pointer-events:none; z-index:1; display:block;
+}
+.th-ring.pretty .ring-aura{
+  position:absolute; inset:6px; border-radius:999px; pointer-events:none;
+  background: radial-gradient(60% 60% at 50% 50%, rgba(147,197,253,.35), transparent 70%);
+  box-shadow: 0 0 0 6px rgba(191,225,255,.45) inset, 0 10px 30px rgba(30,64,175,.15);
+}
+
+.th-ring.pretty, .th-orbit{ will-change: transform; }
+
+.th-ring.pretty, .th-orbit{ pointer-events: auto; }
+.th-ring.pretty .ring-aura{ pointer-events: none; }
+
+.ring-btn{
+  pointer-events:auto; width:var(--ring-size); height:var(--ring-size);
+  display:grid; place-items:center;
+  border-radius:999px; border:1.5px solid #bae6fd;
+  background: linear-gradient(180deg, rgba(255,255,255,.85), rgba(255,255,255,.65));
+  backdrop-filter: blur(6px);
+  box-shadow: 0 6px 20px rgba(30,58,138,.18), inset 0 -4px 10px rgba(59,130,246,.08);
+  font-weight:800; color:#0a1e2f; cursor:pointer;
+  transition: transform .1s ease, box-shadow .15s ease, background .2s ease;
+}
+.ring-btn:hover{ transform:translateY(-1px); box-shadow:0 10px 28px rgba(30,58,138,.22); }
+.ring-btn:active{ transform:translateY(0); box-shadow:0 6px 18px rgba(30,58,138,.2) inset; }
+
+.ring-left  { position:absolute; top:50%; left:0;   transform: translate(calc(-50% - var(--ring-gap)), -50%); }
+.ring-right { position:absolute; top:50%; right:0;  transform: translate(calc( 50% + var(--ring-gap)), -50%); }
+.ring-top   { position:absolute; left:50%; top:0;   transform: translate(-50%, calc(-50% - var(--ring-gap))); }
+.ring-bottom{ position:absolute; left:50%; bottom:0;transform: translate(-50%, calc( 50% + var(--ring-gap))); }
+
+.th-orbit{
+  position:absolute;
+  left: calc(-1 * var(--orbit-gap));
+  top:  calc(-1 * var(--orbit-gap));
+  right: calc(-1 * var(--orbit-gap));
+  bottom: calc(-1 * var(--orbit-gap));
+  pointer-events:none; z-index:0;
+}
+.ring-chip{
+  position:absolute; pointer-events:auto;
+  padding:8px 12px; border-radius:999px;
+  border:1.5px solid #a5d8ff; background:linear-gradient(180deg,#ffffff,#f8fbff);
+  box-shadow: 0 10px 24px rgba(36,59,83,.14);
+  font-weight:800; font-size:12px; color:#0a1e2f; cursor:pointer;
+  transition: transform .1s ease, box-shadow .15s ease, background .2s ease;
+}
+.ring-chip:hover{ transform: translateY(-1px); box-shadow:0 14px 30px rgba(36,59,83,.2); }
+.ring-rename{ left: 0; bottom: 0; transform: translate(-50%, 50%); }
+.ring-delete{ right: 0; bottom: 0; transform: translate(50%, 50%); }
+.ring-delete:hover{ background:#fff1f0; }
+
+/* Wrapper halaman biarkan fleksibel mengikuti lebar kartu .page */
+.iwkbu-wrap{
+  padding:16px;
+  position:relative;
+  min-height:100dvh;
+  background:linear-gradient(180deg, var(--bg), #eef6ff);
+}
+
+/* Kartu tabel: jangan jadi scroller, cukup “membungkus” */
+.table-card{
+  position:relative; z-index:1;
+  background:linear-gradient(180deg, var(--white), #fffaf2);
+  border:2px solid var(--blue); border-radius:18px; box-shadow:var(--shadow);
+  padding:12px;
+  overflow: clip; /* atau hidden */
+}
+
+/* INI ADALAH SCROLLER UTAMA */
+.table-scroll{
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: calc(100dvh - var(--chrome-h)); /* kamu sudah set --chrome-h */
+  padding-bottom: 8px;
+  border-radius: 14px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-gutter: stable both-edges;
+}
+
+/* Tabel boleh melebar sesuka hati, scroller yang mengatasi */
+.kawaii-table{
+  width: max-content;   /* kunci: biar bisa melebar > container */
+  min-width: 100%;      /* kalau kolom sedikit, tetap memenuhi lebar */
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+/* --- Fix: semua teks di modal jadi hitam (ink) --- */
+.modal-card { color: #0b273b; } /* warna dasar teks modal */
+
+.modal-card h3,
+.modal-card label { color: #0b273b; }
+
+.modal-card input,
+.modal-card select,
+.modal-card textarea {
+  color: #0b273b !important;   /* teks input */
+  background: #fff;            /* pastikan background putih */
+}
+
+/* placeholder biar abu-abu, bukan putih */
+.modal-card input::placeholder,
+.modal-card textarea::placeholder { color: #6b7d92; opacity: 1; }
+
+/* opsi datalist (yang bisa diwariskan) */
+.modal-card datalist option { color: #0b273b; }
+
+/* kalau browser autofill bikin teks jadi putih */
+.modal-card input:-webkit-autofill {
+  -webkit-text-fill-color: #0b273b !important;
+  transition: background-color 9999s ease-in-out 0s;
+}
+
+/* Kalau header / judul mau beda, bisa atur lagi di sini */
+.iwkbu-header h1 {
+  color: #000 !important;
+}
+
+/* Input, select, textarea, button biar jelas juga */
+.iwkbu-wrap input,
+.iwkbu-wrap select,
+.iwkbu-wrap textarea,
+.iwkbu-wrap button {
+  color: #000 !important;
+}
+
+/* Placeholder (teks abu-abu di dalam input) */
+.iwkbu-wrap input::placeholder,
+.iwkbu-wrap textarea::placeholder {
+  color: #555;
+}
+/* === Warna teks khusus TABEL IWKBU saja === */
+
+/* Header tabel */
+.kawaii-table thead th {
+  color: #0b273b !important;
+}
+
+/* Isi tabel */
+.kawaii-table tbody td {
+  color: #0b273b !important;
+}
+
+/* Input di dalam tabel */
+.kawaii-table input,
+.kawaii-table select,
+.kawaii-table textarea {
+  color: #0b273b !important;
+  background: #fff !important;
+}
+
+/* Placeholder */
+.kawaii-table input::placeholder,
+.kawaii-table textarea::placeholder {
+  color: #777 !important;
+}
+.iwkbu-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.iwkbu-header .title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  white-space: nowrap;
+}
+
+/* container actions 2 baris */
+.iwkbu-header .actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end; /* biar rata kanan */
+}
+
+/* row atas & bawah */
+.iwkbu-header .actions-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  width: 100%;
+  justify-content: flex-end;
+}
+
+/* search agak panjang */
+.iwkbu-header .actions-row.top .search {
+  width: 280px;  /* adjust selera */
+  min-width: 180px;
+}
+
+/* bikin kontrol compact */
+.iwkbu-header .select-filter,
+.iwkbu-header .btn,
+.iwkbu-header .search {
+  height: 36px;
+}
+
+.iwkbu-header .btn {
+  padding: 0 12px;
+  white-space: nowrap;
+}
+
+/* mobile: biar rapi turun */
+@media (max-width: 640px) {
+  .iwkbu-header .actions {
+    align-items: stretch;
+  }
+  .iwkbu-header .actions-row {
+    justify-content: flex-start;
+  }
+  .iwkbu-header .actions-row.top .search {
+    width: 100%;
+    flex: 1 1 100%;
+  }
+}
+/* ================================
+   SELECT FILTER HEADER (putih cantik)
+   ================================ */
+.select-filter{
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+
+  background: var(--white) !important;
+  color: var(--ink) !important;
+
+  border: 2px solid var(--blue);
+  border-radius: 14px;
+
+  padding: 8px 38px 8px 12px;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+
+  box-shadow:
+    inset 0 -3px 0 #00000008,
+    0 4px 0 #00000010;
+
+  min-width: 160px;
+  transition: .15s ease;
+}
+
+.select-filter:hover{
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 -3px 0 #00000008,
+    0 6px 0 #00000010;
+}
+
+.select-filter:focus{
+  outline: none;
+  box-shadow:
+    0 0 0 4px var(--yellow),
+    inset 0 -3px 0 #00000008,
+    0 4px 0 #00000010;
+}
+
+/* Panah dropdown biru lucu */
+.select-filter{
+  background-image:
+    linear-gradient(45deg, transparent 50%, #3b82f6 50%),
+    linear-gradient(135deg, #3b82f6 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) 50%,
+    calc(100% - 12px) 50%;
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+}
+
+/* Options biar tetep putih */
+.select-filter option{
+  background: #fff;
+  color: var(--ink);
+  font-weight: 600;
+}
+.select-filter[multiple] {
+  height: 40px;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+/* biar gak keliatan list tinggi */
+.select-filter[multiple] option {
+  padding: 6px;
+}
+
+/* wrapper harus bisa scroll horizontal */
+.table-scroll {
+  overflow-x: auto;
+  position: relative;
+}
+
+/* base sticky */
+.kawaii-table .sticky {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  background: #fff;
+  box-shadow: 2px 0 0 rgba(0,0,0,0.05);
+}
+
+/* NOPOL paling kiri */
+.kawaii-table .nopol-col {
+  left: 0;
+  min-width: 130px;
+  z-index: 6;
+}
+
+/* AKSI di kanan nopol */
+.kawaii-table .aksi-col {
+  left: 130px; /* HARUS sama dengan width nopol */
+  min-width: 90px;
+  z-index: 5;
+}
+
+/* NO di kanan aksi */
+.kawaii-table .no-col {
+  left: 220px; /* 130 + 90 */
+  min-width: 70px;
+  z-index: 4;
+}
+
+/* header sticky lebih tinggi */
+.kawaii-table thead th.sticky {
+  z-index: 10;
+  background: #f6faff;
+}
+.nopol-badge {
+  font-weight: 700;
+  background: #ffe066;
+  border: 2px solid #000;
+}
+
+/* ===== STICKY BASE ===== */
+.kawaii-table th.sticky,
+.kawaii-table td.sticky {
+  position: sticky;
+  background: #fff;
+  z-index: 3;
+}
+
+/* ===== NO ===== */
+.kawaii-table th.no,
+.kawaii-table td.no {
+  left: 0;
+  width: 60px;
+  min-width: 60px;
+  text-align: center;
+  z-index: 6;
+  background: #f8fafc;
+}
+
+/* ===== NOPOL ===== */
+.kawaii-table th.nopol-col,
+.kawaii-table td.nopol-col {
+  left: 60px; /* = lebar kolom No */
+  width: 140px;
+  min-width: 140px;
+  z-index: 5;
+  background: #ffffff;
+}
+
+/* ===== AKSI ===== */
+.kawaii-table th.aksi-col,
+.kawaii-table td.aksi-col {
+  left: 200px; /* 60 + 140 */
+  width: 90px;
+  min-width: 90px;
+  z-index: 4;
+  background: #ffffff;
+}
+
+/* Optional biar ada garis pemisah */
+.kawaii-table td.no,
+.kawaii-table td.nopol-col,
+.kawaii-table td.aksi-col {
+  border-right: 1px solid #e5e7eb;
+}
