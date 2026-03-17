@@ -58,11 +58,11 @@ public function destroy($id)
         Log::info("DELETE MASUK: ".$id);
 
         DB::table('crm_reports_rows')
-            ->where('report_code', $id) // ✅ FIX
+            ->where('report_code', $id)
             ->delete();
 
         DB::table('crm_armada_rows')
-            ->where('report_code', $id) // ⚠️ sesuaikan kalau beda
+            ->where('report_id', $id) // 🔥 FIX DI SINI
             ->delete();
 
         return response()->json([

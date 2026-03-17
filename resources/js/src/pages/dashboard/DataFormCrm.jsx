@@ -330,7 +330,7 @@ if (!res.ok) {
 
     setRows((prev) =>
       prev.map((row) =>
-        row.Id === selected.dbId ? { ...row, step4: finalStep4 } : row,
+        row.dbId === selected.dbId ? { ...row, step4: finalStep4 } : row,
       ),
     );
 
