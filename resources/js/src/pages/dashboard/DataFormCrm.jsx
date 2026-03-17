@@ -93,7 +93,7 @@ useEffect(() => {
             rekomendasi: a.rekomendasi,
             bukti: (a.bukti || []).map(f => ({
               ...f,
-              url: f.url?.startsWith("http") ? f.url : BASE + f.url
+              url: fixUrl(f.url)
             })),
           })),
         },
@@ -130,7 +130,7 @@ const mapped = (result.data || []).map((r, i) => {
   // fix foto
   if (Array.isArray(step3.fotoKunjungan)) {
     step3.fotoKunjungan = step3.fotoKunjungan.map(f =>
-      f.startsWith("http") ? f : BASE + f
+      fixUrl(f)
     );
   }
 
@@ -170,7 +170,7 @@ if (Array.isArray(step3.evidence)) {
     const path = f.url || f.path || "";
     return {
       ...f,
-      url: path.startsWith("http") ? path : BASE + path
+      url: fixUrl(f.url || f.path)
     };
   });
 }
@@ -180,7 +180,7 @@ if (Array.isArray(step3.suratPernyataan)) {
     const path = f.url || f.path || "";
     return {
       ...f,
-      url: path.startsWith("http") ? path : BASE + path
+      url: fixUrl(f.url || f.path)
     };
   });
 }
@@ -191,7 +191,7 @@ if (Array.isArray(step3.suratPernyataan)) {
       if (Array.isArray(a.bukti)) {
         a.bukti = a.bukti.map(f => ({
           ...f,
-          url: f.url?.startsWith("http") ? f.url : BASE + f.url
+          url: fixUrl(f.url)
         }));
       }
       return a;
@@ -445,6 +445,8 @@ if (!res.ok) {
  async function loadImageAsDataURL(src) {
   try {
 
+    src = fixUrl(src);
+    
     if (!src) return null;
 
     if (src.startsWith("/storage")) {
@@ -1563,29 +1565,29 @@ doc.save(`Laporan_CRM_${perusahaanSafe}.pdf`);
                   })}
                 </div>
                 <div className="files">
-                  {selected.step3.suratPernyataan?.map((f, i) => (
-                    <a
-  key={i}
-  href={f.url}
-  target="_blank"
-  rel="noopener noreferrer"
-  className="file-pill"
->
-  <IconFile /> {f.name}
-</a>
-                  ))}
-                  {selected.step3.evidence?.map((f, i) => (
-                    <a
-  key={i}
-  href={f.url}
-  target="_blank"
-  rel="noopener noreferrer"
-  className="file-pill"
->
-  <IconFile /> {f.name}
-</a>
-                  ))}
-                </div>
+  {(() => {
+    const filesGabung = [
+      ...(selected.step3.suratPernyataan || []),
+      ...(selected.step3.evidence || [])
+    ];
+
+    const filesUnique = Array.from(
+      new Map(filesGabung.map(f => [f.url, f])).values()
+    );
+
+    return filesUnique.map((f, i) => (
+      <a
+        key={i}
+        href={f.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="file-pill"
+      >
+        <IconFile /> {f.name}
+      </a>
+    ));
+  })()}
+</div>
                 <div className="ratings">
                   <Rating
                     label="Respon Pemilik/Pengelola"
@@ -2230,4 +2232,23 @@ function parseRupiah(val) {
 
   const num = Number(str);
   return isNaN(num) ? 0 : num;
+}
+
+function fixUrl(url) {
+  if (!url) return "";
+
+  // ganti localhost → domain production
+  if (url.includes("127.0.0.1:8000")) {
+    return url.replace(
+      "http://127.0.0.1:8000",
+      "http://moveon-jr.alwaysdata.net"
+    );
+  }
+
+  // kalau path relatif
+  if (url.startsWith("/")) {
+    return "http://moveon-jr.alwaysdata.net" + url;
+  }
+
+  return url;
 }

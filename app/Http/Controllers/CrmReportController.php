@@ -6,7 +6,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class CrmReportController extends Controller {
-  public function update(Request $request, $id)
+
+public function update(Request $request, $id)
 {
     try {
 
@@ -51,7 +52,13 @@ class CrmReportController extends Controller {
 
 public function destroy($id)
 {
-    DB::table('crm_reports_rows')->where('id', $id)->delete();
+    DB::table('crm_reports_rows')
+        ->where('id', $id)
+        ->delete();
+
+    DB::table('crm_armada_rows')
+        ->where('report_id', $id)
+        ->delete();
 
     return response()->json([
         'success' => true
