@@ -595,7 +595,7 @@ if (!Array.isArray(rincian)) {
 }
 
     const totalOS = rincian.reduce(
-      (sum, a) => sum + (Number(a.bayarOs) || 0),
+      (sum, a) => sum + (parseRupiah(a.bayarOs) || 0),
       0,
     );
 
@@ -608,7 +608,7 @@ if (!Array.isArray(rincian)) {
         r.nopol || "-",
         r.status || "-",
         `${r.tipeArmada || "-"}${r.tahun ? " (" + r.tahun + ")" : ""}`,
-        formatRupiah(Number(r.bayarOs || 0)),
+        formatRupiah(parseRupiah(r.bayarOs || 0)),
         r.rekomendasi || r.tindakLanjut || "-",
         Array.isArray(r.bukti) && r.bukti.length ? "" : "-",
       ]);
@@ -1438,7 +1438,7 @@ doc.save(`Laporan_CRM_${perusahaanSafe}.pdf`);
 
                   // total OS yang harus dibayar (sum semua bayarOs yang terisi)
                   const totalOsHarusDibayar = rincian.reduce((sum, a) => {
-                    const raw = Number(a?.bayarOs);
+                    const raw = parseRupiah(a?.bayarOs);
                     return sum + (Number.isFinite(raw) ? raw : 0);
                   }, 0);
 
@@ -1480,7 +1480,7 @@ doc.save(`Laporan_CRM_${perusahaanSafe}.pdf`);
                             </thead>
                             <tbody>
                               {rincian.map((a, idx) => {
-                                const rawOs = Number(a.bayarOs);
+                                const rawOs = parseRupiah(a.bayarOs);
                                 const osValue = Number.isFinite(rawOs)
                                   ? rawOs
                                   : 0;
@@ -2218,4 +2218,16 @@ function formatRupiah(value) {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(num);
+}
+
+function parseRupiah(val) {
+  if (val == null) return 0;
+
+  let str = String(val)
+    .replace(/[^0-9,-]/g, "") // buang huruf
+    .replace(/\./g, "")       // hapus titik ribuan
+    .replace(/,/g, ".");      // koma jadi desimal
+
+  const num = Number(str);
+  return isNaN(num) ? 0 : num;
 }
