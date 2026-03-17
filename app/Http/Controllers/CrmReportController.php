@@ -12,7 +12,9 @@ public function update(Request $request, $id)
 {
     try {
 
-        $report = DB::table('crm_reports_rows')->where('id', $id)->first();
+        $report = DB::table('crm_reports_rows')
+            ->where('pk_id', $id) // ✅ FIX
+            ->first();
 
         if (!$report) {
             return response()->json([
@@ -20,18 +22,16 @@ public function update(Request $request, $id)
             ], 404);
         }
 
-        // decode step4 lama
         $oldStep4 = [];
 
         if (!empty($report->step4)) {
             $oldStep4 = json_decode($report->step4, true) ?? [];
         }
 
-        // data baru dari React
         $newStep4 = array_merge($oldStep4, $request->step4 ?? []);
 
         DB::table('crm_reports_rows')
-            ->where('id', $id)
+            ->where('pk_id', $id) // ✅ FIX
             ->update([
                 'step4' => json_encode($newStep4),
                 'updated_at' => now()
@@ -47,7 +47,6 @@ public function update(Request $request, $id)
         return response()->json([
             'error' => $e->getMessage()
         ], 500);
-
     }
 }
 
@@ -55,14 +54,8 @@ public function destroy($id)
 {
     try {
 
-        Log::info("DELETE MASUK: ".$id);
-
         DB::table('crm_reports_rows')
-            ->where('report_code', $id)
-            ->delete();
-
-        DB::table('crm_armada_rows')
-            ->where('report_id', $id) // 🔥 FIX DI SINI
+            ->where('pk_id', $id)
             ->delete();
 
         return response()->json([
@@ -70,9 +63,6 @@ public function destroy($id)
         ]);
 
     } catch (\Throwable $e) {
-
-        Log::error("DELETE ERROR: ".$e->getMessage());
-
         return response()->json([
             'error' => $e->getMessage()
         ], 500);

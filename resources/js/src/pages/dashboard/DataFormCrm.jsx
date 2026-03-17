@@ -17,8 +17,8 @@ async function addVerificationNotification({
     : new Date().toISOString();
 
   const payload = {
-  report_id: reportCode || null,
-  report_uuid: reportId,
+  report_id: reportId,        // pk_id (PRIMARY KEY)
+  report_code: reportCode,    // CRM-xxxx
   perusahaan,
   status,
   note,
@@ -68,7 +68,7 @@ export default function DataFormCrm() {
   const [totalRows, setTotalRows] = useState(0);
 
 useEffect(() => {
-  if (!selected?.dbId) return;
+  if (!selected?.dbId || selected.step2?.rincianArmada?.length) return;
 
   (async () => {
     const BASE = "http://moveon-jr.alwaysdata.net";
@@ -200,7 +200,7 @@ if (Array.isArray(step3.suratPernyataan)) {
 
   return {
     id: r.report_code || r.id,
-    dbId: r.id,
+    dbId: r.pk_id,
     step1: r.step1 || {},
     step2,
     step3,
@@ -349,11 +349,11 @@ if (!res.ok) {
     setVerifyOpen(false);
   };
 
- async function handleDelete(row) {
+ async function handleDelete(dbId) {
   if (!window.confirm("Yakin ingin menghapus laporan ini?")) return;
 
   const res = await fetch(
-    `http://moveon-jr.alwaysdata.net/api/crm-reports/${row.id}`, // 🔥 ganti
+    `http://moveon-jr.alwaysdata.net/api/crm-reports/${dbId}`,
     { method: "DELETE" }
   );
 
@@ -362,7 +362,7 @@ if (!res.ok) {
     return;
   }
 
-  setRows(prev => prev.filter(r => r.id !== row.id));
+  setRows(prev => prev.filter(r => r.dbId !== dbId));
 }
 
   useEffect(() => {
@@ -780,6 +780,10 @@ if (!Array.isArray(rincian)) {
   ...(row.step3?.evidence || [])
 ];
 
+const filesUnique = Array.from(
+  new Map(files.map(f => [f.url, f])).values()
+);
+
 if (typeof files === "string") {
   try {
     files = JSON.parse(files);
@@ -793,7 +797,7 @@ if (typeof files === "string") {
       doc.text("- Tidak ada file", pad, y);
       y += 14;
     } else {
-      for (let f of files) {
+      for (let f of filesUnique) {
         y = checkPage(doc, y, pad, 16);
 
         if (isImageFile(f.name)) {
@@ -1221,7 +1225,7 @@ doc.save(`Laporan_CRM_${perusahaanSafe}.pdf`);
 
                       <button
                         className="btn btn-danger"
-                        onClick={() => handleDelete(d)}
+                        onClick={() => handleDelete(d.dbId)}
                       >
                         Hapus
                       </button>
