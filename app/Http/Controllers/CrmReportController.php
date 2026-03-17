@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class CrmReportController extends Controller {
 
@@ -52,6 +53,8 @@ public function update(Request $request, $id)
 
 public function destroy($id)
 {
+    Log::info("DELETE MASUK: ".$id);
+
     DB::table('crm_reports_rows')
         ->where('id', $id)
         ->delete();
