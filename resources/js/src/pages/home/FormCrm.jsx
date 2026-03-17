@@ -204,7 +204,7 @@ async function uploadFile(file) {
   const fd = new FormData();
   fd.append("file", file);
 
-  const res = await fetch("http://localhost:8000/api/crm/upload", {
+  const res = await fetch("https://moveon-jr.alwaysdata.net/api/crm/upload", {
     method: "POST",
     body: fd
   });
@@ -220,7 +220,7 @@ async function uploadFile(file) {
 async function saveCrmToServer(form) {
   const baseRow = buildCrmRowFromForm(form);
 
-  const res = await fetch("http://localhost:8000/api/crm/save", {
+  const res = await fetch("https://moveon-jr.alwaysdata.net/api/crm/save", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -320,7 +320,7 @@ export default function FormCrm() {
     (async () => {
       try {
         // 1) Master PIC + Loket (distinct)
-        const res = await fetch("http://localhost:8000/api/iwkbu/pic");
+        const res = await fetch("https://moveon-jr.alwaysdata.net/api/iwkbu/pic");
         const picData = await res.json();
         setPicMaster(picData);
 
@@ -350,7 +350,7 @@ export default function FormCrm() {
         }
 
         // 2) Master PT/CV + pemilik + HP
-        const res2 = await fetch("http://localhost:8000/api/perusahaan");
+        const res2 = await fetch("https://moveon-jr.alwaysdata.net/api/perusahaan");
         const compData = await res2.json();
 
         if (compData) {
@@ -386,7 +386,7 @@ export default function FormCrm() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch("http://localhost:8000/api/employees");
+        const res = await fetch("https://moveon-jr.alwaysdata.net/api/employees");
 
         if (!res.ok) {
           throw new Error("Gagal load employees");
@@ -1155,7 +1155,7 @@ function Step2Armada({
       setErrorIwkbu(null);
       try {
   const res = await fetch(
-    `http://localhost:8000/api/iwkbu?perusahaan=${encodeURIComponent(nama)}`
+    `https://moveon-jr.alwaysdata.net/api/iwkbu?perusahaan=${encodeURIComponent(nama)}`
   );
 
   if (!res.ok) {
