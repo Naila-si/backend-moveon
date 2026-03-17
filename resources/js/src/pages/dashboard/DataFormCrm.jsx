@@ -330,7 +330,7 @@ if (!res.ok) {
 
     setRows((prev) =>
       prev.map((row) =>
-        row.dbId === selected.dbId ? { ...row, step4: finalStep4 } : row,
+        row.Id === selected.dbId ? { ...row, step4: finalStep4 } : row,
       ),
     );
 
@@ -349,21 +349,21 @@ if (!res.ok) {
     setVerifyOpen(false);
   };
 
-  async function handleDelete(row) {
-    if (!window.confirm("Yakin ingin menghapus laporan ini?")) return;
+ async function handleDelete(row) {
+  if (!window.confirm("Yakin ingin menghapus laporan ini?")) return;
 
-    const res = await fetch(
-  `http://moveon-jr.alwaysdata.net/api/crm-reports/${row.dbId}`,
-  { method: "DELETE" }
-);
+  const res = await fetch(
+    `http://moveon-jr.alwaysdata.net/api/crm-reports/${row.id}`, // 🔥 ganti
+    { method: "DELETE" }
+  );
 
-if (!res.ok) {
-  alert("Gagal menghapus data");
-  return;
-}
-
-    setRows((prev) => prev.filter((r) => r.dbId !== row.dbId));
+  if (!res.ok) {
+    alert("Gagal menghapus data");
+    return;
   }
+
+  setRows(prev => prev.filter(r => r.id !== row.id));
+}
 
   useEffect(() => {
     if (selected) {
@@ -446,7 +446,7 @@ if (!res.ok) {
   try {
 
     src = fixUrl(src);
-    
+
     if (!src) return null;
 
     if (src.startsWith("/storage")) {

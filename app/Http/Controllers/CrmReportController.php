@@ -53,19 +53,16 @@ public function update(Request $request, $id)
 
 public function destroy($id)
 {
-    Log::info("DELETE MASUK: ".$id);
-
     DB::table('crm_reports_rows')
-        ->where('id', $id)
+        ->where('report_code', $id)
         ->delete();
 
     DB::table('crm_armada_rows')
-        ->where('report_id', $id)
+        ->where('report_code', $id)
         ->delete();
 
     return response()->json([
         'success' => true
     ]);
 }
-
 }
