@@ -12,7 +12,7 @@ const idr = (n) =>
 // Fungsi untuk membuka gambar di tab baru
 const openImageInNewTab = (dataUrl, fileName) => {
   if (!dataUrl) return;
-  
+
   const newTab = window.open();
   if (newTab) {
     newTab.document.write(`
@@ -32,7 +32,7 @@ const openImageInNewTab = (dataUrl, fileName) => {
 // Fungsi untuk download gambar
 const downloadImage = (dataUrl, fileName) => {
   if (!dataUrl) return;
-  
+
   const link = document.createElement('a');
   link.href = dataUrl;
   link.download = fileName;
@@ -52,7 +52,7 @@ export default function DataFromManifest() {
     setLoading(true);
 
     try {
-      const res = await fetch("http://127.0.0.1:8000/api/manifest-submissions");
+      const res = await fetch("http://moveon-jr.alwaysdata.net/api/manifest-submissions");
       const data = await res.json();
 
       console.log("Data dari API:", data);
@@ -73,7 +73,7 @@ export default function DataFromManifest() {
   setLoading(true);
 
   try {
-    const res = await fetch("http://127.0.0.1:8000/api/manifest-submissions");
+    const res = await fetch("http://moveon-jr.alwaysdata.net/api/manifest-submissions");
     const data = await res.json();
 
     setRows(data || []);
@@ -89,7 +89,7 @@ export default function DataFromManifest() {
     if (!window.confirm("Hapus data manifest ini?")) return;
 
     try {
-      const res = await fetch(`http://127.0.0.1:8000/api/manifest-submissions/${id}`, {
+      const res = await fetch(`http://moveon-jr.alwaysdata.net/api/manifest-submissions/${id}`, {
   method: "DELETE",
 });
 
@@ -127,10 +127,10 @@ if (!res.ok) {
   // ========= PERHITUNGAN UNIK =========
   const summaryStats = useMemo(() => {
     const totalEntri = filtered.length;
-    
+
     // Hitung kapal unik (tidak duplikat)
     const uniqueKapal = new Set();
-    
+
     // Hitung perusahaan unik (tidak duplikat)
     const uniquePerusahaan = new Set();
 
@@ -149,13 +149,13 @@ if (!res.ok) {
         integrationStats.totalIntegrated++;
       }
     });
-    
+
     // Total penumpang
     const totalPenumpang = filtered.reduce(
       (sum, r) => sum + (Number(r.total_penumpang || 0)),
       0
     );
-    
+
     // Total premi
     const totalPremi = filtered.reduce(
       (sum, r) => sum + Number(r.jumlah_premi || 0),
@@ -191,7 +191,7 @@ if (!res.ok) {
   const exportCSV = () => {
     const headers = [
       "Tanggal",
-      "Kapal", 
+      "Kapal",
       "Rute",
       "Total Penumpang",
       "Jumlah Premi",
@@ -247,9 +247,9 @@ if (!res.ok) {
             }}
           />
           <div className="actions">
-            <button 
-              className="btn ghost" 
-              type="button" 
+            <button
+              className="btn ghost"
+              type="button"
               onClick={refreshData}
               disabled={loading}
             >
@@ -294,9 +294,9 @@ if (!res.ok) {
                   <td>{r.telp || "-"}</td>
                   {/* <td className="num">
                     {r.iwkl_id ? (
-                      <span style={{ 
-                        background: '#e3f2fd', 
-                        padding: '2px 6px', 
+                      <span style={{
+                        background: '#e3f2fd',
+                        padding: '2px 6px',
                         borderRadius: '4px',
                         fontSize: '12px'
                       }}>
@@ -385,7 +385,7 @@ if (!res.ok) {
           <div>
             💰 Premi: <b>{idr(summaryStats.totalPremi)}</b>
           </div>
-          
+
           {/* Info Integrasi IWKL */}
           <div style={{
             padding: "4px 8px",

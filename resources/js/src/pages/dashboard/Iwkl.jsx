@@ -413,7 +413,7 @@ export default function IwklSimple() {
     // 1. AMBIL DATA IWKL
     // ===============================
     const resIwkl = await fetch(
-      "http://127.0.0.1:8000/api/iwkl?tahun=" + tahunAktif
+      "http://moveon-jr.alwaysdata.net/api/iwkl?tahun=" + tahunAktif
     );
 
     if (!resIwkl.ok) throw new Error("Gagal load IWKL");
@@ -424,7 +424,7 @@ export default function IwklSimple() {
     // 2. AMBIL DATA BULANAN
     // ===============================
     const resBulan = await fetch(
-      "http://127.0.0.1:8000/api/iwkl-bulanan?tahun=" + tahunAktif
+      "http://moveon-jr.alwaysdata.net/api/iwkl-bulanan?tahun=" + tahunAktif
     );
 
     if (!resBulan.ok) throw new Error("Gagal load iwkl_bulanan");
@@ -618,7 +618,7 @@ export default function IwklSimple() {
 
   const fetchYearOptions = async () => {
     try {
-      const res = await fetch("http://127.0.0.1:8000/api/iwkl-years");
+      const res = await fetch("http://moveon-jr.alwaysdata.net/api/iwkl-years");
 const data = await res.json();
 
       if (!res.ok) {
@@ -648,7 +648,7 @@ const data = await res.json();
 
   const fetchFilterOptions = async () => {
     try {
-      const res = await fetch("http://127.0.0.1:8000/api/iwkl-filters");
+      const res = await fetch("http://moveon-jr.alwaysdata.net/api/iwkl-filters");
 const data = await res.json();
 
       if (!res.ok) {
@@ -713,7 +713,7 @@ const data = await res.json();
     const fetchData = async () => {
       setLoading(true);
 
-      const res = await fetch("http://127.0.0.1:8000/api/iwkl?tahun=" + tahunAktif);
+      const res = await fetch("http://moveon-jr.alwaysdata.net/api/iwkl?tahun=" + tahunAktif);
 const iwklData = await res.json();
 
       if (!res.ok) {
@@ -723,7 +723,7 @@ const iwklData = await res.json();
 }
 
       const resBulan = await fetch(
-  "http://127.0.0.1:8000/api/iwkl-bulanan?tahun=" + tahunAktif
+  "http://moveon-jr.alwaysdata.net/api/iwkl-bulanan?tahun=" + tahunAktif
 );
 const bulanData = await resBulan.json();
 
@@ -820,7 +820,7 @@ const bulanData = await resBulan.json();
   const deleteRow = async (id) => {
     if (!window.confirm("Hapus baris ini?")) return;
     setSaving(true);
-    const res = await fetch(`http://127.0.0.1:8000/api/iwkl/${id}`, {
+    const res = await fetch(`http://moveon-jr.alwaysdata.net/api/iwkl/${id}`, {
   method: "DELETE",
 });
     setSaving(false);
@@ -898,7 +898,7 @@ const bulanData = await resBulan.json();
     }
 
     setSaving(true);
-    const res = await fetch(`http://127.0.0.1:8000/api/iwkl/${id}`, {
+    const res = await fetch(`http://moveon-jr.alwaysdata.net/api/iwkl/${id}`, {
   method: "PUT",
   headers: {
     "Content-Type": "application/json",
@@ -920,7 +920,7 @@ const bulanData = await resBulan.json();
   const updateBulan = async (iwklId, key, value) => {
   const bulan = monthIndex[key];
 
-  await fetch("http://127.0.0.1:8000/api/iwkl-bulanan", {
+  await fetch("http://moveon-jr.alwaysdata.net/api/iwkl-bulanan", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -964,7 +964,7 @@ const bulanData = await resBulan.json();
     };
 
     setSaving(true);
-    const res = await fetch("http://127.0.0.1:8000/api/iwkl", {
+    const res = await fetch("http://moveon-jr.alwaysdata.net/api/iwkl", {
   method: "POST",
   headers: {
     "Content-Type": "application/json",
@@ -1894,7 +1894,7 @@ const data = await res.json();
                   <option key={l} value={l} />
                 ))}
               </datalist>
-  
+
               <label>
                 Kelas
                 <select

@@ -67,13 +67,13 @@ function setFontBold(doc, size = 12) {
 }
 
 async function fetchReportFull(reportId) {
-  const res = await fetch(`http://127.0.0.1:8000/api/crm-reports/${reportId}`);
+  const res = await fetch(`http://moveon-jr.alwaysdata.net/api/crm-reports/${reportId}`);
   const report = await res.json();
 
   if (!report) throw new Error("Report tidak ditemukan");
 
   const resArmada = await fetch(
-    `http://127.0.0.1:8000/api/crm-armada/${reportId}`
+    `http://moveon-jr.alwaysdata.net/api/crm-armada/${reportId}`
   );
   const armadaRows = await resArmada.json();
 
@@ -255,7 +255,7 @@ async function downloadPdfFromRow(row) {
       3: { cellWidth: 90 },
       4: { cellWidth: 80 },
       5: { cellWidth: 140 },
-      6: { cellWidth: 70 }, 
+      6: { cellWidth: 70 },
     },
     headStyles: { fillColor: [230, 230, 230] },
 
@@ -594,7 +594,7 @@ function getPetugasName(it, petugasMap) {
 }
 
 async function fetchPetugasByReportId(reportId) {
-  const res = await fetch(`http://127.0.0.1:8000/api/crm-reports/${reportId}`);
+  const res = await fetch(`http://moveon-jr.alwaysdata.net/api/crm-reports/${reportId}`);
   const data = await res.json();
 
   if (!data?.step1) return "-";
@@ -625,7 +625,7 @@ export default function NotifikasiBerkas() {
 
   const fetchNotif = async () => {
   try {
-    const res = await fetch("http://127.0.0.1:8000/api/crm-notifikasi");
+    const res = await fetch("http://moveon-jr.alwaysdata.net/api/crm-notifikasi");
     const data = await res.json();
 
     setItems(data || []);
@@ -716,7 +716,7 @@ export default function NotifikasiBerkas() {
   async function handleDelete(id) {
     if (!confirm("Hapus notifikasi ini?")) return;
 
-    const { error } = await fetch(`http://127.0.0.1:8000/api/crm-notifikasi/${id}`, {
+    const { error } = await fetch(`http://moveon-jr.alwaysdata.net/api/crm-notifikasi/${id}`, {
       method: "DELETE",
     });
 
@@ -731,7 +731,7 @@ export default function NotifikasiBerkas() {
   async function clearAll() {
   if (!confirm("Hapus SEMUA notifikasi?")) return;
 
-  await fetch("http://127.0.0.1:8000/api/crm-notifikasi", {
+  await fetch("http://moveon-jr.alwaysdata.net/api/crm-notifikasi", {
     method: "DELETE",
   });
 
@@ -945,7 +945,7 @@ html, body, .notif-page {
   padding: 16px 24px;
   width: 100%;
   box-sizing: border-box;
-  min-width: 0; 
+  min-width: 0;
 }
 
 /* CARD */
@@ -975,7 +975,7 @@ html, body, .notif-page {
   font-size: 15px;
   box-shadow: inset 0 2px 6px rgba(180,210,255,.15);
   width: 100%;
-  display: block; 
+  display: block;
 }
 
 /* ========================= TABLE ========================= */

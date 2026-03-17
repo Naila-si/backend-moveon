@@ -30,7 +30,7 @@ const initials = (name) => {
 const ensureSamsat = async (name, loket) => {
   if (!name?.trim()) return null;
 
-  const res = await fetch("http://127.0.0.1:8000/api/samsat", {
+  const res = await fetch("http://moveon-jr.alwaysdata.net/api/samsat", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -54,7 +54,7 @@ export default function RKJadwal() {
   const tableRef = useRef(null);
   const headerLeftRef = useRef(null);
   const headerGridRef = useRef(null);
-  const firstGridRef = useRef(null);  
+  const firstGridRef = useRef(null);
 
   // helper: apakah tanggal = hari ini pada bulan yg sedang dilihat
   const isToday = (y, m, d) =>
@@ -87,7 +87,7 @@ export default function RKJadwal() {
   const [newName, setNewName] = useState("");
   const [newSamsatId, setNewSamsatId] = useState("");
   const [newSamsatText, setNewSamsatText] = useState("");
-  const [newLoket, setNewLoket] = useState("");  
+  const [newLoket, setNewLoket] = useState("");
   const selectedSamsat = useMemo(
     () => samsats.find(s => String(s.id) === String(newSamsatId)),
     [samsats, newSamsatId]
@@ -159,7 +159,7 @@ export default function RKJadwal() {
   const isStatusShown = (status) => (statusFilter === "all" ? true : status === statusFilter);
 
   const loadPeople = async () => {
-  const res = await fetch("http://127.0.0.1:8000/api/employees");
+  const res = await fetch("http://moveon-jr.alwaysdata.net/api/employees");
   const data = await res.json();
 
   setPeople(normalizePeople(data));
@@ -168,7 +168,7 @@ export default function RKJadwal() {
  const loadEntriesForMonth = async (y, m) => {
 
   const res = await fetch(
-    `http://127.0.0.1:8000/api/rkj-entries?year=${y}&month=${m+1}`
+    `http://moveon-jr.alwaysdata.net/api/rkj-entries?year=${y}&month=${m+1}`
   );
 
   const data = await res.json();
@@ -178,7 +178,7 @@ export default function RKJadwal() {
 
  const loadSamsat = async () => {
 
-  const res = await fetch("http://127.0.0.1:8000/api/samsat");
+  const res = await fetch("http://moveon-jr.alwaysdata.net/api/samsat");
   const data = await res.json();
 
   setSamsats(data || []);
@@ -203,7 +203,7 @@ export default function RKJadwal() {
 
     if (mode === "create") {
       // upsert by (pid,date)
-      const res = await fetch("http://127.0.0.1:8000/api/rkj-entries", {
+      const res = await fetch("http://moveon-jr.alwaysdata.net/api/rkj-entries", {
   method: "POST",
   headers: {
     "Content-Type": "application/json",
@@ -222,7 +222,7 @@ export default function RKJadwal() {
         await loadEntriesForMonth(year, month);
       }
     } else {
-      const res = await fetch(`http://127.0.0.1:8000/api/rkj-entries/${id}`, {
+      const res = await fetch(`http://moveon-jr.alwaysdata.net/api/rkj-entries/${id}`, {
   method: "PUT",
   headers: {
     "Content-Type": "application/json",
@@ -244,7 +244,7 @@ export default function RKJadwal() {
 
   const deleteEntry = async () => {
     if (!entryModal?.id) return;
-const res = await fetch(`http://127.0.0.1:8000/api/rkj-entries/${entryModal.id}`, {
+const res = await fetch(`http://moveon-jr.alwaysdata.net/api/rkj-entries/${entryModal.id}`, {
   method: "DELETE",
 });
     if (!res.ok) {
@@ -277,7 +277,7 @@ const res = await fetch(`http://127.0.0.1:8000/api/rkj-entries/${entryModal.id}`
       loket: newLoket,
     };
 
-   const res = await fetch("http://127.0.0.1:8000/api/employees", {
+   const res = await fetch("http://moveon-jr.alwaysdata.net/api/employees", {
   method: "POST",
   headers: {
     "Content-Type": "application/json",
@@ -334,7 +334,7 @@ const data = await res.json();
       samsat_id: samsatIdFinal || null,
     };
 
-    const res =await fetch(`http://127.0.0.1:8000/api/employees/${editId}`, {
+    const res =await fetch(`http://moveon-jr.alwaysdata.net/api/employees/${editId}`, {
   method: "PUT",
   headers: {
     "Content-Type": "application/json",
@@ -373,7 +373,7 @@ const data = await res.json();
 
     const pid = deleteTarget.id;
 
-    const res = await fetch(`http://127.0.0.1:8000/api/employees/${pid}`, {
+    const res = await fetch(`http://moveon-jr.alwaysdata.net/api/employees/${pid}`, {
   method: "DELETE",
 });
 

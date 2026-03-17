@@ -27,7 +27,7 @@ async function addVerificationNotification({
   payload: { reportId, status, note, perusahaan },
 };
 
-const res = await fetch("http://127.0.0.1:8000/api/crm-notifikasi", {
+const res = await fetch("http://moveon-jr.alwaysdata.net/api/crm-notifikasi", {
   method: "POST",
   headers: {
     "Content-Type": "application/json",
@@ -71,10 +71,10 @@ useEffect(() => {
   if (!selected?.dbId) return;
 
   (async () => {
-    const BASE = "http://127.0.0.1:8000";
+    const BASE = "http://moveon-jr.alwaysdata.net";
 
     const res = await fetch(
-      `http://127.0.0.1:8000/api/crm-armada/${selected.dbId}`
+      `http://moveon-jr.alwaysdata.net/api/crm-armada/${selected.dbId}`
     );
 
     const data = await res.json();
@@ -109,7 +109,7 @@ useEffect(() => {
 
   try {
     const res = await fetch(
-      `http://127.0.0.1:8000/api/crm-reports?page=${page}&q=${query}&status=${filterValidasi}`
+      `http://moveon-jr.alwaysdata.net/api/crm-reports?page=${page}&q=${query}&status=${filterValidasi}`
     );
 
     if (!res.ok) {
@@ -120,7 +120,7 @@ useEffect(() => {
 
     console.log("API RESULT:", result);
 
-    const BASE = "http://127.0.0.1:8000";
+    const BASE = "http://moveon-jr.alwaysdata.net";
 
 const mapped = (result.data || []).map((r, i) => {
 
@@ -300,7 +300,7 @@ console.log("MAPPED DATA:", mapped);
       waktuValidasi: ts,
     };
 
-    const res = await fetch(`http://127.0.0.1:8000/api/crm-reports/${selected.dbId}`, {
+    const res = await fetch(`http://moveon-jr.alwaysdata.net/api/crm-reports/${selected.dbId}`, {
   method: "PUT",
   headers: {
     "Content-Type": "application/json",
@@ -353,7 +353,7 @@ if (!res.ok) {
     if (!window.confirm("Yakin ingin menghapus laporan ini?")) return;
 
     const res = await fetch(
-  `http://127.0.0.1:8000/api/crm-reports/${row.dbId}`,
+  `http://moveon-jr.alwaysdata.net/api/crm-reports/${row.dbId}`,
   { method: "DELETE" }
 );
 
@@ -400,16 +400,16 @@ if (!res.ok) {
 //     const semuaNopol = Array.isArray(s2.rincianArmada)
 //       ? s2.rincianArmada.map((r) => r.nopol).filter(Boolean)
 //       : [];
-//     const nopolText = semuaNopol.join(" ");  
+//     const nopolText = semuaNopol.join(" ");
 
 //     const searchableText = [
-//       d.id,                    
+//       d.id,
 //       s1.namaPemilik,
 //       s1.perusahaan,
 //       s1.loket,
 //       s1.jenisAngkutan,
-//       namaPetugas,   
-//       nopolText,          
+//       namaPetugas,
+//       nopolText,
 //       s2.janjiBayar,
 //       s4.statusValidasi,
 //     ]
@@ -448,7 +448,7 @@ if (!res.ok) {
     if (!src) return null;
 
     if (src.startsWith("/storage")) {
-      src = "http://127.0.0.1:8000" + src;
+      src = "http://moveon-jr.alwaysdata.net" + src;
     }
 
     const res = await fetch(src);
@@ -1747,8 +1747,8 @@ doc.save(`Laporan_CRM_${perusahaanSafe}.pdf`);
       .dfc-modal-actions{ display:flex; gap:10px; }
       .dfc-modal-body{
         flex:1 1 auto;
-        min-height:0;                      
-        overflow:auto;                     
+        min-height:0;
+        overflow:auto;
         -webkit-overflow-scrolling:touch;
         padding-bottom:12px;
         overscroll-behavior: contain;
@@ -1976,7 +1976,7 @@ table.dfc-table{
   border:none;
 }
 /* === FIX: Set semua tulisan jadi hitam === */
-.dfc-container, 
+.dfc-container,
 .dfc-container * {
   color: #0f172a !important;          /* teks utama */
 }
