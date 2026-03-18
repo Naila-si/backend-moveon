@@ -1561,7 +1561,7 @@ if (!href) return null;
                       <a
                         className="thumb"
                         key={idx}
-                        href={fixUrl(f.url)}
+                        href={href}
                         target="_blank"
                         rel="noreferrer"
                       >
