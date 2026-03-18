@@ -1512,7 +1512,7 @@ doc.save(`Laporan_CRM_${perusahaanSafe}.pdf`);
       {a.bukti.map((f, i) => (
         <a
           key={i}
-          href={f.url}
+          href={fixUrl(f.url)}
           target="_blank"
           rel="noopener noreferrer"
           style={{
@@ -1555,13 +1555,13 @@ doc.save(`Laporan_CRM_${perusahaanSafe}.pdf`);
               <Section title="3) Upload & Penilaian">
                 <div className="gallery">
                   {selected.step3.fotoKunjungan?.map((src, idx) => {
-                    const href = typeof src === "string" ? src : src?.url;
-                    if (!href) return null;
+const href = fixUrl(typeof src === "string" ? src : src?.url);
+if (!href) return null;
                     return (
                       <a
                         className="thumb"
                         key={idx}
-                        href={href}
+                        href={fixUrl(f.url)}
                         target="_blank"
                         rel="noreferrer"
                       >
@@ -1584,7 +1584,7 @@ doc.save(`Laporan_CRM_${perusahaanSafe}.pdf`);
     return filesUnique.map((f, i) => (
       <a
         key={i}
-        href={f.url}
+        href={fixUrl(f.url)}
         target="_blank"
         rel="noopener noreferrer"
         className="file-pill"
@@ -1614,8 +1614,7 @@ doc.save(`Laporan_CRM_${perusahaanSafe}.pdf`);
                     {selected.step3.tandaTanganPetugas && (
                       <div className="sig-card">
                         <div className="sig-label">Tanda Tangan Petugas</div>
-                        <img
-                          src={selected.step3.tandaTanganPetugas}
+                        <img src={fixUrl(selected.step3.tandaTanganPetugas)}
                           alt="Tanda tangan petugas"
                         />
                       </div>
@@ -1625,8 +1624,7 @@ doc.save(`Laporan_CRM_${perusahaanSafe}.pdf`);
                         <div className="sig-label">
                           Tanda Tangan Pemilik/Pengelola
                         </div>
-                        <img
-                          src={selected.step3.tandaTanganPemilik}
+                        <img src={fixUrl(selected.step3.tandaTanganPemilik)}
                           alt="Tanda tangan pemilik/pengelola"
                         />
                       </div>
