@@ -130,11 +130,11 @@ const mapped = (result.data || []).map((r, i) => {
   const step3 = r.step3 || {};
 
   // fix foto
-  if (Array.isArray(step3.fotoKunjungan)) {
-    step3.fotoKunjungan = step3.fotoKunjungan.map(f =>
-      fixUrl(f)
-    );
-  }
+ if (Array.isArray(step3.fotoKunjungan)) {
+  step3.fotoKunjungan = step3.fotoKunjungan.map(f =>
+    fixUrl(f)
+  );
+}
 
   if (typeof step3.fotoKunjungan === "string") {
   try {
@@ -2241,15 +2241,18 @@ function parseRupiah(val) {
 function fixUrl(url) {
   if (!url) return "";
 
-  // ganti localhost → domain production
-  if (url.includes("127.0.0.1:8000")) {
-    return url.replace(
-      "http://127.0.0.1:8000",
-      "http://moveon-jr.alwaysdata.net"
-    );
-  }
+  url = String(url).trim();
 
-  // kalau path relatif
+  // 🔥 bersihin backslash (kadang dari Laravel)
+  url = url.replace(/\\/g, "/");
+
+  // 🔥 paksa ganti localhost
+  url = url.replace(
+    /^https?:\/\/127\.0\.0\.1:8000/,
+    "http://moveon-jr.alwaysdata.net"
+  );
+
+  // 🔥 kalau relatif path
   if (url.startsWith("/")) {
     return "http://moveon-jr.alwaysdata.net" + url;
   }
