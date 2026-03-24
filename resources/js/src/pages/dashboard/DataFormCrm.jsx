@@ -144,28 +144,31 @@ async function fetchReports() {
   }
 
   if (Array.isArray(step3.evidence)) {
-    step3.evidence = step3.evidence.map((f) => ({
-      ...f,
-      url: fixUrl(f?.url),
-    }));
-  }
+  step3.evidence = step3.evidence.map((f, i) =>
+    typeof f === "string"
+      ? { name: `Evidence ${i + 1}`, url: fixUrl(f) }
+      : { ...f, url: fixUrl(f?.url || "") }
+  );
+}
 
-  if (Array.isArray(step3.suratPernyataan)) {
-    step3.suratPernyataan = step3.suratPernyataan.map((f) => ({
-      ...f,
-      url: fixUrl(f?.url),
-    }));
-  }
+if (Array.isArray(step3.suratPernyataan)) {
+  step3.suratPernyataan = step3.suratPernyataan.map((f, i) =>
+    typeof f === "string"
+      ? { name: `Surat ${i + 1}`, url: fixUrl(f) }
+      : { ...f, url: fixUrl(f?.url || "") }
+  );
+}
 
   if (Array.isArray(step2.rincianArmada)) {
     step2.rincianArmada = step2.rincianArmada.map((a) => ({
       ...a,
       bukti: Array.isArray(a.bukti)
-        ? a.bukti.map((f) => ({
-            ...f,
-            url: fixUrl(f?.url),
-          }))
-        : [],
+  ? a.bukti.map((f, i) =>
+      typeof f === "string"
+        ? { name: `Bukti ${i + 1}`, url: fixUrl(f) }
+        : { ...f, url: fixUrl(f?.url || "") }
+    )
+  : [],
     }));
   }
 
@@ -182,11 +185,11 @@ async function fetchReports() {
     setRows(mapped);
     setTotalRows(result.total || 0);
   } catch (e) {
-    console.error("FETCH REPORTS ERROR:", e);
-    setErrorMsg("Gagal memuat data.");
-  } finally {
-    setLoading(false);
-  }
+  console.error("FETCH REPORTS ERROR:", e);
+  setErrorMsg("Gagal memuat data: " + (e.message || "unknown error"));
+} finally {
+  setLoading(false);
+}
 }
 
     fetchReports();

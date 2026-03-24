@@ -40,7 +40,7 @@ Route::get('/crm-reports', function (Request $req) {
     $total = (clone $query)->count();
 
     $rows = $query
-        ->orderBy('created_at', 'desc')
+        ->orderBy('pk_id', 'desc')
         ->offset($offset)
         ->limit($limit)
         ->get()
@@ -53,8 +53,6 @@ Route::get('/crm-reports', function (Request $req) {
                 'step3' => json_decode($r->step3 ?? '{}', true) ?: [],
                 'step4' => json_decode($r->step4 ?? '{}', true) ?: [],
                 'step5' => json_decode($r->step5 ?? '{}', true) ?: [],
-                'created_at' => $r->created_at,
-                'updated_at' => $r->updated_at,
             ];
         })
         ->values();
@@ -76,16 +74,14 @@ Route::get('/crm-reports/{id}', function ($id) {
     }
 
     return response()->json([
-        'pk_id' => $r->pk_id,
-        'report_code' => $r->report_code,
-        'step1' => json_decode($r->step1 ?? '{}', true) ?: [],
-        'step2' => json_decode($r->step2 ?? '{}', true) ?: [],
-        'step3' => json_decode($r->step3 ?? '{}', true) ?: [],
-        'step4' => json_decode($r->step4 ?? '{}', true) ?: [],
-        'step5' => json_decode($r->step5 ?? '{}', true) ?: [],
-        'created_at' => $r->created_at,
-        'updated_at' => $r->updated_at,
-    ]);
+    'pk_id' => $r->pk_id,
+    'report_code' => $r->report_code,
+    'step1' => json_decode($r->step1 ?? '{}', true) ?: [],
+    'step2' => json_decode($r->step2 ?? '{}', true) ?: [],
+    'step3' => json_decode($r->step3 ?? '{}', true) ?: [],
+    'step4' => json_decode($r->step4 ?? '{}', true) ?: [],
+    'step5' => json_decode($r->step5 ?? '{}', true) ?: [],
+]);
 });
 
 Route::put('/crm-reports/{id}', function (Request $req, $id) {
@@ -99,11 +95,10 @@ Route::put('/crm-reports/{id}', function (Request $req, $id) {
     $newStep4 = array_merge($oldStep4, $req->input('step4', []));
 
     DB::table('crm_reports_rows')
-        ->where('pk_id', $id)
-        ->update([
-            'step4' => json_encode($newStep4),
-            'updated_at' => now(),
-        ]);
+    ->where('pk_id', $id)
+    ->update([
+        'step4' => json_encode($newStep4),
+    ]);
 
     return response()->json([
         'success' => true,
@@ -182,10 +177,6 @@ Route::post('/crm/upload', function (Request $req) {
             'error' => $e->getMessage(),
         ], 500);
     }
-});
-
-Route::get('/cek-crm', function () {
-    return response()->json(['ok' => 'crm-file route kebaca']);
 });
 
 Route::get('/crm-file', function (Request $req) {
