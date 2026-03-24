@@ -4,6 +4,7 @@ use App\Http\Controllers\CrmReportController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 
@@ -125,22 +126,35 @@ Route::get('/crm-armada/{id}', function ($id) {
 });
 
 Route::post('/crm/save', function (Request $req) {
-    $id = DB::table('crm_reports_rows')->insertGetId([
-        'report_code' => $req->id,
-        'step1' => json_encode($req->step1),
-        'step2' => json_encode($req->step2),
-        'step3' => json_encode($req->step3),
-        'step4' => json_encode($req->step4),
-        'step5' => json_encode($req->step5),
-        'created_at' => now(),
-        'updated_at' => now(),
-    ]);
+    try {
+        $validated = $req->validate([
+            'id' => 'nullable|string',
+            'step1' => 'required|array',
+            'step2' => 'required|array',
+            'step3' => 'required|array',
+            'step4' => 'required|array',
+            'step5' => 'required|array',
+        ]);
 
-    return response()->json([
-        'success' => true,
-        'reportId' => $id,
-        'reportCode' => $req->id,
-    ]);
+        $id = DB::table('crm_reports_rows')->insertGetId([
+            'report_code' => $validated['id'] ?? null,
+            'step1' => json_encode($validated['step1'], JSON_UNESCAPED_UNICODE),
+            'step2' => json_encode($validated['step2'], JSON_UNESCAPED_UNICODE),
+            'step3' => json_encode($validated['step3'], JSON_UNESCAPED_UNICODE),
+            'step4' => json_encode($validated['step4'], JSON_UNESCAPED_UNICODE),
+            'step5' => json_encode($validated['step5'], JSON_UNESCAPED_UNICODE),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'reportId' => $id,
+            'reportCode' => $validated['id'] ?? null,
+        ]);
+    } catch (\Throwable $e) {
+        return response()->json([
+            'message' => $e->getMessage(),
+        ], 500);
+    }
 });
 
 Route::post('/crm/upload', function (Request $req) {

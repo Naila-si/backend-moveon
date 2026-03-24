@@ -196,28 +196,50 @@ async function fetchUploadImage(file) {
   return await res.json(); // { url, name, path }
 }
 
+async function uploadDataUrlImage(dataUrl, filename = "signature.png") {
+  if (!dataUrl || typeof dataUrl !== "string" || !dataUrl.startsWith("data:image/")) {
+    return null;
+  }
+
+  const blob = await fetch(dataUrl).then((r) => r.blob());
+  const file = new File([blob], filename, { type: blob.type || "image/png" });
+  return await fetchUploadImage(file);
+}
+
 async function saveCrmToServer(rowPayload) {
   const res = await fetch("https://moveon-jr.alwaysdata.net/api/crm/save", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      Accept: "application/json",
     },
     body: JSON.stringify(rowPayload),
   });
 
-  const text = await res.text();
+  const raw = await res.text();
+  const contentType = res.headers.get("content-type") || "";
+
   console.log("SAVE STATUS:", res.status);
-  console.log("SAVE RESPONSE RAW:", text);
+  console.log("SAVE CONTENT-TYPE:", contentType);
+  console.log("SAVE RESPONSE RAW:", raw);
+  console.log("SAVE PAYLOAD:", rowPayload);
+
+  let data = null;
+  try {
+    data = JSON.parse(raw);
+  } catch {}
 
   if (!res.ok) {
-    throw new Error(`Gagal menyimpan CRM [${res.status}]: ${text}`);
+    throw new Error(
+      data?.message || data?.error || `Gagal menyimpan CRM [${res.status}]`
+    );
   }
 
-  try {
-    return JSON.parse(text);
-  } catch {
-    throw new Error("Response server bukan JSON: " + text);
+  if (!data) {
+    throw new Error("Response server bukan JSON");
   }
+
+  return data;
 }
 
 function isImageUpload(file) {
@@ -326,11 +348,15 @@ async function normalizeStep3Files(step3) {
   };
 
   return {
-    ...step3,
-    fotoKunjungan: await normalizeFotoKunjungan(step3?.fotoKunjungan || []),
-    evidence: await normalizeImageObjects(step3?.evidence || []),
-    suratPernyataan: await normalizeImageObjects(step3?.suratPernyataan || []),
-  };
+  ...step3,
+  fotoKunjungan: await normalizeFotoKunjungan(step3?.fotoKunjungan || []),
+  evidence: (await normalizeImageObjects(step3?.evidence || [])).map(
+    (x) => x.path || x.url || ""
+  ),
+  suratPernyataan: (await normalizeImageObjects(step3?.suratPernyataan || [])).map(
+    (x) => x.path || x.url || ""
+  ),
+};
 }
 
 export default function FormCrm() {
@@ -443,8 +469,6 @@ export default function FormCrm() {
             a.pic.localeCompare(b.pic, "id"),
           );
           setPicMaster(arr);
-        } else if (picErr) {
-          console.error("Gagal load PIC:", picErr);
         }
 
         // 2) Master PT/CV + pemilik + HP
@@ -655,6 +679,16 @@ const handleSubmit = async () => {
   try {
     const armadaListUploaded = await normalizeArmadaFiles(form.armadaList || []);
 
+    const signPetugas = await uploadDataUrlImage(
+      form.tandaTanganPetugas,
+      "ttd-petugas.png"
+    );
+
+    const signPemilik = await uploadDataUrlImage(
+      form.tandaTanganPemilik,
+      "ttd-pemilik.png"
+    );
+
     const step3Raw = {
       fotoKunjungan: form.fotoKunjungan ? [form.fotoKunjungan] : [],
       evidence: form.suratPernyataanEvidence || [],
@@ -664,11 +698,14 @@ const handleSubmit = async () => {
       ketaatanPerizinan: form.nilaiPelayanan ?? 3,
       keramaianPenumpang: form.nilaiKelengkapan ?? 3,
       ketaatanUjiKir: form.nilaiPelayanan ?? 3,
-      tandaTanganPetugas: form.tandaTanganPetugas || "",
-      tandaTanganPemilik: form.tandaTanganPemilik || "",
+      tandaTanganPetugas: signPetugas?.url || "",
+      tandaTanganPemilik: signPemilik?.url || "",
     };
 
     const finalStep3 = await normalizeStep3Files(step3Raw);
+
+    finalStep3.evidence = (finalStep3.evidence || []).map((x) => x.path || x.url || "");
+    finalStep3.suratPernyataan = (finalStep3.suratPernyataan || []).map((x) => x.path || x.url || "");
 
     const rowPayload = buildCrmRowFromForm({
       ...form,
@@ -676,8 +713,7 @@ const handleSubmit = async () => {
       finalStep3,
     });
 
-    console.log("ROW PAYLOAD STEP3:", rowPayload.step3);
-    console.log("ROW PAYLOAD STEP2:", rowPayload.step2);
+    console.log("FINAL PAYLOAD:", JSON.stringify(rowPayload, null, 2));
 
     const { reportId, reportCode } = await saveCrmToServer(rowPayload);
 
@@ -693,6 +729,7 @@ const handleSubmit = async () => {
     alert(e.message || "Terjadi kesalahan saat menyimpan ke server.");
   }
 };
+
   const resetDraft = () => {
     if (confirm("Hapus draft yang tersimpan?")) {
       localStorage.removeItem("form_crm_draft_v5");
