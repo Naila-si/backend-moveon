@@ -3,7 +3,7 @@ import { Routes, Route, Navigate, HashRouter } from "react-router-dom";
 
 /* === Halaman umum === */
 import Home from "./components/Home";
-import CRMForm from "./pages/home/FormCrm.jsx"; // tetap ada untuk rute /crm
+import CRMForm from "./pages/home/FormCrm.jsx";
 import Register from "./pages/home/Register.jsx";
 import Login from "./pages/home/Login.jsx";
 

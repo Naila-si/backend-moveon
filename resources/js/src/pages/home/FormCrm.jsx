@@ -81,24 +81,6 @@ const TIPE_ARMADA_MASTER = [
   "KAPAL PENUMPANG",
 ];
 
-// === Shared table untuk CRM list (dipakai DataFormCrm juga) ===
-const CRM_LS_KEY = "crmData";
-
-function loadCrmRows() {
-  try {
-    const raw = localStorage.getItem(CRM_LS_KEY);
-    if (!raw) return [];
-    const arr = JSON.parse(raw);
-    return Array.isArray(arr) ? arr : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveCrmRows(rows) {
-  localStorage.setItem(CRM_LS_KEY, JSON.stringify(rows));
-}
-
 // bikin ID: CRM-2025-xxx
 function generateCrmId() {
   const year = new Date().getFullYear();
@@ -124,8 +106,8 @@ function buildCrmRowFromForm(form) {
     osTarif: a.osTarif ?? null,
     bayarOs: a.bayarOs || "",
     rekomendasi: a.rekomendasi || "",
-    // untuk kompatibel dengan DataFormCrm yg sudah pakai `tindakLanjut`
     tindakLanjut: a.rekomendasi || "",
+    bukti: Array.isArray(a.bukti) ? a.bukti : [],
   }));
 
   // gabung rekomendasi armada jadi satu kalimat
@@ -166,20 +148,18 @@ function buildCrmRowFromForm(form) {
     },
 
     // ===== STEP 3 di tabel =====
-    step3: {
-      fotoKunjungan: form.fotoKunjunganUrl
-    ? [form.fotoKunjunganUrl]
-    : [],
-  suratPernyataan: form.evidenceUrls || [],
-  evidence: form.evidenceUrls || [],
-      responPemilik: form.nilaiKebersihan ?? 3,
-      ketertibanOperasional: form.nilaiKebersihan ?? 3,
-      ketaatanPerizinan: form.nilaiPelayanan ?? 3,
-      keramaianPenumpang: form.nilaiKelengkapan ?? 3,
-      ketaatanUjiKir: form.nilaiPelayanan ?? 3,
-      tandaTanganPetugas: form.tandaTanganPetugas || "",
-      tandaTanganPemilik: form.tandaTanganPemilik || "",
-    },
+    step3: form.finalStep3 || {
+  fotoKunjungan: [],
+  suratPernyataan: [],
+  evidence: [],
+  responPemilik: form.nilaiKebersihan ?? 3,
+  ketertibanOperasional: form.nilaiKebersihan ?? 3,
+  ketaatanPerizinan: form.nilaiPelayanan ?? 3,
+  keramaianPenumpang: form.nilaiKelengkapan ?? 3,
+  ketaatanUjiKir: form.nilaiPelayanan ?? 3,
+  tandaTanganPetugas: form.tandaTanganPetugas || "",
+  tandaTanganPemilik: form.tandaTanganPemilik || "",
+},
 
     // ===== STEP 4 di tabel (validasi) =====
     step4: {
@@ -200,39 +180,157 @@ function buildCrmRowFromForm(form) {
   };
 }
 
-async function uploadFile(file) {
+async function fetchUploadImage(file) {
   const fd = new FormData();
   fd.append("file", file);
 
   const res = await fetch("https://moveon-jr.alwaysdata.net/api/crm/upload", {
     method: "POST",
-    body: fd
+    body: fd,
   });
 
   if (!res.ok) {
-    throw new Error("Upload gagal");
+    throw new Error("Upload gambar gagal");
   }
 
-  const data = await res.json();
-  return data.url;
+  return await res.json(); // { url, name, path }
 }
 
-async function saveCrmToServer(form) {
-  const baseRow = buildCrmRowFromForm(form);
-
+async function saveCrmToServer(rowPayload) {
   const res = await fetch("https://moveon-jr.alwaysdata.net/api/crm/save", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(baseRow),
+    body: JSON.stringify(rowPayload),
   });
 
+  const text = await res.text();
+  console.log("SAVE STATUS:", res.status);
+  console.log("SAVE RESPONSE RAW:", text);
+
   if (!res.ok) {
-    throw new Error("Gagal menyimpan CRM");
+    throw new Error(`Gagal menyimpan CRM [${res.status}]: ${text}`);
   }
 
-  return await res.json();
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error("Response server bukan JSON: " + text);
+  }
+}
+
+function isImageUpload(file) {
+  return /^image\//i.test(file?.type || "");
+}
+
+async function normalizeArmadaFiles(armadaList = []) {
+  const result = [];
+
+  for (const a of armadaList) {
+    const buktiOut = [];
+
+    for (const item of a.buktiFiles || []) {
+      if (!item) continue;
+
+      const file = item.file || item.originFileObj || item;
+      if (!(file instanceof File)) continue;
+      if (!isImageUpload(file)) continue;
+
+      const uploaded = await fetchUploadImage(file);
+
+      buktiOut.push({
+        name: uploaded.name || file.name,
+        url: uploaded.url,
+        path: uploaded.path,
+      });
+    }
+
+    result.push({
+      ...a,
+      bukti: buktiOut,
+    });
+  }
+
+  return result;
+}
+
+async function normalizeStep3Files(step3) {
+  const normalizeImageObjects = async (items = []) => {
+    const out = [];
+
+    for (const item of items) {
+      if (!item) continue;
+
+      if (typeof item === "string") {
+        out.push({
+          name: "image",
+          url: item,
+        });
+        continue;
+      }
+
+      if (item.url && !item.file) {
+        out.push(item);
+        continue;
+      }
+
+      const file = item.file || item.originFileObj || item;
+      if (!(file instanceof File)) {
+        if (item?.url) out.push(item);
+        continue;
+      }
+
+      if (!isImageUpload(file)) continue;
+
+      const uploaded = await fetchUploadImage(file);
+      out.push({
+        name: uploaded.name || file.name,
+        url: uploaded.url,
+        path: uploaded.path,
+      });
+    }
+
+    return out;
+  };
+
+  const normalizeFotoKunjungan = async (items = []) => {
+    const out = [];
+
+    for (const item of items) {
+      if (!item) continue;
+
+      if (typeof item === "string") {
+        out.push(item);
+        continue;
+      }
+
+      if (item.url && !item.file) {
+        out.push(item.url);
+        continue;
+      }
+
+      const file = item.file || item.originFileObj || item;
+      if (!(file instanceof File)) {
+        if (item?.url) out.push(item.url);
+        continue;
+      }
+
+      if (!isImageUpload(file)) continue;
+
+      const uploaded = await fetchUploadImage(file);
+      out.push(uploaded.url);
+    }
+
+    return out;
+  };
+
+  return {
+    ...step3,
+    fotoKunjungan: await normalizeFotoKunjungan(step3?.fotoKunjungan || []),
+    evidence: await normalizeImageObjects(step3?.evidence || []),
+    suratPernyataan: await normalizeImageObjects(step3?.suratPernyataan || []),
+  };
 }
 
 export default function FormCrm() {
@@ -544,8 +642,7 @@ export default function FormCrm() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
 
-  const handleSubmit = async () => {
-
+const handleSubmit = async () => {
   if (
     Object.keys(step1Errors).length ||
     Object.keys(step2Errors).length ||
@@ -556,61 +653,46 @@ export default function FormCrm() {
   }
 
   try {
+    const armadaListUploaded = await normalizeArmadaFiles(form.armadaList || []);
 
-    let fotoUrl = null;
-    let evidenceUrls = [];
-
-    // upload foto kunjungan
-    if (form.fotoKunjungan) {
-      fotoUrl = await uploadFile(form.fotoKunjungan);
-    }
-
-    // upload evidence
-    if (form.suratPernyataanEvidence?.length) {
-      for (const f of form.suratPernyataanEvidence) {
-        const url = await uploadFile(f);
-        evidenceUrls.push({
-          name: f.name,
-          url
-        });
-      }
-    }
-
-    // buat payload baru
-    const formWithFiles = {
-      ...form,
-      fotoKunjunganUrl: fotoUrl,
-      evidenceUrls
+    const step3Raw = {
+      fotoKunjungan: form.fotoKunjungan ? [form.fotoKunjungan] : [],
+      evidence: form.suratPernyataanEvidence || [],
+      suratPernyataan: form.suratPernyataanEvidence || [],
+      responPemilik: form.nilaiKebersihan ?? 3,
+      ketertibanOperasional: form.nilaiKebersihan ?? 3,
+      ketaatanPerizinan: form.nilaiPelayanan ?? 3,
+      keramaianPenumpang: form.nilaiKelengkapan ?? 3,
+      ketaatanUjiKir: form.nilaiPelayanan ?? 3,
+      tandaTanganPetugas: form.tandaTanganPetugas || "",
+      tandaTanganPemilik: form.tandaTanganPemilik || "",
     };
 
-    // simpan CRM ke server
-    const { reportId, reportCode } =
-      await saveCrmToServer(formWithFiles);
+    const finalStep3 = await normalizeStep3Files(step3Raw);
 
+    const rowPayload = buildCrmRowFromForm({
+      ...form,
+      armadaList: armadaListUploaded,
+      finalStep3,
+    });
 
-    // simpan ke localStorage juga
-    const newRow = buildCrmRowFromForm(formWithFiles);
-    newRow.id = reportCode;
+    console.log("ROW PAYLOAD STEP3:", rowPayload.step3);
+    console.log("ROW PAYLOAD STEP2:", rowPayload.step2);
 
-    const existing = loadCrmRows();
-    const next = [newRow, ...existing];
-    saveCrmRows(next);
+    const { reportId, reportCode } = await saveCrmToServer(rowPayload);
 
     setDirty(false);
     localStorage.removeItem("form_crm_draft_v5");
-
     setShowSuccessPopup(true);
 
     setTimeout(() => {
       window.location.replace("/");
     }, 2500);
-
   } catch (e) {
     console.error("Gagal menyimpan data CRM:", e);
-    alert("Terjadi kesalahan saat menyimpan ke server.");
+    alert(e.message || "Terjadi kesalahan saat menyimpan ke server.");
   }
 };
-
   const resetDraft = () => {
     if (confirm("Hapus draft yang tersimpan?")) {
       localStorage.removeItem("form_crm_draft_v5");
@@ -1164,8 +1246,19 @@ function Step2Armada({
 
   const data = await res.json();
 
-  if (!alive) return;
-  setIwkbuRows(data || []);
+if (!alive) return;
+
+const rows = Array.isArray(data)
+  ? data
+  : Array.isArray(data?.data)
+    ? data.data
+    : [];
+
+console.log("IWKBU RAW:", data);
+console.log("IWKBU ROWS:", rows);
+
+setIwkbuRows(rows);
+
 } catch (e) {
         if (!alive) return;
         console.error("Load iwkbu for Step2Armada error:", e);
@@ -1183,27 +1276,27 @@ function Step2Armada({
 
   // daftar nopol unik buat datalist
   const nopolOptions = useMemo(
-    () =>
-      Array.from(
-        new Set(
-          (iwkbuRows || [])
-            .map((r) => r.nopol)
-            .filter(Boolean)
-            .map((n) => n.toUpperCase()),
-        ),
-      ).sort(),
-    [iwkbuRows],
-  );
+  () =>
+    Array.from(
+      new Set(
+        (Array.isArray(iwkbuRows) ? iwkbuRows : [])
+          .map((r) => r.nopol)
+          .filter(Boolean)
+          .map((n) => n.toUpperCase()),
+      ),
+    ).sort(),
+  [iwkbuRows],
+);
 
   const tipeArmadaOptions = useMemo(() => {
-    const fromMaster = TIPE_ARMADA_MASTER;
-    const fromIwkbu = (iwkbuRows || [])
-      .map((r) => r.jenis)
-      .filter(Boolean)
-      .map((j) => j.toUpperCase());
+  const fromMaster = TIPE_ARMADA_MASTER;
+  const fromIwkbu = (Array.isArray(iwkbuRows) ? iwkbuRows : [])
+    .map((r) => r.jenis)
+    .filter(Boolean)
+    .map((j) => j.toUpperCase());
 
-    return Array.from(new Set([...fromMaster, ...fromIwkbu])).sort();
-  }, [iwkbuRows]);
+  return Array.from(new Set([...fromMaster, ...fromIwkbu])).sort();
+}, [iwkbuRows]);
 
   // pastikan tiap item armada punya field tambahan (osTarif, bayarOs, buktiFiles, rekomendasi)
   const safeList = (armadaList || []).map((a) => ({
@@ -1246,9 +1339,9 @@ function Step2Armada({
   const handleNopolChange = (idx, raw) => {
     const value = (raw || "").toUpperCase(); // ❌ trim DIHAPUS
 
-    const row = iwkbuRows.find(
-      (r) => (r.nopol || "").toUpperCase().trim() === value.trim(),
-    );
+    const row = (Array.isArray(iwkbuRows) ? iwkbuRows : []).find(
+  (r) => (r.nopol || "").toUpperCase().trim() === value.trim(),
+);
 
     if (row) {
       update(idx, {
@@ -1467,13 +1560,13 @@ function Step2Armada({
             {/* Status tertentu → upload bukti */}
             {showUpload && (
               <div className="form-grid" style={{ marginTop: 8 }}>
-                <Field label="Upload Bukti (PDF / Foto)">
+                <Field label="Upload Bukti (Foto)">
                   <input
-                    type="file"
-                    multiple
-                    accept=".pdf,image/*"
-                    onChange={(e) => handleBuktiChange(i, e.target.files || [])}
-                  />
+  type="file"
+  multiple
+  accept="image/*"
+  onChange={(e) => handleBuktiChange(i, e.target.files || [])}
+/>
                   <div className="hint">
                     Maksimal 3 file, masing-masing ≤ 5MB.
                     {a.buktiFiles?.length
@@ -1703,13 +1796,12 @@ function Step3UploadPenilaian({ form, setField, errors, onPickMultiple }) {
           </span>
         </Field>
 
-        <Field label="Upload Surat Pernyataan & Evidence (maks 10 file)">
+        <Field label="Upload Surat Pernyataan & Evidence (maks. 10 file, format gambar saja)">
           <input
-            type="file"
-            multiple
-            accept="image/*,.pdf"
-            onChange={onPickMultiple("suratPernyataanEvidence")}
-          />
+  type="file"
+  multiple
+  accept="image/*"
+  onChange={onPickMultiple("suratPernyataanEvidence")}/>
           <span className="hint">
             {totalSurat > 0 ? `${totalSurat} file terpilih` : "Belum ada file"}
           </span>

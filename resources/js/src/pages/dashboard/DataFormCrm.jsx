@@ -29,7 +29,7 @@ const ts = waktuValidasi
   payload: { reportId, status, note, perusahaan },
 };
 
-const res = await fetch("http://moveon-jr.alwaysdata.net/api/crm-notifikasi", {
+const res = await fetch("https://moveon-jr.alwaysdata.net/api/crm-notifikasi", {
   method: "POST",
   headers: {
     "Content-Type": "application/json",
@@ -73,10 +73,10 @@ useEffect(() => {
   if (!selected?.dbId || selected.step2?.rincianArmada?.length) return;
 
   (async () => {
-    const BASE = "http://moveon-jr.alwaysdata.net";
+    const BASE = "https://moveon-jr.alwaysdata.net";
 
     const res = await fetch(
-      `http://moveon-jr.alwaysdata.net/api/crm-armada/${selected.dbId}`
+      `https://moveon-jr.alwaysdata.net/api/crm-armada/${selected.dbId}`
     );
 
     const data = await res.json();
@@ -105,99 +105,68 @@ useEffect(() => {
 }, [selected?.dbId]);
 
   useEffect(() => {
-    async function fetchReports() {
+async function fetchReports() {
   setLoading(true);
   setErrorMsg("");
 
   try {
-    const res = await fetch(
-      `http://moveon-jr.alwaysdata.net/api/crm-reports?page=${page}&q=${query}&status=${filterValidasi}`
-    );
+    const url = `https://moveon-jr.alwaysdata.net/api/crm-reports?page=${page}&q=${query}&status=${filterValidasi}`;
+    console.log("FETCH URL:", url);
+
+    const res = await fetch(url, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+      },
+      cache: "no-store",
+    });
+
+    console.log("FETCH STATUS:", res.status, res.statusText);
+    console.log("FETCH HEADERS content-type:", res.headers.get("content-type"));
+    console.log("FETCH HEADERS content-encoding:", res.headers.get("content-encoding"));
+
+    const rawText = await res.text();
+    console.log("RAW RESPONSE TEXT:", rawText);
 
     if (!res.ok) {
-  throw new Error("API ERROR");
-}
+      throw new Error("API ERROR: " + rawText);
+    }
 
-    const result = await res.json();
+    const result = JSON.parse(rawText);
+    console.log("PARSED RESULT:", result);
 
-    console.log("API RESULT:", result);
-
-    const BASE = "http://moveon-jr.alwaysdata.net";
-
-const mapped = (result.data || []).map((r, i) => {
-
+    const mapped = (result.data || []).map((r) => {
   const step2 = r.step2 || {};
   const step3 = r.step3 || {};
 
-  // fix foto
- if (Array.isArray(step3.fotoKunjungan)) {
-  step3.fotoKunjungan = step3.fotoKunjungan.map(f =>
-    fixUrl(f)
-  );
-}
-
-  if (typeof step3.fotoKunjungan === "string") {
-  try {
-    step3.fotoKunjungan = JSON.parse(step3.fotoKunjungan);
-  } catch {
-    step3.fotoKunjungan = [];
+  if (Array.isArray(step3.fotoKunjungan)) {
+    step3.fotoKunjungan = step3.fotoKunjungan.map((f) => fixUrl(f));
   }
-}
 
-if (Array.isArray(step3.fotoKunjungan)) {
-  step3.fotoKunjungan = step3.fotoKunjungan.map(f =>
-    f.startsWith("http") ? f : BASE + f
-  );
-}
-
-  // fix evidence
-if (typeof step3.evidence === "string") {
-  try {
-    step3.evidence = JSON.parse(step3.evidence);
-  } catch {
-    step3.evidence = [];
-  }
-}
-
-if (typeof step3.suratPernyataan === "string") {
-  try {
-    step3.suratPernyataan = JSON.parse(step3.suratPernyataan);
-  } catch {
-    step3.suratPernyataan = [];
-  }
-}
-
-if (Array.isArray(step3.evidence)) {
-  step3.evidence = step3.evidence.map(f => {
-    const path = f.url || f.path || "";
-    return {
+  if (Array.isArray(step3.evidence)) {
+    step3.evidence = step3.evidence.map((f) => ({
       ...f,
-      url: fixUrl(f.url || f.path)
-    };
-  });
-}
+      url: fixUrl(f?.url),
+    }));
+  }
 
-if (Array.isArray(step3.suratPernyataan)) {
-  step3.suratPernyataan = step3.suratPernyataan.map(f => {
-    const path = f.url || f.path || "";
-    return {
+  if (Array.isArray(step3.suratPernyataan)) {
+    step3.suratPernyataan = step3.suratPernyataan.map((f) => ({
       ...f,
-      url: fixUrl(f.url || f.path)
-    };
-  });
-}
+      url: fixUrl(f?.url),
+    }));
+  }
 
-  // FIX BUKTI ARMADA
   if (Array.isArray(step2.rincianArmada)) {
-    step2.rincianArmada = step2.rincianArmada.map(a => {
-      if (Array.isArray(a.bukti)) {
-        a.bukti = a.bukti.map(f => ({
-          ...f,
-          url: fixUrl(f.url)
-        }));
-      }
-      return a;
-    });
+    step2.rincianArmada = step2.rincianArmada.map((a) => ({
+      ...a,
+      bukti: Array.isArray(a.bukti)
+        ? a.bukti.map((f) => ({
+            ...f,
+            url: fixUrl(f?.url),
+          }))
+        : [],
+    }));
   }
 
   return {
@@ -210,12 +179,10 @@ if (Array.isArray(step3.suratPernyataan)) {
   };
 });
 
-console.log("MAPPED DATA:", mapped);
-
     setRows(mapped);
     setTotalRows(result.total || 0);
   } catch (e) {
-    console.error(e);
+    console.error("FETCH REPORTS ERROR:", e);
     setErrorMsg("Gagal memuat data.");
   } finally {
     setLoading(false);
@@ -302,7 +269,7 @@ console.log("MAPPED DATA:", mapped);
       waktuValidasi: ts,
     };
 
-    const res = await fetch(`http://moveon-jr.alwaysdata.net/api/crm-reports/${selected.dbId}`, {
+    const res = await fetch(`https://moveon-jr.alwaysdata.net/api/crm-reports/${selected.dbId}`, {
   method: "PUT",
   headers: {
     "Content-Type": "application/json",
@@ -355,7 +322,7 @@ if (!res.ok) {
   if (!window.confirm("Yakin ingin menghapus laporan ini?")) return;
 
   const res = await fetch(
-    `http://moveon-jr.alwaysdata.net/api/crm-reports/${dbId}`,
+    `https://moveon-jr.alwaysdata.net/api/crm-reports/${dbId}`,
     { method: "DELETE" }
   );
 
@@ -444,18 +411,16 @@ if (!res.ok) {
     setPage(1);
   }, [query, filterJenis, filterValidasi]);
 
- async function loadImageAsDataURL(src) {
+async function loadImageAsDataURL(src) {
   try {
+    const finalSrc = fixUrl(src);
+    if (!finalSrc) return null;
 
-    src = fixUrl(src);
-
-    if (!src) return null;
-
-    if (src.startsWith("/storage")) {
-      src = "http://moveon-jr.alwaysdata.net" + src;
+    const res = await fetch(finalSrc);
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
     }
 
-    const res = await fetch(src);
     const blob = await res.blob();
 
     return await new Promise((resolve) => {
@@ -463,9 +428,8 @@ if (!res.ok) {
       reader.onloadend = () => resolve(reader.result);
       reader.readAsDataURL(blob);
     });
-
   } catch (err) {
-    console.warn("Image load gagal:", src);
+    console.warn("Image load gagal:", src, err);
     return null;
   }
 }
@@ -516,7 +480,7 @@ if (!res.ok) {
     // -----------------------------------------------------------
     // HEADER
     // -----------------------------------------------------------
-    const logoDataUrl = await loadImageAsDataURL("/assets/logo-bulat.png");
+    const logoDataUrl = await loadImageAsDataURL("https://moveon-jr.alwaysdata.net/assets/logo-bulat.png");
     const logoSize = 34;
 
     doc.addImage(
@@ -1512,7 +1476,7 @@ doc.save(`Laporan_CRM_${perusahaanSafe}.pdf`);
       {a.bukti.map((f, i) => (
         <a
           key={i}
-          href={fixUrl(f.url)}
+          href={f.url}
           target="_blank"
           rel="noopener noreferrer"
           style={{
@@ -1551,87 +1515,168 @@ doc.save(`Laporan_CRM_${perusahaanSafe}.pdf`);
                 })()}
               </Section>
 
-              {/* Step 3- */}
-              <Section title="3) Upload & Penilaian">
-                <div className="gallery">
-                  {selected.step3.fotoKunjungan?.map((src, idx) => {
-const href = fixUrl(typeof src === "string" ? src : src?.url);
-if (!href) return null;
-                    return (
-                      <a
-                        className="thumb"
-                        key={idx}
-                        href={href}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        <img src={href} alt={`Foto Kunjungan ${idx + 1}`} />
-                      </a>
-                    );
-                  })}
-                </div>
-                <div className="files">
+{/* Step 3 */}
+<Section title="3) Upload & Penilaian">
   {(() => {
+    const fotoKunjungan = Array.isArray(selected.step3?.fotoKunjungan)
+      ? selected.step3.fotoKunjungan
+      : [];
+
     const filesGabung = [
-      ...(selected.step3.suratPernyataan || []),
-      ...(selected.step3.evidence || [])
+      ...(selected.step3?.suratPernyataan || []),
+      ...(selected.step3?.evidence || []),
     ];
 
     const filesUnique = Array.from(
-      new Map(filesGabung.map(f => [f.url, f])).values()
+      new Map(
+        filesGabung
+          .filter(Boolean)
+          .map((f, idx) => [f?.url || f?.name || `file-${idx}`, f])
+      ).values()
     );
 
-    return filesUnique.map((f, i) => (
-      <a
-        key={i}
-        href={fixUrl(f.url)}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="file-pill"
-      >
-        <IconFile /> {f.name}
-      </a>
-    ));
+    const getRaw = (file) =>
+      typeof file === "string" ? file : file?.url || "";
+
+    const getHref = (file) => getRaw(file);
+
+    const getName = (file, fallback = "File") =>
+      typeof file === "string" ? fallback : file?.name || fallback;
+
+    const isBase64Image = (value) =>
+      /^data:image\//i.test(String(value || "").trim());
+
+    const isImageFile = (file) => {
+  const raw = getRaw(file);
+
+  if (!raw) return false;
+
+  const decoded = decodeURIComponent(raw).toLowerCase();
+
+  return (
+    decoded.startsWith("data:image/") ||
+    decoded.endsWith(".png") ||
+    decoded.endsWith(".jpg") ||
+    decoded.endsWith(".jpeg") ||
+    decoded.endsWith(".webp") ||
+    decoded.endsWith(".gif")
+  );
+};
+
+    const isPdfFile = (file) => {
+      const raw = `${getRaw(file)} ${getName(file, "")}`.toLowerCase();
+      return raw.includes(".pdf");
+    };
+
+    return (
+      <>
+        {/* Gambar: tampil saja, jangan bisa diklik */}
+        <div className="gallery">
+          {fotoKunjungan.map((src, idx) => (
+  <div className="thumb" key={`foto-${idx}`}>
+    <img
+      src={src}
+      alt={`Foto Kunjungan ${idx + 1}`}
+      onError={(e) => {
+        console.log("Gagal load foto:", src);
+        e.currentTarget.style.display = "none";
+      }}
+    />
+  </div>
+))}
+
+         {filesUnique.map((f, i) => {
+  const href = f?.url || "";
+  if (!href || !isImageFile(f)) return null;
+
+  return (
+    <div className="thumb" key={`img-file-${i}`}>
+      <img
+        src={href}
+        alt={f?.name || `Lampiran ${i + 1}`}
+        onError={(e) => {
+          console.log("Gagal load lampiran:", href);
+          e.currentTarget.style.display = "none";
+        }}
+      />
+    </div>
+  );
+})}
+        </div>
+
+        {/* PDF / file lain */}
+        <div className="files">
+          {filesUnique.map((f, i) => {
+            const href = getHref(f);
+            if (!href || isImageFile(f)) return null;
+
+            if (isPdfFile(f)) {
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  className="file-pill"
+                  onClick={() =>
+                    window.open(href, "_blank", "noopener,noreferrer")
+                  }
+                >
+                  <IconFile /> {getName(f, `PDF ${i + 1}`)}
+                </button>
+              );
+            }
+
+            return (
+              <span key={i} className="file-pill">
+                <IconFile /> {getName(f, `File ${i + 1}`)}
+              </span>
+            );
+          })}
+        </div>
+      </>
+    );
   })()}
-</div>
-                <div className="ratings">
-                  <Rating
-                    label="Respon Pemilik/Pengelola"
-                    value={`${selected.step3.responPemilik}/5`}
-                  />
-                  <Rating
-                    label="Ketaatan Perizinan"
-                    value={`${selected.step3.ketaatanPerizinan}/5`}
-                  />
-                  <Rating
-                    label="Keramaian Penumpang"
-                    value={`${selected.step3.keramaianPenumpang}/5`}
-                  />
-                </div>
-                {(selected.step3.tandaTanganPetugas ||
-                  selected.step3.tandaTanganPemilik) && (
-                  <div className="signatures">
-                    {selected.step3.tandaTanganPetugas && (
-                      <div className="sig-card">
-                        <div className="sig-label">Tanda Tangan Petugas</div>
-                        <img src={fixUrl(selected.step3.tandaTanganPetugas)}
-                          alt="Tanda tangan petugas"
-                        />
-                      </div>
-                    )}
-                    {selected.step3.tandaTanganPemilik && (
-                      <div className="sig-card">
-                        <div className="sig-label">
-                          Tanda Tangan Pemilik/Pengelola
-                        </div>
-                        <img src={fixUrl(selected.step3.tandaTanganPemilik)}
-                          alt="Tanda tangan pemilik/pengelola"
-                        />
-                      </div>
-                    )}
-                  </div>
-                )}
-              </Section>
+
+  <div className="ratings">
+    <Rating
+      label="Respon Pemilik/Pengelola"
+      value={`${selected.step3.responPemilik}/5`}
+    />
+    <Rating
+      label="Ketaatan Perizinan"
+      value={`${selected.step3.ketaatanPerizinan}/5`}
+    />
+    <Rating
+      label="Keramaian Penumpang"
+      value={`${selected.step3.keramaianPenumpang}/5`}
+    />
+  </div>
+
+  {(selected.step3.tandaTanganPetugas ||
+    selected.step3.tandaTanganPemilik) && (
+    <div className="signatures">
+      {selected.step3.tandaTanganPetugas && (
+        <div className="sig-card">
+          <div className="sig-label">Tanda Tangan Petugas</div>
+          <img
+            src={fixUrl(selected.step3.tandaTanganPetugas)}
+            alt="Tanda tangan petugas"
+          />
+        </div>
+      )}
+      {selected.step3.tandaTanganPemilik && (
+        <div className="sig-card">
+          <div className="sig-label">
+            Tanda Tangan Pemilik/Pengelola
+          </div>
+          <img
+            src={fixUrl(selected.step3.tandaTanganPemilik)}
+            alt="Tanda tangan pemilik/pengelola"
+          />
+        </div>
+      )}
+    </div>
+  )}
+</Section>
             </div>
           </div>
         </div>
@@ -2040,7 +2085,7 @@ table.dfc-table{
   background:
     linear-gradient(180deg, #ffffff, #f0f9ff),
     url("data:image/svg+xml;utf8,\
-<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230284c7' stroke-width='2'><path d='M6 9l6 6 6-6'/></svg>")
+<svg xmlns='https://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230284c7' stroke-width='2'><path d='M6 9l6 6 6-6'/></svg>")
     no-repeat right 14px center / 16px;
 
   transition:all .15s ease;
@@ -2238,24 +2283,27 @@ function parseRupiah(val) {
   return isNaN(num) ? 0 : num;
 }
 
+const BASE_URL = "https://moveon-jr.alwaysdata.net";
+
 function fixUrl(url) {
   if (!url) return "";
 
-  url = String(url).trim();
+  const clean = String(url).trim().replace(/\\/g, "/");
 
-  // 🔥 bersihin backslash (kadang dari Laravel)
-  url = url.replace(/\\/g, "/");
+  if (clean.startsWith("data:image/")) return clean;
 
-  // 🔥 paksa ganti localhost
-  url = url.replace(
-    /^https?:\/\/127\.0\.0\.1:8000/,
-    "http://moveon-jr.alwaysdata.net"
-  );
+  // kalau sudah URL crm-file, JANGAN bungkus lagi
+  if (clean.includes("/api/crm-file?url=")) return clean;
 
-  // 🔥 kalau relatif path
-  if (url.startsWith("/")) {
-    return "http://moveon-jr.alwaysdata.net" + url;
+  if (clean.startsWith("http://") || clean.startsWith("https://")) return clean;
+
+  if (clean.startsWith("/storage/")) {
+    return `${BASE_URL}/api/crm-file?url=${encodeURIComponent(clean)}`;
   }
 
-  return url;
+  if (clean.startsWith("/")) {
+    return `${BASE_URL}${clean}`;
+  }
+
+  return `${BASE_URL}/api/crm-file?url=${encodeURIComponent("/" + clean)}`;
 }

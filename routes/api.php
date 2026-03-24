@@ -3,82 +3,218 @@
 use App\Http\Controllers\CrmReportController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
+
+/*
+|--------------------------------------------------------------------------
+| CRM REPORTS
+|--------------------------------------------------------------------------
+*/
 
 Route::get('/crm-reports', function (Request $req) {
-
-    $page = (int)($req->page ?? 1);
+    $page = max((int) $req->query('page', 1), 1);
     $limit = 50;
     $offset = ($page - 1) * $limit;
 
+    $q = trim((string) $req->query('q', ''));
+    $status = trim((string) $req->query('status', ''));
+
     $query = DB::table('crm_reports_rows');
 
-    $total = $query->count();
-
-    $rows = $query
-        ->orderBy('created_at','desc')
-        ->offset($offset)
-        ->limit($limit)
-        ->get();
-
-    // decode JSON
-    foreach ($rows as $r) {
-        $r->step1 = json_decode($r->step1 ?? '{}', true);
-        $r->step2 = json_decode($r->step2 ?? '{}', true);
-        $r->step3 = json_decode($r->step3 ?? '{}', true);
-        $r->step4 = json_decode($r->step4 ?? '{}', true);
-        $r->step5 = json_decode($r->step5 ?? '{}', true);
+    if ($q !== '') {
+        $query->where(function ($sub) use ($q) {
+            $sub->where('report_code', 'like', "%{$q}%")
+                ->orWhere('step1', 'like', "%{$q}%")
+                ->orWhere('step2', 'like', "%{$q}%")
+                ->orWhere('step4', 'like', "%{$q}%");
+        });
     }
 
+    if ($status !== '' && strtolower($status) !== 'semua') {
+        $query->where('step4', 'like', '%'.$status.'%');
+    }
+
+    $total = (clone $query)->count();
+
+    $rows = $query
+        ->orderBy('created_at', 'desc')
+        ->offset($offset)
+        ->limit($limit)
+        ->get()
+        ->map(function ($r) {
+            return [
+                'pk_id' => $r->pk_id,
+                'report_code' => $r->report_code,
+                'step1' => json_decode($r->step1 ?? '{}', true) ?: [],
+                'step2' => json_decode($r->step2 ?? '{}', true) ?: [],
+                'step3' => json_decode($r->step3 ?? '{}', true) ?: [],
+                'step4' => json_decode($r->step4 ?? '{}', true) ?: [],
+                'step5' => json_decode($r->step5 ?? '{}', true) ?: [],
+                'created_at' => $r->created_at,
+                'updated_at' => $r->updated_at,
+            ];
+        })
+        ->values();
+
     return response()->json([
-        'data'=>$rows,
-        'total'=>$total
+        'data' => $rows,
+        'total' => $total,
+        'page' => $page,
+    ], 200, [
+        'Content-Type' => 'application/json; charset=UTF-8',
     ]);
 });
 
 Route::get('/crm-reports/{id}', function ($id) {
+    $r = DB::table('crm_reports_rows')->where('pk_id', $id)->first();
 
-    $r = DB::table('crm_reports_rows')->where('id',$id)->first();
-
-    if(!$r) return null;
-
-    $r->step1 = json_decode($r->step1 ?? '{}', true);
-    $r->step2 = json_decode($r->step2 ?? '{}', true);
-    $r->step3 = json_decode($r->step3 ?? '{}', true);
-    $r->step4 = json_decode($r->step4 ?? '{}', true);
-
-    return $r;
-});
-
-Route::get('/crm-armada/{id}', function ($id) {
-
-    $rows = DB::table('crm_armada_rows')
-        ->where('report_id',$id)
-        ->get();
-
-    foreach ($rows as $r) {
-        $r->bukti = json_decode($r->bukti ?? '[]', true);
+    if (!$r) {
+        return response()->json(['error' => 'Data tidak ditemukan'], 404);
     }
 
-    return $rows;
+    return response()->json([
+        'pk_id' => $r->pk_id,
+        'report_code' => $r->report_code,
+        'step1' => json_decode($r->step1 ?? '{}', true) ?: [],
+        'step2' => json_decode($r->step2 ?? '{}', true) ?: [],
+        'step3' => json_decode($r->step3 ?? '{}', true) ?: [],
+        'step4' => json_decode($r->step4 ?? '{}', true) ?: [],
+        'step5' => json_decode($r->step5 ?? '{}', true) ?: [],
+        'created_at' => $r->created_at,
+        'updated_at' => $r->updated_at,
+    ]);
+});
+
+Route::put('/crm-reports/{id}', function (Request $req, $id) {
+    $report = DB::table('crm_reports_rows')->where('pk_id', $id)->first();
+
+    if (!$report) {
+        return response()->json(['error' => 'Data tidak ditemukan'], 404);
+    }
+
+    $oldStep4 = json_decode($report->step4 ?? '{}', true) ?: [];
+    $newStep4 = array_merge($oldStep4, $req->input('step4', []));
+
+    DB::table('crm_reports_rows')
+        ->where('pk_id', $id)
+        ->update([
+            'step4' => json_encode($newStep4),
+            'updated_at' => now(),
+        ]);
+
+    return response()->json([
+        'success' => true,
+        'step4' => $newStep4,
+    ]);
+});
+
+Route::delete('/crm-reports/{id}', [CrmReportController::class, 'destroy']);
+
+Route::get('/crm-armada/{id}', function ($id) {
+    $rows = DB::table('crm_armada_rows')
+        ->where('report_id', $id)
+        ->get()
+        ->map(function ($r) {
+            $r->bukti = json_decode($r->bukti ?? '[]', true) ?: [];
+            return $r;
+        });
+
+    return response()->json($rows);
+});
+
+Route::post('/crm/save', function (Request $req) {
+    $id = DB::table('crm_reports_rows')->insertGetId([
+        'report_code' => $req->id,
+        'step1' => json_encode($req->step1),
+        'step2' => json_encode($req->step2),
+        'step3' => json_encode($req->step3),
+        'step4' => json_encode($req->step4),
+        'step5' => json_encode($req->step5),
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    return response()->json([
+        'success' => true,
+        'reportId' => $id,
+        'reportCode' => $req->id,
+    ]);
+});
+
+Route::post('/crm/upload', function (Request $req) {
+    try {
+        $req->validate([
+            'file' => 'required|file|mimes:jpg,jpeg,png,jfif,webp|max:5120',
+        ]);
+
+        if (!Storage::disk('public')->exists('crm')) {
+            Storage::disk('public')->makeDirectory('crm');
+        }
+
+        $file = $req->file('file');
+        $path = $file->store('crm', 'public'); // <- cukup crm saja
+
+        return response()->json([
+            'success' => true,
+            'name' => $file->getClientOriginalName(),
+            'path' => $path, // crm/namafile.png
+            'url' => '/storage/' . $path, // /storage/crm/namafile.png
+            'full_url' => url('/storage/' . $path),
+        ]);
+    } catch (\Throwable $e) {
+        return response()->json([
+            'error' => $e->getMessage(),
+        ], 500);
+    }
+});
+
+Route::get('/cek-crm', function () {
+    return response()->json(['ok' => 'crm-file route kebaca']);
+});
+
+Route::get('/crm-file', function (Request $req) {
+    $rawUrl = $req->query('url');
+
+    if (!$rawUrl) {
+        return response()->json(['error' => 'URL file kosong'], 400);
+    }
+
+    $url = trim($rawUrl);
+    $path = parse_url($url, PHP_URL_PATH) ?: $url;
+    $path = str_replace('\\', '/', $path);
+
+    // hanya izinkan file dari /storage/crm/
+    if (!str_starts_with($path, '/storage/crm/')) {
+        return response()->json(['error' => 'Path file tidak diizinkan'], 403);
+    }
+
+    $relativePath = ltrim(str_replace('/storage/', '', $path), '/');
+
+    if (!Storage::disk('public')->exists($relativePath)) {
+        return response()->json([
+            'error' => 'File tidak ditemukan',
+            'path' => $relativePath,
+        ], 404);
+    }
+
+    $fullPath = Storage::disk('public')->path($relativePath);
+    $mimeType = mime_content_type($fullPath) ?: 'application/octet-stream';
+
+    return response()->file($fullPath, [
+        'Content-Type' => $mimeType,
+        'Cache-Control' => 'no-store, no-cache, must-revalidate',
+    ]);
 });
 
 Route::get('/crm-notifikasi', function () {
-    return DB::table('crm_notifikasi_rows')->orderBy('ts','desc')->get();
+    return response()->json(
+        DB::table('crm_notifikasi_rows')->orderBy('ts', 'desc')->get()
+    );
 });
 
-Route::delete('/crm-notifikasi/{id}', function ($id) {
-    DB::table('crm_notifikasi_rows')->where('id',$id)->delete();
-    return response()->json(['success'=>true]);
-});
-
-Route::delete('/crm-notifikasi', function () {
-    DB::table('crm_notifikasi_rows')->delete();
-    return response()->json(['success'=>true]);
-});
-
-Route::post('/crm-notifikasi', function (Illuminate\Http\Request $req) {
-
+Route::post('/crm-notifikasi', function (Request $req) {
     DB::table('crm_notifikasi_rows')->insert([
         'report_id' => $req->report_id,
         'report_uuid' => $req->report_uuid,
@@ -91,56 +227,17 @@ Route::post('/crm-notifikasi', function (Illuminate\Http\Request $req) {
         'created_at' => now(),
     ]);
 
-    return response()->json([
-        'success' => true
-    ]);
-
+    return response()->json(['success' => true]);
 });
 
-Route::get('/crm-notifikasi', function () {
-
-    return DB::table('crm_notifikasi_rows')
-        ->orderBy('ts','desc')
-        ->get();
-
+Route::delete('/crm-notifikasi/{id}', function ($id) {
+    DB::table('crm_notifikasi_rows')->where('id', $id)->delete();
+    return response()->json(['success' => true]);
 });
 
-Route::put('/crm-reports/{id}', function (Request $req, $id) {
-
-    $report = DB::table('crm_reports_rows')->where('id',$id)->first();
-
-    if(!$report){
-        return response()->json(['error'=>'not found'],404);
-    }
-
-    $step4 = $req->step4;
-
-    DB::table('crm_reports_rows')
-        ->where('id',$id)
-        ->update([
-            'step4' => json_encode($step4)
-        ]);
-
-    /* ===============================
-       INSERT NOTIFIKASI OTOMATIS
-       =============================== */
-
-    if(($step4['statusValidasi'] ?? '') === 'Tervalidasi'){
-
-        $step1 = json_decode($report->step1, true);
-
-        DB::table('crm_notifikasi_rows')->insert([
-            'report_id'   => $report->report_code,
-            'report_uuid' => $report->id,
-            'perusahaan'  => $step1['perusahaan'] ?? '-',
-            'status'      => 'Tervalidasi',
-            'note'        => $step4['catatanValidasi'] ?? '',
-            'petugas'     => $step1['petugasDepan'] ?? '-',
-            'ts'          => now()
-        ]);
-    }
-
-    return response()->json(['success'=>true]);
+Route::delete('/crm-notifikasi', function () {
+    DB::table('crm_notifikasi_rows')->delete();
+    return response()->json(['success' => true]);
 });
 
 Route::get('/manifest-submissions', function () {
@@ -477,26 +574,6 @@ Route::delete('/rkj-entries/{id}', function ($id) {
 
 });
 
-Route::post('/crm/save', function (Request $req) {
-
-    $id = DB::table('crm_reports_rows')->insertGetId([
-        'report_code' => $req->id,
-        'step1' => json_encode($req->step1),
-        'step2' => json_encode($req->step2),
-        'step3' => json_encode($req->step3),
-        'step4' => json_encode($req->step4),
-        'step5' => json_encode($req->step5),
-        'created_at' => now()
-    ]);
-
-    return response()->json([
-        'success' => true,
-        'reportId' => $id,
-        'reportCode' => $req->id
-    ]);
-
-});
-
 Route::get('/perusahaan', function () {
 
     return DB::table('iwkbu_rows')
@@ -632,38 +709,6 @@ Route::get('/iwkbu', function (Request $req) {
 
     return $query->get();
 });
-
-Route::post('/crm/upload', function (Request $req) {
-
-    $req->validate([
-        'file' => 'required|file|mimes:jpg,jpeg,png,pdf|max:5120'
-    ]);
-
-    $file = $req->file('file');
-
-    $path = $file->store('crm','public');
-
-    return response()->json([
-        'url' => '/storage/'.$path
-    ]);
-});
-
-Route::put('/crm-reports/{id}', function (Request $req, $id) {
-
-    DB::table('crm_reports_rows')
-        ->where('id',$id)
-        ->update([
-            'step4' => json_encode($req->step4)
-        ]);
-
-    $row = DB::table('crm_reports_rows')->where('id',$id)->first();
-
-    $row->step4 = json_decode($row->step4,true);
-
-    return response()->json($row);
-});
-
-Route::delete('/crm-reports/{id}', [CrmReportController::class, 'destroy']);
 
 Route::get('/dashboard', function (Request $req) {
 
