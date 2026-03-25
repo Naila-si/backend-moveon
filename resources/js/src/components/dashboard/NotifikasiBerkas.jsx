@@ -3,6 +3,49 @@ import { useNavigate } from "react-router-dom";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 
+const BASE_URL = "https://moveon-jr.alwaysdata.net";
+
+function fixUrl(url) {
+  if (!url) return "";
+
+  const clean = String(url).trim().replace(/\\/g, "/");
+
+  if (clean.startsWith("data:image/")) return clean;
+  if (clean.includes("/api/crm-file?url=")) return clean;
+
+  // kalau absolute URL
+  if (clean.startsWith("http://") || clean.startsWith("https://")) {
+    try {
+      const u = new URL(clean);
+
+      // kalau file dari domain sendiri /storage/...
+      if (u.origin === BASE_URL && u.pathname.startsWith("/storage/")) {
+        return `${BASE_URL}/api/crm-file?url=${encodeURIComponent(u.pathname)}`;
+      }
+
+      // kalau dari supabase -> ambil path-nya lalu lempar ke proxy juga
+      if (
+        u.hostname.includes("supabase.co") &&
+        u.pathname.includes("/storage/v1/object/public/")
+      ) {
+        const parts = u.pathname.split("/storage/v1/object/public/");
+        const relative = parts[1] || "";
+        return `${BASE_URL}/api/crm-file?url=${encodeURIComponent("/" + relative)}`;
+      }
+
+      return clean;
+    } catch {
+      return clean;
+    }
+  }
+
+  if (clean.startsWith("/storage/")) {
+    return `${BASE_URL}/api/crm-file?url=${encodeURIComponent(clean)}`;
+  }
+
+  return `${BASE_URL}/api/crm-file?url=${encodeURIComponent("/" + clean.replace(/^\/+/, ""))}`;
+}
+
 /* ===========================
    FORMAT RUPIAH
    =========================== */
@@ -24,7 +67,8 @@ function formatRupiah(n) {
    =========================== */
 
 async function loadImageAsDataURL(src) {
-  if (!src) throw new Error("Image source kosong");
+  const finalSrc = fixUrl(src);
+  if (!finalSrc) throw new Error("Image source kosong");
 
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -38,7 +82,7 @@ async function loadImageAsDataURL(src) {
       resolve(c.toDataURL("image/png"));
     };
     img.onerror = reject;
-    img.src = src;
+    img.src = finalSrc;
   });
 }
 
@@ -97,21 +141,47 @@ async function fetchReportFull(reportId) {
   report.step4 =
     typeof report.step4 === "string" ? JSON.parse(report.step4 || "{}") : (report.step4 || {});
 
+    const normalizeFiles = (arr = [], prefix = "File") =>
+  Array.isArray(arr)
+    ? arr.map((f, i) =>
+        typeof f === "string"
+          ? { name: `${prefix} ${i + 1}`, url: fixUrl(f) }
+          : { ...f, url: fixUrl(f?.url || "") }
+      )
+    : [];
+
+report.step3 = report.step3 || {};
+
+report.step3.evidence = normalizeFiles(report.step3.evidence, "Evidence");
+report.step3.suratPernyataan = normalizeFiles(report.step3.suratPernyataan, "Surat");
+
+report.step3.fotoKunjungan = Array.isArray(report.step3.fotoKunjungan)
+  ? report.step3.fotoKunjungan.map((x) => fixUrl(x))
+  : [];
+
+report.step3.tandaTanganPetugas = fixUrl(report.step3.tandaTanganPetugas || "");
+report.step3.tandaTanganPemilik = fixUrl(report.step3.tandaTanganPemilik || "");
+
   const rincianArmada = (armadaRows || []).map((a) => ({
-    nopol: a.nopol ?? "",
-    status: a.status ?? "",
-    tipeArmada: a.tipe_armada ?? "",
-    tahun: a.tahun ?? null,
-    bayarOs: a.bayar_os ?? 0,
-    rekomendasi: a.rekomendasi ?? "",
-    tindakLanjut: a.rekomendasi ?? "",
-    bukti:
-    typeof a.bukti === "string"
-        ? JSON.parse(a.bukti || "[]")
-        : Array.isArray(a.bukti)
-        ? a.bukti
-        : [],
-  }));
+  nopol: a.nopol ?? "",
+  status: a.status ?? "",
+  tipeArmada: a.tipe_armada ?? "",
+  tahun: a.tahun ?? null,
+  bayarOs: a.bayar_os ?? 0,
+  rekomendasi: a.rekomendasi ?? "",
+  tindakLanjut: a.rekomendasi ?? "",
+  bukti:
+    (typeof a.bukti === "string"
+      ? JSON.parse(a.bukti || "[]")
+      : Array.isArray(a.bukti)
+      ? a.bukti
+      : []
+    ).map((f, i) =>
+      typeof f === "string"
+        ? { name: `Bukti ${i + 1}`, url: fixUrl(f) }
+        : { ...f, url: fixUrl(f?.url || "") }
+    ),
+}));
 
   const totalOsHarusDibayar = rincianArmada.reduce((s, a) => {
     const x = Number(a.bayarOs);
@@ -240,8 +310,8 @@ async function downloadPdfFromRow(row) {
 
       if (isImageFile(f.name)) {
         try {
-          buktiImages[`${rIndex}-${bIndex}`] = await loadImageAsDataURL(f.url);
-        } catch {}
+const safeUrl = fixUrl(f.url);
+buktiImages[`${rIndex}-${bIndex}`] = await loadImageAsDataURL(safeUrl);        } catch {}
       }
     }
   }
@@ -310,7 +380,7 @@ async function downloadPdfFromRow(row) {
 
       buktiList.forEach((f, i) => {
         const key = `${rIndex}-${i}`;
-        const url = f.url;
+        const url = fixUrl(f.url);
 
         // ---- jika PDF ----
         if (/\.pdf$/i.test(f.name)) {
@@ -395,7 +465,8 @@ async function downloadPdfFromRow(row) {
 
       if (isImageFile(f.name)) {
         // tampilkan gambar
-        const dataURL = await loadImageAsDataURL(f.url);
+        const safeUrl = fixUrl(f.url);
+const dataURL = await loadImageAsDataURL(safeUrl);
         const maxW = 140;
         const maxH = 110;
 
@@ -432,7 +503,7 @@ async function downloadPdfFromRow(row) {
       } else {
         setFontNormal(doc, 12);
         doc.text(`• ${f.name}`, pad, y);
-        doc.link(pad, y - 10, 200, 20, { url: f.url });
+        doc.link(pad, y - 10, 200, 20, { url: fixUrl(f.url) });
         y += 18;
       }
     }
@@ -474,8 +545,9 @@ async function downloadPdfFromRow(row) {
 
     let x = pad;
 
-    for (let src of row.step3.fotoKunjungan) {
+    for (let rawSrc of row.step3.fotoKunjungan) {
       try {
+        const src = fixUrl(rawSrc);
         const img = new Image();
         img.crossOrigin = "anonymous";
 
@@ -534,7 +606,7 @@ async function downloadPdfFromRow(row) {
 
     // === TTD PETUGAS ===
     if (ttdPetugas) {
-      const imgPetugas = await loadImageAsDataURL(ttdPetugas);
+      const imgPetugas = await loadImageAsDataURL(fixUrl(ttdPetugas));
       setFontNormal(doc, 12);
       doc.text("Petugas", x, y + 12);
       doc.addImage(imgPetugas, "PNG", x, y + 18, maxW, maxH);
@@ -543,7 +615,7 @@ async function downloadPdfFromRow(row) {
 
     // === TTD PEMILIK ===
     if (ttdPemilik) {
-      const imgPemilik = await loadImageAsDataURL(ttdPemilik);
+      const imgPemilik = await loadImageAsDataURL(fixUrl(ttdPemilik));
       doc.text("Pemilik / Pengelola", x, y + 12);
       doc.addImage(imgPemilik, "PNG", x, y + 18, maxW, maxH);
     }
