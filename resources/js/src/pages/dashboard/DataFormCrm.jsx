@@ -19,15 +19,14 @@ async function addVerificationNotification({
     : `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 
   const payload = {
-  report_id: reportCode,      // kode laporan, mis. CRM-2026-770
-  report_id_int: String(reportId), // db id numeric
-  report_uuid: "",
+  report_id: reportCode,
+  report_id_int: String(reportId),
+  report_uuid: null,
   perusahaan,
   status,
   note,
   ts,
   petugas: petugas || "-",
-  payload: { reportId, reportCode, status, note, perusahaan },
 };
 
   const res = await fetch("https://moveon-jr.alwaysdata.net/api/crm-notifikasi", {

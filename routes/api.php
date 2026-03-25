@@ -234,7 +234,7 @@ Route::post('/crm-notifikasi', function (Request $req) {
         DB::table('crm_notifikasi_rows')->insert([
             'id' => (string) \Illuminate\Support\Str::uuid(),
             'report_id' => $req->report_id,
-            'report_id_int' => $req->report_id,
+            'report_id_int' => $req->report_id_int,
             'report_uuid' => $req->report_uuid,
             'perusahaan' => $req->perusahaan,
             'status' => $req->status,
