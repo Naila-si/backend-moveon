@@ -52,7 +52,7 @@ export default function DataFromManifest() {
     setLoading(true);
 
     try {
-      const res = await fetch("http://moveon-jr.alwaysdata.net/api/manifest-submissions");
+      const res = await fetch("https://moveon-jr.alwaysdata.net/api/manifest-submissions");
       const data = await res.json();
 
       console.log("Data dari API:", data);
@@ -73,7 +73,7 @@ export default function DataFromManifest() {
   setLoading(true);
 
   try {
-    const res = await fetch("http://moveon-jr.alwaysdata.net/api/manifest-submissions");
+    const res = await fetch("https://moveon-jr.alwaysdata.net/api/manifest-submissions");
     const data = await res.json();
 
     setRows(data || []);
@@ -89,7 +89,7 @@ export default function DataFromManifest() {
     if (!window.confirm("Hapus data manifest ini?")) return;
 
     try {
-      const res = await fetch(`http://moveon-jr.alwaysdata.net/api/manifest-submissions/${id}`, {
+      const res = await fetch(`https://moveon-jr.alwaysdata.net/api/manifest-submissions/${id}`, {
   method: "DELETE",
 });
 

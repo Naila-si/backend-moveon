@@ -98,7 +98,7 @@ export default function Analitik() {
 
     try {
 
-      const res = await fetch(`http://moveon-jr.alwaysdata.net/api/dashboard?year=${selectedYear}`)
+      const res = await fetch(`https://moveon-jr.alwaysdata.net/api/dashboard?year=${selectedYear}`)
       const data = await res.json()
 
       setEmployees(data.employees || [])

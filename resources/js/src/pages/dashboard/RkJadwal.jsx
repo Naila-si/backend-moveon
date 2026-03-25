@@ -30,7 +30,7 @@ const initials = (name) => {
 const ensureSamsat = async (name, loket) => {
   if (!name?.trim()) return null;
 
-  const res = await fetch("http://moveon-jr.alwaysdata.net/api/samsat", {
+  const res = await fetch("https://moveon-jr.alwaysdata.net/api/samsat", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -159,7 +159,7 @@ export default function RKJadwal() {
   const isStatusShown = (status) => (statusFilter === "all" ? true : status === statusFilter);
 
   const loadPeople = async () => {
-  const res = await fetch("http://moveon-jr.alwaysdata.net/api/employees");
+  const res = await fetch("https://moveon-jr.alwaysdata.net/api/employees");
   const data = await res.json();
 
   setPeople(normalizePeople(data));
@@ -168,7 +168,7 @@ export default function RKJadwal() {
  const loadEntriesForMonth = async (y, m) => {
 
   const res = await fetch(
-    `http://moveon-jr.alwaysdata.net/api/rkj-entries?year=${y}&month=${m+1}`
+    `https://moveon-jr.alwaysdata.net/api/rkj-entries?year=${y}&month=${m+1}`
   );
 
   const data = await res.json();
@@ -178,7 +178,7 @@ export default function RKJadwal() {
 
  const loadSamsat = async () => {
 
-  const res = await fetch("http://moveon-jr.alwaysdata.net/api/samsat");
+  const res = await fetch("https://moveon-jr.alwaysdata.net/api/samsat");
   const data = await res.json();
 
   setSamsats(data || []);
@@ -203,7 +203,7 @@ export default function RKJadwal() {
 
     if (mode === "create") {
       // upsert by (pid,date)
-      const res = await fetch("http://moveon-jr.alwaysdata.net/api/rkj-entries", {
+      const res = await fetch("https://moveon-jr.alwaysdata.net/api/rkj-entries", {
   method: "POST",
   headers: {
     "Content-Type": "application/json",
@@ -222,7 +222,7 @@ export default function RKJadwal() {
         await loadEntriesForMonth(year, month);
       }
     } else {
-      const res = await fetch(`http://moveon-jr.alwaysdata.net/api/rkj-entries/${id}`, {
+      const res = await fetch(`https://moveon-jr.alwaysdata.net/api/rkj-entries/${id}`, {
   method: "PUT",
   headers: {
     "Content-Type": "application/json",
@@ -244,7 +244,7 @@ export default function RKJadwal() {
 
   const deleteEntry = async () => {
     if (!entryModal?.id) return;
-const res = await fetch(`http://moveon-jr.alwaysdata.net/api/rkj-entries/${entryModal.id}`, {
+const res = await fetch(`https://moveon-jr.alwaysdata.net/api/rkj-entries/${entryModal.id}`, {
   method: "DELETE",
 });
     if (!res.ok) {
@@ -277,7 +277,7 @@ const res = await fetch(`http://moveon-jr.alwaysdata.net/api/rkj-entries/${entry
       loket: newLoket,
     };
 
-   const res = await fetch("http://moveon-jr.alwaysdata.net/api/employees", {
+   const res = await fetch("https://moveon-jr.alwaysdata.net/api/employees", {
   method: "POST",
   headers: {
     "Content-Type": "application/json",
@@ -334,7 +334,7 @@ const data = await res.json();
       samsat_id: samsatIdFinal || null,
     };
 
-    const res =await fetch(`http://moveon-jr.alwaysdata.net/api/employees/${editId}`, {
+    const res =await fetch(`https://moveon-jr.alwaysdata.net/api/employees/${editId}`, {
   method: "PUT",
   headers: {
     "Content-Type": "application/json",
@@ -373,7 +373,7 @@ const data = await res.json();
 
     const pid = deleteTarget.id;
 
-    const res = await fetch(`http://moveon-jr.alwaysdata.net/api/employees/${pid}`, {
+    const res = await fetch(`https://moveon-jr.alwaysdata.net/api/employees/${pid}`, {
   method: "DELETE",
 });
 

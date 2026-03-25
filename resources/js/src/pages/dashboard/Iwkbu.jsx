@@ -109,7 +109,7 @@ function useEmployees() {
 
       try{
 
-        const res = await fetch("http://moveon-jr.alwaysdata.net/api/employees");
+        const res = await fetch("https://moveon-jr.alwaysdata.net/api/employees");
         const data = await res.json();
 
         setEmployees(data || []);
@@ -310,7 +310,7 @@ const exportToExcel = async () => {
 
   try{
 
-    const res = await fetch("http://moveon-jr.alwaysdata.net/api/iwkbu-all");
+    const res = await fetch("https://moveon-jr.alwaysdata.net/api/iwkbu-all");
     const allRows = await res.json();
 
     if(!allRows.length){
@@ -345,7 +345,7 @@ const exportToExcel = async () => {
 
   try{
 
-    const res = await fetch("http://moveon-jr.alwaysdata.net/api/iwkbu-total");
+    const res = await fetch("https://moveon-jr.alwaysdata.net/api/iwkbu-total");
     const json = await res.json();
 
     setTotalNominalAll(json.total || 0);
@@ -362,7 +362,7 @@ const exportToExcel = async () => {
   const fetchFilterOptions = async () => {
   try {
 
-    const res = await fetch("http://moveon-jr.alwaysdata.net/api/iwkbu-filters");
+    const res = await fetch("https://moveon-jr.alwaysdata.net/api/iwkbu-filters");
     const allRows = await res.json();
 
     const safeUniq = (arr, { upper = false } = {}) =>
@@ -455,7 +455,7 @@ const exportToExcel = async () => {
   setLoadingRows(true);
 
   try {
-    const res = await fetch(`http://moveon-jr.alwaysdata.net/api/iwkbu?page=${page}`);
+    const res = await fetch(`https://moveon-jr.alwaysdata.net/api/iwkbu?page=${page}`);
     const json = await res.json();
 
     setRows((json.data || []).map(fromDB));
@@ -689,7 +689,7 @@ const exportToExcel = async () => {
     };
 
     const payload = toDB(next);
-    const res = await fetch("http://moveon-jr.alwaysdata.net/api/iwkbu",{
+    const res = await fetch("https://moveon-jr.alwaysdata.net/api/iwkbu",{
   method:"POST",
   headers:{
     "Content-Type":"application/json"
@@ -751,7 +751,7 @@ if(!res.ok){
 
     if (value === "") dbValue = null;
 
-    const res = await fetch(`http://moveon-jr.alwaysdata.net/api/iwkbu/${id}`,{
+    const res = await fetch(`https://moveon-jr.alwaysdata.net/api/iwkbu/${id}`,{
   method:"PUT",
   headers:{
     "Content-Type":"application/json"
@@ -785,7 +785,7 @@ if(!res.ok){
 
   const deleteRow = async (id) => {
     if (!window.confirm("Hapus baris ini?")) return;
-    const res = await fetch(`http://moveon-jr.alwaysdata.net/api/iwkbu/${id}`,{
+    const res = await fetch(`https://moveon-jr.alwaysdata.net/api/iwkbu/${id}`,{
   method:"DELETE"
 });
 
