@@ -14,44 +14,44 @@ async function addVerificationNotification({
 }) {
   const now = new Date();
 
-const ts = waktuValidasi
-  ? waktuValidasi
-  : `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  const ts = waktuValidasi
+    ? waktuValidasi
+    : `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 
   const payload = {
-  report_id: reportId,        // pk_id (PRIMARY KEY) I
-  report_code: reportCode,    // CRM-xxxx
-  perusahaan,
-  status,
-  note,
-  ts,
-  petugas: petugas || "-",
-  payload: { reportId, status, note, perusahaan },
-};
+    report_uuid: reportId,      // <-- GANTI dari report_id ke report_uuid
+    report_code: reportCode,
+    perusahaan,
+    status,
+    note,
+    ts,
+    petugas: petugas || "-",
+    payload: { reportId, status, note, perusahaan },
+  };
 
-const res = await fetch("https://moveon-jr.alwaysdata.net/api/crm-notifikasi", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify(payload),
-});
+  const res = await fetch("https://moveon-jr.alwaysdata.net/api/crm-notifikasi", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
 
-const text = await res.text();
+  const text = await res.text();
+  console.log("INSERT NOTIF RAW:", text);
 
-let data = null;
+  let data = null;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    console.error("Response bukan JSON:", text);
+  }
 
-try {
-  data = JSON.parse(text);
-} catch {
-  console.error("Response bukan JSON:", text);
-}
+  if (!res.ok) {
+    throw new Error(`Gagal insert notifikasi: ${text}`);
+  }
 
-console.log("INSERT NOTIF:", data);
-
-if (!res.ok) {
-  console.error("Gagal insert notif");
-}
+  return data;
 }
 
 const PAGE_SIZE = 50;
@@ -294,12 +294,13 @@ step3.suratPernyataan = normalizeUploadedFiles(
     setVerifyStatus(selected?.step4?.statusValidasi ?? "");
   }, [selected]);
 
-  const handleSaveVerification = async () => {
+const handleSaveVerification = async () => {
+  try {
     if (!selected?.dbId) {
-  alert("ID laporan tidak ditemukan dari server");
-  console.log("Selected data:", selected);
-  return;
-}
+      alert("ID laporan tidak ditemukan dari server");
+      console.log("Selected data:", selected);
+      return;
+    }
 
     if (!verifyStatus) {
       alert("Silakan pilih status validasi.");
@@ -309,10 +310,11 @@ step3.suratPernyataan = normalizeUploadedFiles(
     const now = new Date();
     const pad = (n) => String(n).padStart(2, "0");
     const ts = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(
-      now.getDate(),
+      now.getDate()
     )} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
 
     const normalizedStatus = normalizeStatusValidasi(verifyStatus);
+
     const newStep4 = {
       ...(selected.step4 || {}),
       validasiOleh: "Petugas",
@@ -321,45 +323,46 @@ step3.suratPernyataan = normalizeUploadedFiles(
       waktuValidasi: ts,
     };
 
-    const res = await fetch(`https://moveon-jr.alwaysdata.net/api/crm-reports/${selected.dbId}`, {
-  method: "PUT",
-  headers: {
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify({
-    step4: newStep4,
-  }),
-});
+    const res = await fetch(
+      `https://moveon-jr.alwaysdata.net/api/crm-reports/${selected.dbId}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          step4: newStep4,
+        }),
+      }
+    );
 
-const text = await res.text();   // baca sekali saja
-console.log("RAW SERVER RESPONSE:", text);
+    const text = await res.text();
+    console.log("RAW SERVER RESPONSE:", text);
 
-let updated = null;
+    let updated = null;
+    try {
+      updated = JSON.parse(text);
+    } catch (e) {
+      console.error("Response bukan JSON:", text);
+    }
 
-try {
-  updated = JSON.parse(text);
-} catch (e) {
-  console.error("Response bukan JSON:", text);
-}
-
-if (!res.ok) {
-  alert("Server error. Lihat console.");
-  return;
-}
+    if (!res.ok) {
+      throw new Error("Gagal update laporan: " + text);
+    }
 
     const finalStep4 = updated?.step4 || newStep4;
 
     setRows((prev) =>
       prev.map((row) =>
-        row.dbId === selected.dbId ? { ...row, step4: finalStep4 } : row,
-      ),
+        row.dbId === selected.dbId ? { ...row, step4: finalStep4 } : row
+      )
     );
 
     setSelected((prev) => (prev ? { ...prev, step4: finalStep4 } : prev));
 
     await addVerificationNotification({
-      reportId: selected.dbId,              // UUID
-      reportCode: selected.id,              // CRM-2026-xxx
+      reportId: selected.dbId,
+      reportCode: selected.id,
       status: finalStep4.statusValidasi,
       note: finalStep4.catatanValidasi || "",
       waktuValidasi: finalStep4.waktuValidasi,
@@ -367,8 +370,13 @@ if (!res.ok) {
       petugas: `${selected.step1?.petugasDepan || ""}`.trim(),
     });
 
+    alert("Verifikasi berhasil disimpan dan notifikasi dikirim ke user.");
     setVerifyOpen(false);
-  };
+  } catch (err) {
+    console.error(err);
+    alert(err.message || "Terjadi kesalahan saat menyimpan verifikasi.");
+  }
+};
 
  async function handleDelete(dbId) {
   if (!window.confirm("Yakin ingin menghapus laporan ini?")) return;
@@ -1405,8 +1413,8 @@ doc.save(`Laporan_CRM_${perusahaanSafe}.pdf`);
                       onChange={(e) => setVerifyNote(e.target.value)}
                     />
                     <small className="muted">
-                      Menyimpan akan mengubah status menjadi <b>Tervalidasi</b>.
-                    </small>
+  Menyimpan akan memperbarui status verifikasi sesuai pilihan.
+</small>
                   </div>
                   <div className="dfc-modal-actions" style={{ marginTop: 8 }}>
                     <button

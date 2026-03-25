@@ -566,30 +566,24 @@ async function downloadPdfFromRow(row) {
 }
 
 function mapStatusLabel(status) {
-  if (!status) return "Diproses";
+  if (!status) return "Menunggu";
 
-  const s = String(status).toLowerCase();
+  const s = String(status).toLowerCase().trim();
 
-  if (s === "pending" || s === "menunggu") return "Pending";
+  if (s.includes("valid")) return "Tervalidasi";
+  if (s.includes("menunggu") || s.includes("pending")) return "Menunggu";
 
-  if (
-    s === "tervalidasi" ||
-    s === "validated" ||
-    s === "approved" ||
-    s === "selesai"
-  )
-    return "Selesai";
-
-  if (s === "ditolak" || s === "rejected") return "Ditolak";
-
-  return "Diproses";
+  return "Menunggu";
 }
 
 function getPetugasName(it, petugasMap) {
   if (it?.petugas) return it.petugas;
-  if (petugasMap?.[it?.report_uuid]) {
-    return petugasMap[it.report_uuid];
+
+  const rid = it?.report_uuid || it?.report_id;
+  if (rid && petugasMap?.[rid]) {
+    return petugasMap[rid];
   }
+
   return "-";
 }
 
@@ -631,8 +625,8 @@ export default function NotifikasiBerkas() {
     setItems(data || []);
 
     const uniqueReports = [
-      ...new Set((data || []).map(d => d.report_uuid).filter(Boolean))
-    ];
+  ...new Set((data || []).map(d => d.report_uuid || d.report_id).filter(Boolean))
+];
 
     const map = {};
 
@@ -791,17 +785,17 @@ export default function NotifikasiBerkas() {
                       <td>{getPetugasName(it, petugasMap)}</td>
                       <td>{it?.perusahaan || "-"}</td>
                       <td>
-                        <span
-                          className={`badge ${
-                            mapStatusLabel(it?.status) === "Selesai"
-                              ? "badge-success"
-                              : mapStatusLabel(it?.status) === "Pending"
-                              ? "badge-pending"
-                              : "badge-process"
-                          }`}
-                        >
-                          {mapStatusLabel(it?.status)}
-                        </span>
+                        const statusLabel = mapStatusLabel(it?.status);
+
+<span
+  className={`badge ${
+    statusLabel === "Tervalidasi"
+      ? "badge-success"
+      : "badge-pending"
+  }`}
+>
+  {statusLabel}
+</span>
                       </td>
                       <td>{it?.note || "-"}</td>
                       <td>{new Date(it.ts).toLocaleString()}</td>
@@ -816,7 +810,7 @@ export default function NotifikasiBerkas() {
                           title="Unduh Laporan PDF"
                           onClick={async () => {
                             try {
-                              const reportId = it?.report_uuid;
+                              const reportId = it?.report_uuid || it?.report_id;
                               if (!reportId) return alert("Report ID tidak ada.");
                               const row = await fetchReportFull(reportId);
                               downloadPdfFromRow(row);
