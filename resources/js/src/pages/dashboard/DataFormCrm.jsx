@@ -19,15 +19,16 @@ async function addVerificationNotification({
     : `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 
   const payload = {
-    report_uuid: reportId,      // <-- GANTI dari report_id ke report_uuid
-    report_code: reportCode,
-    perusahaan,
-    status,
-    note,
-    ts,
-    petugas: petugas || "-",
-    payload: { reportId, status, note, perusahaan },
-  };
+  report_id: reportCode,      // kode laporan, mis. CRM-2026-770
+  report_id_int: String(reportId), // db id numeric
+  report_uuid: "",
+  perusahaan,
+  status,
+  note,
+  ts,
+  petugas: petugas || "-",
+  payload: { reportId, reportCode, status, note, perusahaan },
+};
 
   const res = await fetch("https://moveon-jr.alwaysdata.net/api/crm-notifikasi", {
     method: "POST",
@@ -38,13 +39,11 @@ async function addVerificationNotification({
   });
 
   const text = await res.text();
-  console.log("INSERT NOTIF RAW:", text);
 
   let data = null;
   try {
     data = JSON.parse(text);
   } catch {
-    console.error("Response bukan JSON:", text);
   }
 
   if (!res.ok) {
@@ -169,7 +168,6 @@ async function fetchReports() {
 
   try {
     const url = `https://moveon-jr.alwaysdata.net/api/crm-reports?page=${page}&q=${query}&status=${filterValidasi}`;
-    console.log("FETCH URL:", url);
 
     const res = await fetch(url, {
       method: "GET",
@@ -179,19 +177,13 @@ async function fetchReports() {
       cache: "no-store",
     });
 
-    console.log("FETCH STATUS:", res.status, res.statusText);
-    console.log("FETCH HEADERS content-type:", res.headers.get("content-type"));
-    console.log("FETCH HEADERS content-encoding:", res.headers.get("content-encoding"));
-
     const rawText = await res.text();
-    console.log("RAW RESPONSE TEXT:", rawText);
 
     if (!res.ok) {
       throw new Error("API ERROR: " + rawText);
     }
 
     const result = JSON.parse(rawText);
-    console.log("PARSED RESULT:", result);
 
     const mapped = (result.data || []).map((r) => {
   const step2 = r.step2 || {};
@@ -1242,7 +1234,6 @@ doc.save(`Laporan_CRM_${perusahaanSafe}.pdf`);
                       <button
                         className="btn btn-soft"
                         onClick={() => {
-  console.log("ROW DATA:", d);
   setSelected(d);
 }}
                       >
@@ -1629,32 +1620,9 @@ doc.save(`Laporan_CRM_${perusahaanSafe}.pdf`);
       return raw.includes(".pdf") || mime.includes("pdf");
     };
 
-    console.log("fotoKunjungan:", fotoKunjungan);
-    console.log("evidenceList:", evidenceList);
-    console.log("suratList:", suratList);
-    console.log(
-      "evidence images:",
-      evidenceList.filter((f) => f?.url)
-    );
+evidenceList.forEach((f, i) => {});
 
-    console.log("FULL selected.step3 =", selected.step3);
-console.log("fotoKunjungan =", selected.step3?.fotoKunjungan);
-console.log("evidence =", selected.step3?.evidence);
-console.log("suratPernyataan =", selected.step3?.suratPernyataan);
-
-evidenceList.forEach((f, i) => {
-  console.log("EVIDENCE ITEM", i, {
-    file: f,
-    url: f?.url,
-    name: f?.name,
-    mime: f?.mime,
-    original: f?.original,
-  });
-});
-
-fotoKunjungan.forEach((f, i) => {
-  console.log("FOTO ITEM", i, f);
-});
+fotoKunjungan.forEach((f, i) => {});
 
     return (
       <>
@@ -1696,10 +1664,8 @@ fotoKunjungan.forEach((f, i) => {
             src={f.url}
             alt={f?.name || `Evidence ${i + 1}`}
             onLoad={() => {
-              console.log("✅ BERHASIL LOAD:", f.url);
             }}
             onError={(e) => {
-              console.log("❌ GAGAL LOAD:", f.url);
               e.currentTarget.style.display = "none";
             }}
           />
@@ -1729,10 +1695,8 @@ fotoKunjungan.forEach((f, i) => {
               src={f.url}
               alt={f?.name || `Surat ${i + 1}`}
               onLoad={() => {
-                console.log("✅ BERHASIL LOAD SURAT:", f.url);
               }}
               onError={(e) => {
-                console.log("❌ GAGAL LOAD SURAT:", f.url, f);
                 e.currentTarget.style.display = "none";
               }}
             />

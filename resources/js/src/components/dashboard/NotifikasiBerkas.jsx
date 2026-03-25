@@ -24,6 +24,8 @@ function formatRupiah(n) {
    =========================== */
 
 async function loadImageAsDataURL(src) {
+  if (!src) throw new Error("Image source kosong");
+
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.crossOrigin = "anonymous";
@@ -67,21 +69,33 @@ function setFontBold(doc, size = 12) {
 }
 
 async function fetchReportFull(reportId) {
-  const res = await fetch(`https://moveon-jr.alwaysdata.net/api/crm-reports/${reportId}`);
-  const report = await res.json();
+  const cleanId = String(reportId || "").trim();
 
+  const res = await fetch(`https://moveon-jr.alwaysdata.net/api/crm-reports/${encodeURIComponent(cleanId)}`);
+
+  if (!res.ok) {
+    const errText = await res.text();
+    console.error("fetchReportFull gagal:", cleanId, errText);
+    throw new Error(`Report ${cleanId} tidak ditemukan (${res.status})`);
+  }
+
+  const report = await res.json();
   if (!report) throw new Error("Report tidak ditemukan");
 
   const resArmada = await fetch(
-    `https://moveon-jr.alwaysdata.net/api/crm-armada/${reportId}`
+    `https://moveon-jr.alwaysdata.net/api/crm-armada/${report.pk_id}`
   );
-  const armadaRows = await resArmada.json();
 
-  // parse JSON dari database MySQL
-  report.step1 = JSON.parse(report.step1 || "{}");
-  report.step2 = JSON.parse(report.step2 || "{}");
-  report.step3 = JSON.parse(report.step3 || "{}");
-  report.step4 = JSON.parse(report.step4 || "{}");
+  const armadaRows = resArmada.ok ? await resArmada.json() : [];
+
+  report.step1 =
+    typeof report.step1 === "string" ? JSON.parse(report.step1 || "{}") : (report.step1 || {});
+  report.step2 =
+    typeof report.step2 === "string" ? JSON.parse(report.step2 || "{}") : (report.step2 || {});
+  report.step3 =
+    typeof report.step3 === "string" ? JSON.parse(report.step3 || "{}") : (report.step3 || {});
+  report.step4 =
+    typeof report.step4 === "string" ? JSON.parse(report.step4 || "{}") : (report.step4 || {});
 
   const rincianArmada = (armadaRows || []).map((a) => ({
     nopol: a.nopol ?? "",
@@ -91,7 +105,12 @@ async function fetchReportFull(reportId) {
     bayarOs: a.bayar_os ?? 0,
     rekomendasi: a.rekomendasi ?? "",
     tindakLanjut: a.rekomendasi ?? "",
-    bukti: a.bukti ? JSON.parse(a.bukti) : [],
+    bukti:
+    typeof a.bukti === "string"
+        ? JSON.parse(a.bukti || "[]")
+        : Array.isArray(a.bukti)
+        ? a.bukti
+        : [],
   }));
 
   const totalOsHarusDibayar = rincianArmada.reduce((s, a) => {
@@ -100,7 +119,7 @@ async function fetchReportFull(reportId) {
   }, 0);
 
   return {
-    id: report.report_code || report.id,
+    id: report.report_code || report.pk_id,
     step1: report.step1 || {},
     step2: {
       ...(report.step2 || {}),
@@ -148,7 +167,7 @@ async function downloadPdfFromRow(row) {
   let y = pad;
 
   /* HEADER */
-  const logoDataUrl = await loadImageAsDataURL("/assets/logo-bulat.png");
+  const logoDataUrl = await loadImageAsDataURL("https://moveon-jr.alwaysdata.net/assets/logo-bulat.png");
   const logoSize = 34;
 
   doc.addImage(logoDataUrl, "PNG", pad + 523 - logoSize, y, logoSize, logoSize);
@@ -539,14 +558,6 @@ async function downloadPdfFromRow(row) {
 
   setFontNormal(doc, 12);
 
-  const val = [
-    `Validasi oleh : ${row.step4.validasiOleh || "-"}`,
-    `Status        : ${row.step4.statusValidasi || "-"}`,
-    `Waktu         : ${row.step4.waktuValidasi || "-"}`,
-    `Wilayah       : ${row.step4.wilayah || "-"}`,
-    `Catatan       : ${row.step4.catatanValidasi || "-"}`,
-  ];
-
   y = drawKeyValue(doc, pad, y, "Validasi oleh", row.step4.validasiOleh);
   y = drawKeyValue(doc, pad, y, "Status", row.step4.statusValidasi);
   y = drawKeyValue(doc, pad, y, "Waktu", row.step4.waktuValidasi);
@@ -576,68 +587,29 @@ function mapStatusLabel(status) {
   return "Menunggu";
 }
 
-function getPetugasName(it, petugasMap) {
-  if (it?.petugas) return it.petugas;
-
-  const rid = it?.report_uuid || it?.report_id;
-  if (rid && petugasMap?.[rid]) {
-    return petugasMap[rid];
-  }
-
-  return "-";
-}
-
-async function fetchPetugasByReportId(reportId) {
-  const res = await fetch(`https://moveon-jr.alwaysdata.net/api/crm-reports/${reportId}`);
-  const data = await res.json();
-
-  if (!data?.step1) return "-";
-
-  let s1 = data.step1;
-
-  // kalau masih string → parse
-  if (typeof s1 === "string") {
-    try {
-      s1 = JSON.parse(s1);
-    } catch {
-      s1 = {};
-    }
-  }
-
-  return [s1.petugasDepan, s1.petugasBelakang]
-    .filter(Boolean)
-    .join(" ");
+function getPetugasName(it) {
+  return it?.petugas || "-";
 }
 
 export default function NotifikasiBerkas() {
   const navigate = useNavigate();
-  const [petugasMap, setPetugasMap] = useState({});
   const [items, setItems] = useState([]);
   const [q, setQ] = useState("");
   const [sortKey, setSortKey] = useState("ts");
   const [sortDir, setSortDir] = useState("desc");
 
-  const fetchNotif = async () => {
+const fetchNotif = async () => {
   try {
     const res = await fetch("https://moveon-jr.alwaysdata.net/api/crm-notifikasi");
-    const data = await res.json();
 
-    setItems(data || []);
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
 
-    const uniqueReports = [
-  ...new Set((data || []).map(d => d.report_uuid || d.report_id).filter(Boolean))
-];
+    const rows = await res.json();
+    console.log("notif rows:", rows);
 
-    const map = {};
-
-    await Promise.all(
-      uniqueReports.map(async (rid) => {
-        map[rid] = await fetchPetugasByReportId(rid);
-      })
-    );
-
-    setPetugasMap(map);
-
+    setItems(Array.isArray(rows) ? rows : []);
   } catch (err) {
     console.error("fetchNotif error:", err);
   }
@@ -651,21 +623,22 @@ export default function NotifikasiBerkas() {
   }, []);
 
   /* ====== FILTERING ====== */
-  const filtered = useMemo(() => {
-  let data = [...items];
+ const filtered = useMemo(() => {
+  let data = Array.isArray(items) ? [...items] : [];
 
   if (q.trim()) {
     const s = q.toLowerCase();
 
     data = data.filter((it) => {
-      const petugasName = getPetugasName(it, petugasMap);
+      const petugasName = getPetugasName(it);
 
       const msg = [
-        petugasName || "",        // ✅ NAMA PETUGAS
-        it?.perusahaan || "",     // ✅ NAMA PERUSAHAAN
+        petugasName || "",
+        it?.perusahaan || "",
         it?.status || "",
         it?.note || "",
         it?.report_id || "",
+        it?.report_uuid || "",
         it?.ts || "",
       ]
         .join(" ")
@@ -678,14 +651,14 @@ export default function NotifikasiBerkas() {
   const dir = sortDir === "asc" ? 1 : -1;
 
   data.sort((a, b) => {
-    const va = a[sortKey] ?? "";
-    const vb = b[sortKey] ?? "";
-
     if (sortKey === "petugas") {
-      const pa = getPetugasName(a, petugasMap).toLowerCase();
-      const pb = getPetugasName(b, petugasMap).toLowerCase();
+      const pa = getPetugasName(a).toLowerCase();
+      const pb = getPetugasName(b).toLowerCase();
       return pa > pb ? dir : pa < pb ? -dir : 0;
     }
+
+    const va = a?.[sortKey] ?? "";
+    const vb = b?.[sortKey] ?? "";
 
     if (sortKey === "ts") {
       const ta = Date.parse(va) || 0;
@@ -693,11 +666,11 @@ export default function NotifikasiBerkas() {
       return (ta - tb) * dir;
     }
 
-    return va > vb ? dir : va < vb ? -dir : 0;
+    return String(va).localeCompare(String(vb)) * dir;
   });
 
   return data;
-}, [items, q, sortKey, sortDir, petugasMap]);
+}, [items, q, sortKey, sortDir]);
 
   function toggleSort(key) {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -708,28 +681,24 @@ export default function NotifikasiBerkas() {
   }
 
   async function handleDelete(id) {
-    if (!confirm("Hapus notifikasi ini?")) return;
+  if (!confirm("Hapus notifikasi ini?")) return;
 
-    const { error } = await fetch(`https://moveon-jr.alwaysdata.net/api/crm-notifikasi/${id}`, {
-      method: "DELETE",
-    });
+  try {
+    const res = await fetch(
+      `https://moveon-jr.alwaysdata.net/api/crm-notifikasi/${id}`,
+      { method: "DELETE" }
+    );
 
-    if (error) {
+    if (!res.ok) {
       alert("Gagal menghapus notifikasi.");
       return;
     }
 
     fetchNotif();
+  } catch (err) {
+    console.error(err);
+    alert("Gagal menghapus notifikasi.");
   }
-
-  async function clearAll() {
-  if (!confirm("Hapus SEMUA notifikasi?")) return;
-
-  await fetch("https://moveon-jr.alwaysdata.net/api/crm-notifikasi", {
-    method: "DELETE",
-  });
-
-  fetchNotif();
 }
 
   return (
@@ -759,9 +728,8 @@ export default function NotifikasiBerkas() {
         </section>
 
         <section className="card">
-          <h2>Daftar Notifikasi</h2>
-
-          <div className="table-wrap">
+  <h2>Daftar Notifikasi</h2>
+  <div className="table-wrap">
             <table className="notif-table">
               <thead>
                 <tr>
@@ -777,53 +745,68 @@ export default function NotifikasiBerkas() {
               <tbody>
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="empty">Belum ada notifikasi.</td>
+                    <td colSpan={6} className="empty">Belum ada notifikasi.</td>
                   </tr>
                 ) : (
-                  filtered.map((it) => (
-                    <tr key={it.id}>
-                      <td>{getPetugasName(it, petugasMap)}</td>
-                      <td>{it?.perusahaan || "-"}</td>
-                      <td>
-                        const statusLabel = mapStatusLabel(it?.status);
+                  filtered.map((it) => {
+  const statusLabel = mapStatusLabel(it?.status);
 
-<span
-  className={`badge ${
-    statusLabel === "Tervalidasi"
-      ? "badge-success"
-      : "badge-pending"
-  }`}
->
-  {statusLabel}
-</span>
-                      </td>
-                      <td>{it?.note || "-"}</td>
-                      <td>{new Date(it.ts).toLocaleString()}</td>
+  return (
+    <tr key={it.id}>
+      <td>{getPetugasName(it)}</td>
+      <td>{it?.perusahaan || "-"}</td>
+      <td>
+        <span
+          className={`badge ${
+            statusLabel === "Tervalidasi"
+              ? "badge-success"
+              : "badge-pending"
+          }`}
+        >
+          {statusLabel}
+        </span>
+      </td>
+      <td>{it?.note || "-"}</td>
+      <td>
+  {Number.isNaN(new Date(it?.ts).getTime())
+    ? (it?.ts || "-")
+    : new Date(it.ts).toLocaleString()}
+</td>
 
-                      <td className="aksi">
-                        <button className="icon-btn" title="Hapus" onClick={() => handleDelete(it.id)}>
-                          🗑️
-                        </button>
+      <td className="aksi">
+        <button
+          className="icon-btn"
+          title="Hapus"
+          onClick={() => handleDelete(it.id)}
+        >
+          🗑️
+        </button>
 
-                        <button
-                          className="icon-btn"
-                          title="Unduh Laporan PDF"
-                          onClick={async () => {
-                            try {
-                              const reportId = it?.report_uuid || it?.report_id;
-                              if (!reportId) return alert("Report ID tidak ada.");
-                              const row = await fetchReportFull(reportId);
-                              downloadPdfFromRow(row);
-                            } catch (e) {
-                              alert("Gagal unduh laporan.");
-                            }
-                          }}
-                        >
-                          📄
-                        </button>
-                      </td>
-                    </tr>
-                  ))
+        <button
+          className="icon-btn"
+          title="Unduh Laporan PDF"
+          onClick={async () => {
+  try {
+    const reportId = it?.report_id;
+    if (!reportId) {
+      alert("Report ID tidak ada.");
+      return;
+    }
+
+    const row = await fetchReportFull(reportId);
+    await downloadPdfFromRow(row);
+  } catch (e) {
+    console.error(e);
+    alert(`Gagal unduh laporan untuk ${it?.report_id || "-"}.`);
+  }
+}}
+        >
+          📄
+        </button>
+      </td>
+    </tr>
+  );
+})
                 )}
               </tbody>
             </table>

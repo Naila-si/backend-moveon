@@ -67,21 +67,29 @@ Route::get('/crm-reports', function (Request $req) {
 });
 
 Route::get('/crm-reports/{id}', function ($id) {
-    $r = DB::table('crm_reports_rows')->where('pk_id', $id)->first();
+    $id = trim($id);
+
+    $r = DB::table('crm_reports_rows')
+        ->where('pk_id', $id)
+        ->orWhereRaw('TRIM(report_code) = ?', [$id])
+        ->first();
 
     if (!$r) {
-        return response()->json(['error' => 'Data tidak ditemukan'], 404);
+        return response()->json([
+            'error' => 'Data tidak ditemukan',
+            'requested' => $id,
+        ], 404);
     }
 
     return response()->json([
-    'pk_id' => $r->pk_id,
-    'report_code' => $r->report_code,
-    'step1' => json_decode($r->step1 ?? '{}', true) ?: [],
-    'step2' => json_decode($r->step2 ?? '{}', true) ?: [],
-    'step3' => json_decode($r->step3 ?? '{}', true) ?: [],
-    'step4' => json_decode($r->step4 ?? '{}', true) ?: [],
-    'step5' => json_decode($r->step5 ?? '{}', true) ?: [],
-]);
+        'pk_id' => $r->pk_id,
+        'report_code' => $r->report_code,
+        'step1' => json_decode($r->step1 ?? '{}', true) ?: [],
+        'step2' => json_decode($r->step2 ?? '{}', true) ?: [],
+        'step3' => json_decode($r->step3 ?? '{}', true) ?: [],
+        'step4' => json_decode($r->step4 ?? '{}', true) ?: [],
+        'step5' => json_decode($r->step5 ?? '{}', true) ?: [],
+    ]);
 });
 
 Route::put('/crm-reports/{id}', function (Request $req, $id) {
@@ -220,19 +228,34 @@ Route::get('/crm-notifikasi', function () {
 });
 
 Route::post('/crm-notifikasi', function (Request $req) {
-    DB::table('crm_notifikasi_rows')->insert([
-        'report_id' => $req->report_id,
-        'report_uuid' => $req->report_uuid,
-        'perusahaan' => $req->perusahaan,
-        'status' => $req->status,
-        'note' => $req->note,
-        'petugas' => $req->petugas,
-        'ts' => $req->ts,
-        'payload' => json_encode($req->payload),
-        'created_at' => now(),
-    ]);
+    try {
+        Log::info('CRM NOTIF REQUEST', $req->all());
 
-    return response()->json(['success' => true]);
+        DB::table('crm_notifikasi_rows')->insert([
+            'id' => (string) \Illuminate\Support\Str::uuid(),
+            'report_id' => $req->report_id,
+            'report_id_int' => $req->report_id,
+            'report_uuid' => $req->report_uuid,
+            'perusahaan' => $req->perusahaan,
+            'status' => $req->status,
+            'note' => $req->note,
+            'ts' => $req->ts,
+            'payload' => json_encode($req->payload),
+            'petugas' => $req->petugas,
+        ]);
+
+        return response()->json(['success' => true]);
+    } catch (\Throwable $e) {
+        Log::error('CRM NOTIF ERROR', [
+            'message' => $e->getMessage(),
+            'request' => $req->all(),
+        ]);
+
+        return response()->json([
+            'error' => $e->getMessage(),
+            'request' => $req->all(),
+        ], 500);
+    }
 });
 
 Route::delete('/crm-notifikasi/{id}', function ($id) {
