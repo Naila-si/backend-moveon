@@ -351,11 +351,11 @@ async function normalizeStep3Files(step3) {
   ...step3,
   fotoKunjungan: await normalizeFotoKunjungan(step3?.fotoKunjungan || []),
   evidence: (await normalizeImageObjects(step3?.evidence || [])).map(
-    (x) => x.path || x.url || ""
-  ),
-  suratPernyataan: (await normalizeImageObjects(step3?.suratPernyataan || [])).map(
-    (x) => x.path || x.url || ""
-  ),
+  (x) => x.url || x.path || ""
+),
+suratPernyataan: (await normalizeImageObjects(step3?.suratPernyataan || [])).map(
+  (x) => x.url || x.path || ""
+),
 };
 }
 
@@ -406,7 +406,8 @@ export default function FormCrm() {
 
       // Step 3 — Upload & Penilaian
       fotoKunjungan: null,
-      suratPernyataanEvidence: [], // max 5
+evidenceFiles: [],
+suratPernyataanFiles: [],
       nilaiKebersihan: 3,
       nilaiKelengkapan: 3,
       nilaiPelayanan: 3,
@@ -604,12 +605,17 @@ export default function FormCrm() {
 
     // Minimal satu upload
     const anyUpload =
-      form.fotoKunjungan || (form.suratPernyataanEvidence || []).length > 0;
-    if (!anyUpload) e.minimal = "Unggah foto kunjungan.";
+  form.fotoKunjungan ||
+  (form.evidenceFiles || []).length > 0 ||
+  (form.suratPernyataanFiles || []).length > 0;
 
-    if ((form.suratPernyataanEvidence || []).length > 10) {
-      e.surat = "Surat pernyataan & evidence maksimal 10 file.";
-    }
+if ((form.evidenceFiles || []).length > 10) {
+  e.evidence = "Evidence maksimal 10 file.";
+}
+
+if ((form.suratPernyataanFiles || []).length > 10) {
+  e.surat = "Surat pernyataan maksimal 10 file.";
+}
 
     // Penilaian wajib diisi (1–5)
     if (!form.nilaiKebersihan)
@@ -690,22 +696,19 @@ const handleSubmit = async () => {
     );
 
     const step3Raw = {
-      fotoKunjungan: form.fotoKunjungan ? [form.fotoKunjungan] : [],
-      evidence: form.suratPernyataanEvidence || [],
-      suratPernyataan: form.suratPernyataanEvidence || [],
-      responPemilik: form.nilaiKebersihan ?? 3,
-      ketertibanOperasional: form.nilaiKebersihan ?? 3,
-      ketaatanPerizinan: form.nilaiPelayanan ?? 3,
-      keramaianPenumpang: form.nilaiKelengkapan ?? 3,
-      ketaatanUjiKir: form.nilaiPelayanan ?? 3,
-      tandaTanganPetugas: signPetugas?.url || "",
-      tandaTanganPemilik: signPemilik?.url || "",
-    };
+  fotoKunjungan: form.fotoKunjungan ? [form.fotoKunjungan] : [],
+  evidence: form.evidenceFiles || [],
+  suratPernyataan: form.suratPernyataanFiles || [],
+  responPemilik: form.nilaiKebersihan ?? 3,
+  ketertibanOperasional: form.nilaiKebersihan ?? 3,
+  ketaatanPerizinan: form.nilaiPelayanan ?? 3,
+  keramaianPenumpang: form.nilaiKelengkapan ?? 3,
+  ketaatanUjiKir: form.nilaiPelayanan ?? 3,
+  tandaTanganPetugas: signPetugas?.url || "",
+  tandaTanganPemilik: signPemilik?.url || "",
+};
 
-    const finalStep3 = await normalizeStep3Files(step3Raw);
-
-    finalStep3.evidence = (finalStep3.evidence || []).map((x) => x.path || x.url || "");
-    finalStep3.suratPernyataan = (finalStep3.suratPernyataan || []).map((x) => x.path || x.url || "");
+const finalStep3 = await normalizeStep3Files(step3Raw);
 
     const rowPayload = buildCrmRowFromForm({
       ...form,
@@ -942,9 +945,6 @@ function Header({ dirty, onReset, onBeforeUnloadRef }) {
           <button className="btn ghost sm" onClick={handleGoHome}>
             🏠 Kembali ke Home
           </button>
-          {/* <button className="btn ghost sm" onClick={onReset}>
-            Reset Draft
-          </button> */}
         </div>
       </div>
       <div className="container">
@@ -1026,9 +1026,10 @@ function ErrorSummary({ step, step1Errors, step2Errors, step3Errors }) {
 function SidebarSummary({ form, step, step1Errors, step2Errors, step3Errors }) {
   const totalArmada = form.armadaList?.length || 0;
   const totalFiles = [
-    form.fotoKunjungan,
-    ...(form.suratPernyataanEvidence || []),
-  ].filter(Boolean).length;
+  form.fotoKunjungan,
+  ...(form.evidenceFiles || []),
+  ...(form.suratPernyataanFiles || []),
+].filter(Boolean).length;
   const badges = [
     { label: "Langkah", value: `${step}/3` },
     { label: "Armada", value: totalArmada },
@@ -1833,16 +1834,33 @@ function Step3UploadPenilaian({ form, setField, errors, onPickMultiple }) {
           </span>
         </Field>
 
-        <Field label="Upload Surat Pernyataan & Evidence (maks. 10 file, format gambar saja)">
-          <input
-  type="file"
-  multiple
-  accept="image/*"
-  onChange={onPickMultiple("suratPernyataanEvidence")}/>
-          <span className="hint">
-            {totalSurat > 0 ? `${totalSurat} file terpilih` : "Belum ada file"}
-          </span>
-        </Field>
+       <Field label="Upload Evidence (maks. 10 file, format gambar saja)">
+  <input
+    type="file"
+    multiple
+    accept="image/*"
+    onChange={onPickMultiple("evidenceFiles")}
+  />
+  <span className="hint">
+    {(form.evidenceFiles || []).length > 0
+      ? `${form.evidenceFiles.length} file terpilih`
+      : "Belum ada file"}
+  </span>
+</Field>
+
+<Field label="Upload Surat Pernyataan (maks. 10 file, format gambar saja)">
+  <input
+    type="file"
+    multiple
+    accept="image/*"
+    onChange={onPickMultiple("suratPernyataanFiles")}
+  />
+  <span className="hint">
+    {(form.suratPernyataanFiles || []).length > 0
+      ? `${form.suratPernyataanFiles.length} file terpilih`
+      : "Belum ada file"}
+  </span>
+</Field>
       </div>
 
       <div className="card-sub">

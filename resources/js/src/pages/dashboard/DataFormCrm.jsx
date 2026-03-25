@@ -56,6 +56,64 @@ if (!res.ok) {
 
 const PAGE_SIZE = 50;
 
+function normalizeUploadedFiles(input, fallbackPrefix = "File") {
+  let arr = input;
+
+  if (typeof arr === "string") {
+    try {
+      arr = JSON.parse(arr);
+    } catch {
+      arr = arr ? [arr] : [];
+    }
+  }
+
+  if (!Array.isArray(arr)) return [];
+
+  return arr
+    .filter(Boolean)
+    .map((f, i) => {
+      if (typeof f === "string") {
+        return {
+          name: `${fallbackPrefix} ${i + 1}`,
+          url: fixUrl(f),
+          mime: "",
+          original: f,
+        };
+      }
+
+      const rawUrl =
+        f?.url ||
+        f?.file ||
+        f?.path ||
+        f?.src ||
+        f?.href ||
+        "";
+
+      const rawName =
+        f?.name ||
+        f?.filename ||
+        f?.fileName ||
+        f?.original_name ||
+        f?.originalName ||
+        `${fallbackPrefix} ${i + 1}`;
+
+      const mime =
+        f?.mime ||
+        f?.mimetype ||
+        f?.type ||
+        f?.contentType ||
+        "";
+
+      return {
+        ...f,
+        name: rawName,
+        url: fixUrl(rawUrl),
+        mime,
+        original: f,
+      };
+    });
+}
+
 export default function DataFormCrm() {
   const [query, setQuery] = useState("");
   const navigate = useNavigate();
@@ -139,25 +197,16 @@ async function fetchReports() {
   const step2 = r.step2 || {};
   const step3 = r.step3 || {};
 
-  if (Array.isArray(step3.fotoKunjungan)) {
-    step3.fotoKunjungan = step3.fotoKunjungan.map((f) => fixUrl(f));
-  }
+  step3.fotoKunjungan = normalizeUploadedFiles(
+  step3.fotoKunjungan,
+  "Foto Kunjungan"
+).map((f) => f.url);
 
-  if (Array.isArray(step3.evidence)) {
-  step3.evidence = step3.evidence.map((f, i) =>
-    typeof f === "string"
-      ? { name: `Evidence ${i + 1}`, url: fixUrl(f) }
-      : { ...f, url: fixUrl(f?.url || "") }
-  );
-}
-
-if (Array.isArray(step3.suratPernyataan)) {
-  step3.suratPernyataan = step3.suratPernyataan.map((f, i) =>
-    typeof f === "string"
-      ? { name: `Surat ${i + 1}`, url: fixUrl(f) }
-      : { ...f, url: fixUrl(f?.url || "") }
-  );
-}
+  step3.evidence = normalizeUploadedFiles(step3.evidence, "Evidence");
+step3.suratPernyataan = normalizeUploadedFiles(
+  step3.suratPernyataan,
+  "Surat"
+);
 
   if (Array.isArray(step2.rincianArmada)) {
     step2.rincianArmada = step2.rincianArmada.map((a) => ({
@@ -1525,116 +1574,169 @@ doc.save(`Laporan_CRM_${perusahaanSafe}.pdf`);
       ? selected.step3.fotoKunjungan
       : [];
 
-    const filesGabung = [
-      ...(selected.step3?.suratPernyataan || []),
-      ...(selected.step3?.evidence || []),
-    ];
+    const evidenceList = Array.isArray(selected.step3?.evidence)
+      ? selected.step3.evidence
+      : [];
 
-    const filesUnique = Array.from(
-      new Map(
-        filesGabung
-          .filter(Boolean)
-          .map((f, idx) => [f?.url || f?.name || `file-${idx}`, f])
-      ).values()
-    );
+    const suratList = Array.isArray(selected.step3?.suratPernyataan)
+      ? selected.step3.suratPernyataan
+      : [];
 
     const getRaw = (file) =>
       typeof file === "string" ? file : file?.url || "";
 
-    const getHref = (file) => getRaw(file);
-
     const getName = (file, fallback = "File") =>
       typeof file === "string" ? fallback : file?.name || fallback;
 
-    const isBase64Image = (value) =>
-      /^data:image\//i.test(String(value || "").trim());
-
     const isImageFile = (file) => {
-  const raw = getRaw(file);
+      const raw = String(getRaw(file) || "").toLowerCase();
+      const decoded = decodeURIComponent(raw);
+      const name = String(getName(file, "") || "").toLowerCase();
+      const mime = String(file?.mime || file?.type || "").toLowerCase();
 
-  if (!raw) return false;
-
-  const decoded = decodeURIComponent(raw).toLowerCase();
-
-  return (
-    decoded.startsWith("data:image/") ||
-    decoded.endsWith(".png") ||
-    decoded.endsWith(".jpg") ||
-    decoded.endsWith(".jpeg") ||
-    decoded.endsWith(".webp") ||
-    decoded.endsWith(".gif")
-  );
-};
+      return (
+        decoded.startsWith("data:image/") ||
+        mime.startsWith("image/") ||
+        decoded.includes(".png") ||
+        decoded.includes(".jpg") ||
+        decoded.includes(".jpeg") ||
+        decoded.includes(".webp") ||
+        decoded.includes(".gif") ||
+        decoded.includes(".bmp") ||
+        decoded.includes(".svg") ||
+        name.endsWith(".png") ||
+        name.endsWith(".jpg") ||
+        name.endsWith(".jpeg") ||
+        name.endsWith(".webp") ||
+        name.endsWith(".gif") ||
+        name.endsWith(".bmp") ||
+        name.endsWith(".svg")
+      );
+    };
 
     const isPdfFile = (file) => {
       const raw = `${getRaw(file)} ${getName(file, "")}`.toLowerCase();
-      return raw.includes(".pdf");
+      const mime = String(file?.mime || file?.type || "").toLowerCase();
+
+      return raw.includes(".pdf") || mime.includes("pdf");
     };
+
+    console.log("fotoKunjungan:", fotoKunjungan);
+    console.log("evidenceList:", evidenceList);
+    console.log("suratList:", suratList);
+    console.log(
+      "evidence images:",
+      evidenceList.filter((f) => f?.url)
+    );
+
+    console.log("FULL selected.step3 =", selected.step3);
+console.log("fotoKunjungan =", selected.step3?.fotoKunjungan);
+console.log("evidence =", selected.step3?.evidence);
+console.log("suratPernyataan =", selected.step3?.suratPernyataan);
+
+evidenceList.forEach((f, i) => {
+  console.log("EVIDENCE ITEM", i, {
+    file: f,
+    url: f?.url,
+    name: f?.name,
+    mime: f?.mime,
+    original: f?.original,
+  });
+});
+
+fotoKunjungan.forEach((f, i) => {
+  console.log("FOTO ITEM", i, f);
+});
 
     return (
       <>
-        {/* Gambar: tampil saja, jangan bisa diklik */}
-        <div className="gallery">
-          {fotoKunjungan.map((src, idx) => (
-  <div className="thumb" key={`foto-${idx}`}>
-    <img
-      src={src}
-      alt={`Foto Kunjungan ${idx + 1}`}
-      onError={(e) => {
-        console.log("Gagal load foto:", src);
-        e.currentTarget.style.display = "none";
-      }}
-    />
-  </div>
-))}
-
-         {filesUnique.map((f, i) => {
-  const href = f?.url || "";
-  if (!href || !isImageFile(f)) return null;
-
-  return (
-    <div className="thumb" key={`img-file-${i}`}>
-      <img
-        src={href}
-        alt={f?.name || `Lampiran ${i + 1}`}
-        onError={(e) => {
-          console.log("Gagal load lampiran:", href);
-          e.currentTarget.style.display = "none";
-        }}
-      />
-    </div>
-  );
-})}
-        </div>
-
-        {/* PDF / file lain */}
-        <div className="files">
-          {filesUnique.map((f, i) => {
-            const href = getHref(f);
-            if (!href || isImageFile(f)) return null;
-
-            if (isPdfFile(f)) {
-              return (
-                <button
-                  key={i}
-                  type="button"
-                  className="file-pill"
-                  onClick={() =>
-                    window.open(href, "_blank", "noopener,noreferrer")
-                  }
-                >
-                  <IconFile /> {getName(f, `PDF ${i + 1}`)}
-                </button>
-              );
-            }
-
-            return (
-              <span key={i} className="file-pill">
-                <IconFile /> {getName(f, `File ${i + 1}`)}
+        {/* FOTO KUNJUNGAN */}
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ fontWeight: 700, marginBottom: 6 }}>Foto Kunjungan</div>
+          <div className="gallery">
+            {fotoKunjungan.length > 0 ? (
+              fotoKunjungan.map((src, idx) => (
+                <div className="thumb" key={`foto-${idx}`}>
+                  <img
+                    src={src}
+                    alt={`Foto Kunjungan ${idx + 1}`}
+                    onError={(e) => {
+                      console.log("Gagal load foto kunjungan:", src);
+                      e.currentTarget.style.display = "none";
+                    }}
+                  />
+                </div>
+              ))
+            ) : (
+              <span style={{ fontSize: 12, color: "#64748b" }}>
+                Tidak ada foto kunjungan
               </span>
-            );
-          })}
+            )}
+          </div>
         </div>
+
+        {/* EVIDENCE GAMBAR */}
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ fontWeight: 700, marginBottom: 6 }}>Evidence</div>
+          <div className="gallery">
+  {evidenceList.filter((f) => f?.url).length > 0 ? (
+    evidenceList
+      .filter((f) => f?.url)
+      .map((f, i) => (
+        <div className="thumb" key={`evidence-img-${i}`}>
+          <img
+            src={f.url}
+            alt={f?.name || `Evidence ${i + 1}`}
+            onLoad={() => {
+              console.log("✅ BERHASIL LOAD:", f.url);
+            }}
+            onError={(e) => {
+              console.log("❌ GAGAL LOAD:", f.url);
+              e.currentTarget.style.display = "none";
+            }}
+          />
+        </div>
+      ))
+  ) : (
+    <span style={{ fontSize: 12, color: "#64748b" }}>
+      Tidak ada evidence gambar
+    </span>
+  )}
+</div>
+        </div>
+
+        {/* SURAT PERNYATAAN */}
+       <div style={{ marginBottom: 12 }}>
+  <div style={{ fontWeight: 700, marginBottom: 6 }}>
+    Surat Pernyataan
+  </div>
+
+  <div className="gallery">
+    {suratList.filter((f) => f?.url).length > 0 ? (
+      suratList
+        .filter((f) => f?.url)
+        .map((f, i) => (
+          <div className="thumb" key={`surat-img-${i}`}>
+            <img
+              src={f.url}
+              alt={f?.name || `Surat ${i + 1}`}
+              onLoad={() => {
+                console.log("✅ BERHASIL LOAD SURAT:", f.url);
+              }}
+              onError={(e) => {
+                console.log("❌ GAGAL LOAD SURAT:", f.url, f);
+                e.currentTarget.style.display = "none";
+              }}
+            />
+          </div>
+        ))
+    ) : (
+      <span style={{ fontSize: 12, color: "#64748b" }}>
+        Tidak ada surat pernyataan
+      </span>
+    )}
+  </div>
+</div>
       </>
     );
   })()}
@@ -2295,18 +2397,39 @@ function fixUrl(url) {
 
   if (clean.startsWith("data:image/")) return clean;
 
-  // kalau sudah URL crm-file, JANGAN bungkus lagi
+  // kalau sudah URL proxy crm-file, pakai apa adanya
   if (clean.includes("/api/crm-file?url=")) return clean;
 
-  if (clean.startsWith("http://") || clean.startsWith("https://")) return clean;
+  // kalau absolute URL tapi domain sendiri dan ada /storage/, ubah ke proxy crm-file
+  if (clean.startsWith("http://") || clean.startsWith("https://")) {
+    try {
+      const u = new URL(clean);
 
+      // kalau file langsung di /storage/... dari domain sendiri, bungkus ke api/crm-file
+      if (
+        u.origin === BASE_URL &&
+        u.pathname.startsWith("/storage/")
+      ) {
+        return `${BASE_URL}/api/crm-file?url=${encodeURIComponent(u.pathname)}`;
+      }
+
+      // selain itu biarkan
+      return clean;
+    } catch {
+      return clean;
+    }
+  }
+
+  // kalau sudah path /storage/... → bungkus ke proxy
   if (clean.startsWith("/storage/")) {
     return `${BASE_URL}/api/crm-file?url=${encodeURIComponent(clean)}`;
   }
 
+  // kalau absolute path lain
   if (clean.startsWith("/")) {
     return `${BASE_URL}${clean}`;
   }
 
+  // fallback: anggap file ada di bawah /
   return `${BASE_URL}/api/crm-file?url=${encodeURIComponent("/" + clean)}`;
 }
