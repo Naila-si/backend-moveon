@@ -581,7 +581,7 @@ const dataURL = await loadImageAsDataURL(safeUrl);
         doc.addImage(dataURL, "JPEG", x, y, w, h);
         x += w + 15;
       } catch (e) {
-        console.warn("Gagal load foto:", src, e);
+        console.warn("Gagal load foto:", rawSrc, e);
       }
     }
 
@@ -679,7 +679,6 @@ const fetchNotif = async () => {
     }
 
     const rows = await res.json();
-    console.log("notif rows:", rows);
 
     setItems(Array.isArray(rows) ? rows : []);
   } catch (err) {

@@ -198,27 +198,58 @@ Route::get('/crm-file', function (Request $req) {
     $path = parse_url($url, PHP_URL_PATH) ?: $url;
     $path = str_replace('\\', '/', $path);
 
-    // hanya izinkan file dari /storage/crm/
-    if (!str_starts_with($path, '/storage/crm/')) {
-        return response()->json(['error' => 'Path file tidak diizinkan'], 403);
-    }
-
-    $relativePath = ltrim(str_replace('/storage/', '', $path), '/');
-
-    if (!Storage::disk('public')->exists($relativePath)) {
+    // izinkan file lokal baru dan path lama supabase
+    if (
+        !str_starts_with($path, '/storage/crm/') &&
+        !str_starts_with($path, '/crm_uploads/')
+    ) {
         return response()->json([
-            'error' => 'File tidak ditemukan',
-            'path' => $relativePath,
-        ], 404);
+            'error' => 'Path file tidak diizinkan',
+            'path' => $path,
+        ], 403);
     }
 
-    $fullPath = Storage::disk('public')->path($relativePath);
-    $mimeType = mime_content_type($fullPath) ?: 'application/octet-stream';
+    // file lokal alwaysdata
+    if (str_starts_with($path, '/storage/crm/')) {
+        $relativePath = ltrim(str_replace('/storage/', '', $path), '/');
 
-    return response()->file($fullPath, [
-        'Content-Type' => $mimeType,
-        'Cache-Control' => 'no-store, no-cache, must-revalidate',
-    ]);
+        if (!Storage::disk('public')->exists($relativePath)) {
+            return response()->json([
+                'error' => 'File tidak ditemukan',
+                'path' => $relativePath,
+            ], 404);
+        }
+
+        $fullPath = Storage::disk('public')->path($relativePath);
+        $mimeType = mime_content_type($fullPath) ?: 'application/octet-stream';
+
+        return response()->file($fullPath, [
+            'Content-Type' => $mimeType,
+            'Cache-Control' => 'no-store, no-cache, must-revalidate',
+        ]);
+    }
+
+    // file lama dari supabase bucket public
+    if (str_starts_with($path, '/crm_uploads/')) {
+        $supabaseUrl = 'https://otwthkwaxftfjujrijco.supabase.co/storage/v1/object/public' . $path;
+
+        $response = Http::get($supabaseUrl);
+
+        if (!$response->ok()) {
+            return response()->json([
+                'error' => 'File supabase tidak bisa diambil',
+                'status' => $response->status(),
+                'path' => $path,
+            ], $response->status());
+        }
+
+        return response($response->body(), 200, [
+            'Content-Type' => $response->header('Content-Type') ?: 'application/octet-stream',
+            'Cache-Control' => 'no-store, no-cache, must-revalidate',
+        ]);
+    }
+
+    return response()->json(['error' => 'File tidak ditemukan'], 404);
 });
 
 Route::get('/crm-notifikasi', function () {
