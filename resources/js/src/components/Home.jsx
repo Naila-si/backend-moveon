@@ -50,7 +50,7 @@ export default function Home() {
                 <Link className="card" to="/crm">
                   <div className="icon bubble car-ico" aria-hidden>🚘</div>
                   <div className="info">
-                    <h3 className="card-title">Formulir CRM </h3>
+                    <h3 className="card-title">Formu CRM </h3>
                     <p className="card-desc">Input & kelola data kendaraan</p>
                   </div>
                 </Link>
