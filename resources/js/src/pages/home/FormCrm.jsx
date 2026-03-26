@@ -1,1360 +1,1375 @@
 import React, {
-  useMemo,
-  useState,
-  useEffect,
-  useRef,
-  useCallback,
+    useMemo,
+    useState,
+    useEffect,
+    useRef,
+    useCallback,
 } from "react";
 
 const idr = (n) =>
-  (Number(n) || 0).toLocaleString("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    maximumFractionDigits: 0,
-  });
+    (Number(n) || 0).toLocaleString("id-ID", {
+        style: "currency",
+        currency: "IDR",
+        maximumFractionDigits: 0,
+    });
 
 const ARMADA_STATUS_OPTIONS = [
-  "Beroperasi + Bayar",
-  "Beroperasi",
-  "Dijual",
-  "Ubah Sifat",
-  "Ubah Bentuk",
-  "Rusak Sementara",
-  "Rusak Selamanya",
-  "Tidak Ditemukan",
-  "Cadangan",
-];
-
-const ARMADA_STATUS_NEED_UPLOAD = new Set(
-  [
+    "Beroperasi + Bayar",
+    "Beroperasi",
     "Dijual",
     "Ubah Sifat",
     "Ubah Bentuk",
     "Rusak Sementara",
     "Rusak Selamanya",
     "Tidak Ditemukan",
-  ].map((s) => s.toUpperCase()),
+    "Cadangan",
+];
+
+const ARMADA_STATUS_NEED_UPLOAD = new Set(
+    [
+        "Dijual",
+        "Ubah Sifat",
+        "Ubah Bentuk",
+        "Rusak Sementara",
+        "Rusak Selamanya",
+        "Tidak Ditemukan",
+    ].map((s) => s.toUpperCase()),
 );
 
 const LOKET_OPTIONS = [
-  "Loket Kantor Wilayah",
-  "Pekanbaru Kota",
-  "Pekanbaru Selatan",
-  "Pekanbaru Utara",
-  "Panam",
-  "Kubang",
-  "Bangkinang",
-  "Lipat Kain",
-  "Tapung",
-  "Siak",
-  "Perawang",
-  "Kandis",
-  "Pelalawan",
-  "Sorek",
-  "Pasir Pengaraian",
-  "Ujung Batu",
-  "Dalu-Dalu",
-  "Koto Tengah",
-  "Taluk Kuantan",
-  "Singingi Hilir",
-  "Rengat",
-  "Air Molek",
-  "Tembilahan",
-  "Kota Baru",
-  "Sungai Guntung",
-  "Loket Kantor Cabang Dumai",
-  "Dumai",
-  "Duri",
-  "Bengkalis",
-  "Selat Panjang",
-  "Bagan Siapiapi",
-  "Bagan Batu",
-  "Ujung Tanjung",
+    "Loket Kantor Wilayah",
+    "Pekanbaru Kota",
+    "Pekanbaru Selatan",
+    "Pekanbaru Utara",
+    "Panam",
+    "Kubang",
+    "Bangkinang",
+    "Lipat Kain",
+    "Tapung",
+    "Siak",
+    "Perawang",
+    "Kandis",
+    "Pelalawan",
+    "Sorek",
+    "Pasir Pengaraian",
+    "Ujung Batu",
+    "Dalu-Dalu",
+    "Koto Tengah",
+    "Taluk Kuantan",
+    "Singingi Hilir",
+    "Rengat",
+    "Air Molek",
+    "Tembilahan",
+    "Kota Baru",
+    "Sungai Guntung",
+    "Loket Kantor Cabang Dumai",
+    "Dumai",
+    "Duri",
+    "Bengkalis",
+    "Selat Panjang",
+    "Bagan Siapiapi",
+    "Bagan Batu",
+    "Ujung Tanjung",
 ];
 
 const TIPE_ARMADA_MASTER = [
-  "BUS",
-  "MINIBUS",
-  "ANGKUTAN KOTA",
-  "TRAVEL",
-  "ELF",
-  "KAPAL PENUMPANG",
+    "BUS",
+    "MINIBUS",
+    "ANGKUTAN KOTA",
+    "TRAVEL",
+    "ELF",
+    "KAPAL PENUMPANG",
 ];
 
 // bikin ID: CRM-2025-xxx
 function generateCrmId() {
-  const year = new Date().getFullYear();
-  const rand = String(Math.floor(Math.random() * 999)).padStart(3, "0");
-  return `CRM-${year}-${rand}`;
+    const year = new Date().getFullYear();
+    const rand = String(Math.floor(Math.random() * 999)).padStart(3, "0");
+    return `CRM-${year}-${rand}`;
 }
 
 // mapping dari state `form` → struktur row yang dipakai DataFormCrm
 function buildCrmRowFromForm(form) {
-  const tanggal = form.tanggal || "";
-  const waktu = form.waktu || "";
-  const tanggalWaktu = `${tanggal} ${waktu || "00:00"}`.trim();
+    const tanggal = form.tanggal || "";
+    const waktu = form.waktu || "";
+    const tanggalWaktu = `${tanggal} ${waktu || "00:00"}`.trim();
 
-  const armadaList = Array.isArray(form.armadaList) ? form.armadaList : [];
-  const firstArmada = armadaList[0] || {};
+    const armadaList = Array.isArray(form.armadaList) ? form.armadaList : [];
+    const firstArmada = armadaList[0] || {};
 
-  // rincianArmada di tabel
-  const rincianArmada = armadaList.map((a) => ({
-    nopol: a.nopol || "",
-    status: a.status || "",
-    tipeArmada: a.tipeArmada || "",
-    tahun: a.tahun || "",
-    osTarif: a.osTarif ?? null,
-    bayarOs: a.bayarOs || "",
-    rekomendasi: a.rekomendasi || "",
-    tindakLanjut: a.rekomendasi || "",
-    bukti: Array.isArray(a.bukti) ? a.bukti : [],
-  }));
+    // rincianArmada di tabel
+    const rincianArmada = armadaList.map((a) => ({
+        nopol: a.nopol || "",
+        status: a.status || "",
+        tipeArmada: a.tipeArmada || "",
+        tahun: a.tahun || "",
+        osTarif: a.osTarif ?? null,
+        bayarOs: a.bayarOs || "",
+        rekomendasi: a.rekomendasi || "",
+        tindakLanjut: a.rekomendasi || "",
+        bukti: Array.isArray(a.bukti) ? a.bukti : [],
+    }));
 
-  // gabung rekomendasi armada jadi satu kalimat
-  const rekomGabung = armadaList
-    .map((a) => a.rekomendasi)
-    .filter(Boolean)
-    .join(" | ");
+    // gabung rekomendasi armada jadi satu kalimat
+    const rekomGabung = armadaList
+        .map((a) => a.rekomendasi)
+        .filter(Boolean)
+        .join(" | ");
 
-  return {
-    id: generateCrmId(),
+    return {
+        id: generateCrmId(),
 
-    // ===== STEP 1 di tabel =====
-    step1: {
-      tanggalWaktu, // "YYYY-MM-DD HH:mm"
-      loket: form.loket || "",
-      petugasDepan: form.namaPetugas || "",
-      petugasBelakang: "", // form cuma 1 field petugas
-      perusahaan: form.badanUsahaNama || "",
-      jenisAngkutan: form.jenisAngkutan || "",
-      namaPemilik: form.namaPemilik || "",
-      alamat: form.alamatKunjungan || "",
-      telepon: form.telPemilik || "",
-      // sudahKunjungan: !!form.sudahKunjungan,
-      badanUsahaTipe: form.badanUsahaTipe || "",
-      telPengelola: form.telPengelola || "",
-    },
+        // ===== STEP 1 di tabel =====
+        step1: {
+            tanggalWaktu, // "YYYY-MM-DD HH:mm"
+            loket: form.loket || "",
+            petugasDepan: form.namaPetugas || "",
+            petugasBelakang: "", // form cuma 1 field petugas
+            perusahaan: form.badanUsahaNama || "",
+            jenisAngkutan: form.jenisAngkutan || "",
+            namaPemilik: form.namaPemilik || "",
+            alamat: form.alamatKunjungan || "",
+            telepon: form.telPemilik || "",
+            // sudahKunjungan: !!form.sudahKunjungan,
+            badanUsahaTipe: form.badanUsahaTipe || "",
+            telPengelola: form.telPengelola || "",
+        },
 
-    // ===== STEP 2 di tabel =====
-    step2: {
-      nopolAtauNamaKapal: firstArmada.nopol || "",
-      statusKendaraan: firstArmada.status || "",
-      hasilKunjungan: form.hasilKunjungan || "",
-      penjelasanHasil: form.hasilKunjungan || "",
-      tunggakan: 0, // kamu bisa ganti logika ini nanti
-      janjiBayar: form.janjiBayar || "-",
-      rekomendasi: rekomGabung || "",
-      rincianArmada,
-    },
+        // ===== STEP 2 di tabel =====
+        step2: {
+            nopolAtauNamaKapal: firstArmada.nopol || "",
+            statusKendaraan: firstArmada.status || "",
+            hasilKunjungan: form.hasilKunjungan || "",
+            penjelasanHasil: form.hasilKunjungan || "",
+            tunggakan: 0, // kamu bisa ganti logika ini nanti
+            janjiBayar: form.janjiBayar || "-",
+            rekomendasi: rekomGabung || "",
+            rincianArmada,
+        },
 
-    // ===== STEP 3 di tabel =====
-    step3: form.finalStep3 || {
-  fotoKunjungan: [],
-  suratPernyataan: [],
-  evidence: [],
-  responPemilik: form.nilaiKebersihan ?? 3,
-  ketertibanOperasional: form.nilaiKebersihan ?? 3,
-  ketaatanPerizinan: form.nilaiPelayanan ?? 3,
-  keramaianPenumpang: form.nilaiKelengkapan ?? 3,
-  ketaatanUjiKir: form.nilaiPelayanan ?? 3,
-  tandaTanganPetugas: form.tandaTanganPetugas || "",
-  tandaTanganPemilik: form.tandaTanganPemilik || "",
-},
+        // ===== STEP 3 di tabel =====
+        step3: form.finalStep3 || {
+            fotoKunjungan: [],
+            suratLainnya: [],
+            responPemilik: form.nilaiKebersihan ?? 3,
+            ketertibanOperasional: form.nilaiKebersihan ?? 3,
+            ketaatanPerizinan: form.nilaiPelayanan ?? 3,
+            keramaianPenumpang: form.nilaiKelengkapan ?? 3,
+            ketaatanUjiKir: form.nilaiPelayanan ?? 3,
+            tandaTanganPetugas: form.tandaTanganPetugas || "",
+            tandaTanganPemilik: form.tandaTanganPemilik || "",
+        },
 
-    // ===== STEP 4 di tabel (validasi) =====
-    step4: {
-      validasiOleh: "Petugas",
-      statusValidasi: "Menunggu", // default: belum diverifikasi
-      catatanValidasi: "",
-      wilayah: form.loket || "",
-      waktuValidasi: tanggalWaktu,
-    },
+        // ===== STEP 4 di tabel (validasi) =====
+        step4: {
+            validasiOleh: "Petugas",
+            statusValidasi: "Menunggu", // default: belum diverifikasi
+            catatanValidasi: "",
+            wilayah: form.loket || "",
+            waktuValidasi: tanggalWaktu,
+        },
 
-    // ===== STEP 5 di tabel (pesan & saran) =====
-    step5: {
-      pesan: form.pesanPetugas || "",
-      saran: form.saranUntukPemilik || "",
-      kirimKeWaPemilik: !!form.kirimKeWaPemilik,
-      kirimKeWaPengelola: !!form.kirimKeWaPengelola,
-    },
-  };
+        // ===== STEP 5 di tabel (pesan & saran) =====
+        step5: {
+            pesan: form.pesanPetugas || "",
+            saran: form.saranUntukPemilik || "",
+            kirimKeWaPemilik: !!form.kirimKeWaPemilik,
+            kirimKeWaPengelola: !!form.kirimKeWaPengelola,
+        },
+    };
 }
 
 async function fetchUploadImage(file) {
-  const fd = new FormData();
-  fd.append("file", file);
+    const fd = new FormData();
+    fd.append("file", file);
 
-  const res = await fetch("https://moveon-jr.alwaysdata.net/api/crm/upload", {
-    method: "POST",
-    body: fd,
-  });
+    const res = await fetch("https://moveon-jr.alwaysdata.net/api/crm/upload", {
+        method: "POST",
+        body: fd,
+    });
 
-  if (!res.ok) {
-    throw new Error("Upload gambar gagal");
-  }
+    if (!res.ok) {
+        throw new Error("Upload gambar gagal");
+    }
 
-  return await res.json(); // { url, name, path }
+    return await res.json(); // { url, name, path }
 }
 
 async function uploadDataUrlImage(dataUrl, filename = "signature.png") {
-  if (!dataUrl || typeof dataUrl !== "string" || !dataUrl.startsWith("data:image/")) {
-    return null;
-  }
+    if (
+        !dataUrl ||
+        typeof dataUrl !== "string" ||
+        !dataUrl.startsWith("data:image/")
+    ) {
+        return null;
+    }
 
-  const blob = await fetch(dataUrl).then((r) => r.blob());
-  const file = new File([blob], filename, { type: blob.type || "image/png" });
-  return await fetchUploadImage(file);
+    const blob = await fetch(dataUrl).then((r) => r.blob());
+    const file = new File([blob], filename, { type: blob.type || "image/png" });
+    return await fetchUploadImage(file);
 }
 
 async function saveCrmToServer(rowPayload) {
-  const res = await fetch("https://moveon-jr.alwaysdata.net/api/crm/save", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-    body: JSON.stringify(rowPayload),
-  });
+    const res = await fetch("https://moveon-jr.alwaysdata.net/api/crm/save", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+        },
+        body: JSON.stringify(rowPayload),
+    });
 
-  const raw = await res.text();
-  const contentType = res.headers.get("content-type") || "";
+    const raw = await res.text();
+    const contentType = res.headers.get("content-type") || "";
 
-  console.log("SAVE STATUS:", res.status);
-  console.log("SAVE CONTENT-TYPE:", contentType);
-  console.log("SAVE RESPONSE RAW:", raw);
-  console.log("SAVE PAYLOAD:", rowPayload);
+    console.log("SAVE STATUS:", res.status);
+    console.log("SAVE CONTENT-TYPE:", contentType);
+    console.log("SAVE RESPONSE RAW:", raw);
+    console.log("SAVE PAYLOAD:", rowPayload);
 
-  let data = null;
-  try {
-    data = JSON.parse(raw);
-  } catch {}
+    let data = null;
+    try {
+        data = JSON.parse(raw);
+    } catch {}
 
-  if (!res.ok) {
-    throw new Error(
-      data?.message || data?.error || `Gagal menyimpan CRM [${res.status}]`
-    );
-  }
+    if (!res.ok) {
+        throw new Error(
+            data?.message ||
+                data?.error ||
+                `Gagal menyimpan CRM [${res.status}]`,
+        );
+    }
 
-  if (!data) {
-    throw new Error("Response server bukan JSON");
-  }
+    if (!data) {
+        throw new Error("Response server bukan JSON");
+    }
 
-  return data;
+    return data;
 }
 
 function isImageUpload(file) {
-  return /^image\//i.test(file?.type || "");
+    return /^image\//i.test(file?.type || "");
 }
 
 async function normalizeArmadaFiles(armadaList = []) {
-  const result = [];
+    const result = [];
 
-  for (const a of armadaList) {
-    const buktiOut = [];
+    for (const a of armadaList) {
+        const buktiOut = [];
 
-    for (const item of a.buktiFiles || []) {
-      if (!item) continue;
+        for (const item of a.buktiFiles || []) {
+            if (!item) continue;
 
-      const file = item.file || item.originFileObj || item;
-      if (!(file instanceof File)) continue;
-      if (!isImageUpload(file)) continue;
+            const file = item.file || item.originFileObj || item;
+            if (!(file instanceof File)) continue;
+            if (!isImageUpload(file)) continue;
 
-      const uploaded = await fetchUploadImage(file);
+            const uploaded = await fetchUploadImage(file);
 
-      buktiOut.push({
-        name: uploaded.name || file.name,
-        url: uploaded.url,
-        path: uploaded.path,
-      });
+            buktiOut.push({
+                name: uploaded.name || file.name,
+                url: uploaded.url,
+                path: uploaded.path,
+            });
+        }
+
+        result.push({
+            ...a,
+            bukti: buktiOut,
+        });
     }
 
-    result.push({
-      ...a,
-      bukti: buktiOut,
-    });
-  }
-
-  return result;
+    return result;
 }
 
 async function normalizeStep3Files(step3) {
-  const normalizeImageObjects = async (items = []) => {
-    const out = [];
+    const normalizeImageObjects = async (items = []) => {
+        const out = [];
 
-    for (const item of items) {
-      if (!item) continue;
+        for (const item of items) {
+            if (!item) continue;
 
-      if (typeof item === "string") {
-        out.push({
-          name: "image",
-          url: item,
-        });
-        continue;
-      }
+            if (typeof item === "string") {
+                out.push({
+                    name: "image",
+                    url: item,
+                });
+                continue;
+            }
 
-      if (item.url && !item.file) {
-        out.push(item);
-        continue;
-      }
+            if (item.url && !item.file) {
+                out.push(item);
+                continue;
+            }
 
-      const file = item.file || item.originFileObj || item;
-      if (!(file instanceof File)) {
-        if (item?.url) out.push(item);
-        continue;
-      }
+            const file = item.file || item.originFileObj || item;
+            if (!(file instanceof File)) {
+                if (item?.url) out.push(item);
+                continue;
+            }
 
-      if (!isImageUpload(file)) continue;
+            if (!isImageUpload(file)) continue;
 
-      const uploaded = await fetchUploadImage(file);
-      out.push({
-        name: uploaded.name || file.name,
-        url: uploaded.url,
-        path: uploaded.path,
-      });
-    }
+            const uploaded = await fetchUploadImage(file);
+            out.push({
+                name: uploaded.name || file.name,
+                url: uploaded.url,
+                path: uploaded.path,
+            });
+        }
 
-    return out;
-  };
+        return out;
+    };
 
-  const normalizeFotoKunjungan = async (items = []) => {
-    const out = [];
+    const normalizeFotoKunjungan = async (items = []) => {
+        const out = [];
 
-    for (const item of items) {
-      if (!item) continue;
+        for (const item of items) {
+            if (!item) continue;
 
-      if (typeof item === "string") {
-        out.push(item);
-        continue;
-      }
+            if (typeof item === "string") {
+                out.push(item);
+                continue;
+            }
 
-      if (item.url && !item.file) {
-        out.push(item.url);
-        continue;
-      }
+            if (item.url && !item.file) {
+                out.push(item.url);
+                continue;
+            }
 
-      const file = item.file || item.originFileObj || item;
-      if (!(file instanceof File)) {
-        if (item?.url) out.push(item.url);
-        continue;
-      }
+            const file = item.file || item.originFileObj || item;
+            if (!(file instanceof File)) {
+                if (item?.url) out.push(item.url);
+                continue;
+            }
 
-      if (!isImageUpload(file)) continue;
+            if (!isImageUpload(file)) continue;
 
-      const uploaded = await fetchUploadImage(file);
-      out.push(uploaded.url);
-    }
+            const uploaded = await fetchUploadImage(file);
+            out.push(uploaded.url);
+        }
 
-    return out;
-  };
+        return out;
+    };
 
-  return {
-  ...step3,
-  fotoKunjungan: await normalizeFotoKunjungan(step3?.fotoKunjungan || []),
-  evidence: (await normalizeImageObjects(step3?.evidence || [])).map(
-  (x) => x.url || x.path || ""
-),
-suratPernyataan: (await normalizeImageObjects(step3?.suratPernyataan || [])).map(
-  (x) => x.url || x.path || ""
-),
-};
+    return {
+        ...step3,
+        fotoKunjungan: await normalizeFotoKunjungan(step3?.fotoKunjungan || []),
+        suratLainnya: (await normalizeImageObjects(step3?.suratLainnya || [])).map(
+            (x) => x.url || x.path || ""
+        ),
+    };
 }
 
 export default function FormCrm() {
-  const [step, setStep] = useState(1);
-  const [dirty, setDirty] = useState(false);
-  const initial = useRef(true);
-  const [picMaster, setPicMaster] = useState([]);
-  const [companyMaster, setCompanyMaster] = useState([]);
-  const onBeforeUnloadRef = useRef(null);
-  const [showPopup, setShowPopup] = useState(false);
-  const [showFileLimitPopup, setShowFileLimitPopup] = useState(false);
-  const [fileCountSelected, setFileCountSelected] = useState(0);
-  const [employeeMaster, setEmployeeMaster] = useState([]);
-  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+    const [step, setStep] = useState(1);
+    const [dirty, setDirty] = useState(false);
+    const initial = useRef(true);
+    const [picMaster, setPicMaster] = useState([]);
+    const [companyMaster, setCompanyMaster] = useState([]);
+    const onBeforeUnloadRef = useRef(null);
+    const [showPopup, setShowPopup] = useState(false);
+    const [showFileLimitPopup, setShowFileLimitPopup] = useState(false);
+    const [fileCountSelected, setFileCountSelected] = useState(0);
+    const [employeeMaster, setEmployeeMaster] = useState([]);
+    const [showSuccessPopup, setShowSuccessPopup] = useState(false);
 
-  // ================== STATE ==================
-  const showCutePopup = () => {
-    setShowPopup(true);
-    setTimeout(() => setShowPopup(false), 3000); // otomatis hilang 3 detik
-  };
-  const [form, setForm] = useState(() => {
-    const draft = localStorage.getItem("form_crm_draft_v5");
-    if (draft) {
-      try {
-        return JSON.parse(draft);
-      } catch {}
-    }
-    return {
-      // Step 1 — Datakunjungan
-      tanggal: "",
-      waktu: "",
-      loket: "",
-      namaPetugas: "",
-      // sudahKunjungan: false,
-      badanUsahaTipe: "PT",
-      badanUsahaNama: "",
-      jenisAngkutan: "",
-      namaPemilik: "",
-      alamatKunjungan: "",
-      telPemilik: "",
-      telPengelola: "",
-
-      // Step 2 — Armada + Hasil kunjungan
-      armadaList: [{ nopol: "", status: "", tipeArmada: "", tahun: "" }],
-      hasilKunjungan: "",
-      janjiBayar: "",
-
-      // Step 3 — Upload & Penilaian
-      fotoKunjungan: null,
-evidenceFiles: [],
-suratPernyataanFiles: [],
-      nilaiKebersihan: 3,
-      nilaiKelengkapan: 3,
-      nilaiPelayanan: 3,
-      tandaTanganPetugas: "", // dataURL
-      tandaTanganPemilik: "", // dataURL
-
-      // Step 4 — Pesan & Saran
-      pesanPetugas: "",
-      saranUntukPemilik: "",
-      kirimKeWaPemilik: true,
-      kirimKeWaPengelola: false,
+    // ================== STATE ==================
+    const showCutePopup = () => {
+        setShowPopup(true);
+        setTimeout(() => setShowPopup(false), 3000); // otomatis hilang 3 detik
     };
-  });
-
-  // ================== OTOMATIS ISI TANGGAL/WAKTU ==================
-  useEffect(() => {
-    const now = new Date();
-    const d = now.toISOString().slice(0, 10);
-    const t = now.toTimeString().slice(0, 5);
-    setForm((f) => ({ ...f, tanggal: f.tanggal || d, waktu: f.waktu || t }));
-  }, []);
-
-  // ================== AUTOSAVE ==================
-  useEffect(() => {
-    if (initial.current) {
-      initial.current = false;
-      return;
-    }
-    localStorage.setItem("form_crm_draft_v5", JSON.stringify(form));
-    setDirty(true);
-  }, [form]);
-
-  // ================== LOAD MASTER DATA DARI IWKBU ==================
-  useEffect(() => {
-    (async () => {
-      try {
-        // 1) Master PIC + Loket (distinct)
-        const res = await fetch("https://moveon-jr.alwaysdata.net/api/iwkbu/pic");
-        const picData = await res.json();
-        setPicMaster(picData);
-
-        if (picData) {
-          const map = new Map();
-          for (const row of picData) {
-            const raw = (row.pic || "").trim();
-            if (!raw) continue;
-            const key = raw.toLowerCase();
-            const loket = row.loket || "";
-            if (!map.has(key)) {
-              map.set(key, { pic: raw, loket });
-            } else {
-              const existing = map.get(key);
-              // kalau sebelumnya belum ada loket, tapi sekarang ada → update
-              if (!existing.loket && loket) {
-                map.set(key, { pic: existing.pic, loket });
-              }
-            }
-          }
-          const arr = Array.from(map.values()).sort((a, b) =>
-            a.pic.localeCompare(b.pic, "id"),
-          );
-          setPicMaster(arr);
+    const [form, setForm] = useState(() => {
+        const draft = localStorage.getItem("form_crm_draft_v5");
+        if (draft) {
+            try {
+                return JSON.parse(draft);
+            } catch {}
         }
+        return {
+            // Step 1 — Datakunjungan
+            tanggal: "",
+            waktu: "",
+            loket: "",
+            namaPetugas: "",
+            // sudahKunjungan: false,
+            badanUsahaTipe: "PT",
+            badanUsahaNama: "",
+            jenisAngkutan: "",
+            namaPemilik: "",
+            alamatKunjungan: "",
+            telPemilik: "",
+            telPengelola: "",
 
-        // 2) Master PT/CV + pemilik + HP I
-        const res2 = await fetch("https://moveon-jr.alwaysdata.net/api/perusahaan");
-        const compData = await res2.json();
+            // Step 2 — Armada + Hasil kunjungan
+            armadaList: [{ nopol: "", status: "", tipeArmada: "", tahun: "" }],
+            hasilKunjungan: "",
+            janjiBayar: "",
 
-        if (compData) {
-          const map2 = new Map();
+            // Step 3 — Upload & Penilaian
+            fotoKunjungan: null,
+            suratLainnyaFiles: [],
+            nilaiKebersihan: 3,
+            nilaiKelengkapan: 3,
+            nilaiPelayanan: 3,
+            tandaTanganPetugas: "", // dataURL
+            tandaTanganPemilik: "", // dataURL
 
-          for (const row of compData) {
-            const raw = (row.nama_perusahaan || "").trim();
-            if (!raw) continue;
-
-            const key = raw.toLowerCase();
-
-            if (!map2.has(key)) {
-              map2.set(key, {
-                nama_perusahaan: raw,
-                nama_pemilik: row.nama_pemilik || "",
-                hp: row.hp || "",
-              });
-            }
-          }
-
-          const arr2 = Array.from(map2.values()).sort((a, b) =>
-            a.nama_perusahaan.localeCompare(b.nama_perusahaan, "id"),
-          );
-
-          setCompanyMaster(arr2);
-        }
-      } catch (e) {
-        console.error("Error load master data IWKBU:", e);
-      }
-    })();
-  }, []);
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await fetch("https://moveon-jr.alwaysdata.net/api/employees");
-
-        if (!res.ok) {
-          throw new Error("Gagal load employees");
-        }
-
-        const data = await res.json();
-        setEmployeeMaster(data || []);
-      } catch (e) {
-        console.error("Gagal load employees+samsat:", e);
-        setEmployeeMaster([]);
-      }
-    })();
-  }, []);
-
-  // ================== URL SYNC (?step=1..4) ==================
-  useEffect(() => {
-    const s = Number(new URLSearchParams(location.search).get("step"));
-    if (s >= 1 && s <= 3) setStep(s);
-  }, []);
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    params.set("step", String(step));
-    history.replaceState({}, "", `${location.pathname}?${params.toString()}`);
-  }, [step]);
-
-  // ================== UNSAVED GUARD ==================
-  useEffect(() => {
-    const onBeforeUnload = (e) => {
-      if (!dirty) return;
-      e.preventDefault();
-      e.returnValue = "";
-    };
-    onBeforeUnloadRef.current = onBeforeUnload;
-    window.addEventListener("beforeunload", onBeforeUnload);
-    return () => window.removeEventListener("beforeunload", onBeforeUnload);
-  }, [dirty]);
-
-  const setField = (key, value) => setForm((f) => ({ ...f, [key]: value }));
-
-  const steps = [
-    { id: 1, title: "Data Kunjungan" },
-    { id: 2, title: "Armada" },
-    { id: 3, title: "Upload & Penilaian" },
-  ];
-
-  const progressPct = useMemo(
-    () => (step - 1) * (100 / (steps.length - 1)),
-    [step],
-  );
-
-  // ================== VALIDASI ==================
-  const step1Errors = useMemo(() => {
-    const e = {};
-    if (!form.tanggal) e.tanggal = "Wajib diisi";
-    if (!form.waktu) e.waktu = "Wajib diisi";
-    if (!form.loket) e.loket = "Pilih loket";
-    if (!form.namaPetugas) e.namaPetugas = "Wajib diisi";
-    if (!form.jenisAngkutan) e.jenisAngkutan = "Pilih jenis angkutan";
-    if (!form.alamatKunjungan) e.alamatKunjungan = "Wajib diisi";
-    return e;
-  }, [form]);
-
-  const step2Errors = useMemo(() => {
-    const e = {};
-    const list = form.armadaList || [];
-
-    if (list.length === 0) {
-      e.list = "Tambah minimal 1 kendaraan";
-    }
-
-    list.forEach((k, i) => {
-      if (!k.nopol || !k.nopol.trim()) {
-        e[`nopol_${i}`] = "No. Polisi wajib diisi";
-      }
-      if (!k.status) {
-        e[`status_${i}`] = "Status kendaraan wajib dipilih";
-      }
+            // Step 4 — Pesan & Saran
+            pesanPetugas: "",
+            saranUntukPemilik: "",
+            kirimKeWaPemilik: true,
+            kirimKeWaPengelola: false,
+        };
     });
 
-    if (!form.hasilKunjungan) {
-      e.hasilKunjungan = "Isi penjelasan hasil kunjungan";
-    }
+    // ================== OTOMATIS ISI TANGGAL/WAKTU ==================
+    useEffect(() => {
+        const now = new Date();
+        const d = now.toISOString().slice(0, 10);
+        const t = now.toTimeString().slice(0, 5);
+        setForm((f) => ({
+            ...f,
+            tanggal: f.tanggal || d,
+            waktu: f.waktu || t,
+        }));
+    }, []);
 
-    if (!form.janjiBayar) {
-      e.janjiBayar = "Isi jadwal janji bayar";
-    }
+    // ================== AUTOSAVE ==================
+    useEffect(() => {
+        if (initial.current) {
+            initial.current = false;
+            return;
+        }
+        localStorage.setItem("form_crm_draft_v5", JSON.stringify(form));
+        setDirty(true);
+    }, [form]);
 
-    return e;
-  }, [form.armadaList, form.hasilKunjungan, form.janjiBayar]);
+    // ================== LOAD MASTER DATA DARI IWKBU ==================
+    useEffect(() => {
+        (async () => {
+            try {
+                // 1) Master PIC + Loket (distinct)
+                const res = await fetch(
+                    "https://moveon-jr.alwaysdata.net/api/iwkbu/pic",
+                );
+                const picData = await res.json();
+                setPicMaster(picData);
 
-  const step3Errors = useMemo(() => {
-    const e = {};
-
-    // Minimal satu upload
-    const anyUpload =
-  form.fotoKunjungan ||
-  (form.evidenceFiles || []).length > 0 ||
-  (form.suratPernyataanFiles || []).length > 0;
-
-if ((form.evidenceFiles || []).length > 10) {
-  e.evidence = "Evidence maksimal 10 file.";
-}
-
-if ((form.suratPernyataanFiles || []).length > 10) {
-  e.surat = "Surat pernyataan maksimal 10 file.";
-}
-
-    // Penilaian wajib diisi (1–5)
-    if (!form.nilaiKebersihan)
-      e.nilaiKebersihan = "Isi nilai respon pemilik/pengelola";
-    if (!form.nilaiKelengkapan)
-      e.nilaiKelengkapan = "Isi nilai keramaian penumpang";
-    if (!form.nilaiPelayanan)
-      e.nilaiPelayanan = "Isi nilai ketaatan pengurusan izin";
-
-    // Tanda tangan wajib
-    if (!form.tandaTanganPetugas)
-      e.tandaTanganPetugas = "Tanda tangan petugas wajib diisi";
-    if (!form.tandaTanganPemilik)
-      e.tandaTanganPemilik = "Tanda tangan pemilik wajib diisi";
-
-    return e;
-  }, [
-    form.fotoKunjungan,
-    form.suratPernyataanEvidence,
-    form.nilaiKebersihan,
-    form.nilaiKelengkapan,
-    form.nilaiPelayanan,
-    form.tandaTanganPetugas,
-    form.tandaTanganPemilik,
-  ]);
-
-  const canNext1 = Object.keys(step1Errors).length === 0;
-  const canNext2 = Object.keys(step2Errors).length === 0;
-  const canNext3 = Object.keys(step3Errors).length === 0;
-
-  // ================== NAV ==================
-  const focusFirstError = useCallback(() => {
-    const el = document.querySelector("[data-error='true']");
-    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
-  }, []);
-
-  const guardNext = useCallback(() => {
-    if (
-      (step === 1 && !canNext1) ||
-      (step === 2 && !canNext2) ||
-      (step === 3 && !canNext3)
-    ) {
-      focusFirstError();
-      showCutePopup();
-      return;
-    }
-
-    setStep((s) => Math.min(3, s + 1));
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }, [step, canNext1, canNext2, canNext3, focusFirstError]);
-
-  const prev = useCallback(() => {
-    setStep((s) => Math.max(1, s - 1));
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }, []);
-
-const handleSubmit = async () => {
-  if (
-    Object.keys(step1Errors).length ||
-    Object.keys(step2Errors).length ||
-    Object.keys(step3Errors).length
-  ) {
-    alert("Masih ada kolom yang belum lengkap. Cek lagi langkah 1–3 ya 😊");
-    return;
-  }
-
-  try {
-    const armadaListUploaded = await normalizeArmadaFiles(form.armadaList || []);
-
-    const signPetugas = await uploadDataUrlImage(
-      form.tandaTanganPetugas,
-      "ttd-petugas.png"
-    );
-
-    const signPemilik = await uploadDataUrlImage(
-      form.tandaTanganPemilik,
-      "ttd-pemilik.png"
-    );
-
-    const step3Raw = {
-  fotoKunjungan: form.fotoKunjungan ? [form.fotoKunjungan] : [],
-  evidence: form.evidenceFiles || [],
-  suratPernyataan: form.suratPernyataanFiles || [],
-  responPemilik: form.nilaiKebersihan ?? 3,
-  ketertibanOperasional: form.nilaiKebersihan ?? 3,
-  ketaatanPerizinan: form.nilaiPelayanan ?? 3,
-  keramaianPenumpang: form.nilaiKelengkapan ?? 3,
-  ketaatanUjiKir: form.nilaiPelayanan ?? 3,
-  tandaTanganPetugas: signPetugas?.url || "",
-  tandaTanganPemilik: signPemilik?.url || "",
-};
-
-const finalStep3 = await normalizeStep3Files(step3Raw);
-
-    const rowPayload = buildCrmRowFromForm({
-      ...form,
-      armadaList: armadaListUploaded,
-      finalStep3,
-    });
-
-    console.log("FINAL PAYLOAD:", JSON.stringify(rowPayload, null, 2));
-
-    const { reportId, reportCode } = await saveCrmToServer(rowPayload);
-
-    setDirty(false);
-    localStorage.removeItem("form_crm_draft_v5");
-    setShowSuccessPopup(true);
-
-    setTimeout(() => {
-      window.location.replace("/");
-    }, 2500);
-  } catch (e) {
-    console.error("Gagal menyimpan data CRM:", e);
-    alert(e.message || "Terjadi kesalahan saat menyimpan ke server.");
-  }
-};
-
-  const resetDraft = () => {
-    if (confirm("Hapus draft yang tersimpan?")) {
-      localStorage.removeItem("form_crm_draft_v5");
-      location.reload();
-    }
-  };
-
-  // ================== SHORTCUTS ==================
-  useEffect(() => {
-    const onKey = (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
-        e.preventDefault();
-        guardNext();
-      }
-      if (e.shiftKey && e.key === "Enter") {
-        e.preventDefault();
-        prev();
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [guardNext, prev]);
-
-  // ================== RENDER ==================
-  return (
-    <div className="crm-wrap full kawai">
-      <style>{css}</style>
-
-      <div className="crm-card">
-        <Header
-          dirty={dirty}
-          onReset={resetDraft}
-          onBeforeUnloadRef={onBeforeUnloadRef}
-        />
-
-        <div className="container">
-          <Stepper
-            steps={steps}
-            current={step}
-            progressPct={progressPct}
-            onJump={setStep}
-            canNext1={canNext1}
-            canNext2={canNext2}
-            canNext3={canNext3}
-          />
-        </div>
-
-        <div className="container">
-          <div className="grid">
-            <main className="main">
-              <ErrorSummary
-                step={step}
-                step1Errors={step1Errors}
-                step2Errors={step2Errors}
-                step3Errors={step3Errors}
-              />
-
-              <div className="section">
-                {step === 1 && (
-                  <Step1Datakunjungan
-                    form={form}
-                    setField={setField}
-                    errors={step1Errors}
-                    employeeMaster={employeeMaster}
-                    companyMaster={companyMaster}
-                    picMaster={picMaster}
-                  />
-                )}
-                {step === 2 && (
-                  <Step2Armada
-                    form={form}
-                    setField={setField}
-                    armadaList={form.armadaList}
-                    setArmadaList={(list) => setField("armadaList", list)}
-                    errors={step2Errors}
-                    onNext={() => setStep(3)}
-                  />
-                )}
-                {step === 3 && (
-                  <Step3UploadPenilaian
-                    form={form}
-                    setField={setField}
-                    errors={step3Errors}
-                    onPickMultiple={(key) => (e) => {
-                      const files = Array.from(e.target.files || []);
-
-                      if (files.length > 10) {
-                        setFileCountSelected(files.length);
-                        setShowFileLimitPopup(true);
-                        e.target.value = ""; // reset input file
-                        return;
-                      }
-
-                      setField(key, files);
-                    }}
-                  />
-                )}
-              </div>
-
-              <div className="crm-footer sticky">
-                <button
-                  className="btn ghost"
-                  disabled={step === 1}
-                  onClick={prev}
-                >
-                  ⟵ Kembali
-                </button>
-                <div className="spacer" />
-                {step < 3 ? (
-                  <button
-                    className="btn primary"
-                    onClick={guardNext}
-                    disabled={
-                      (step === 1 && !canNext1) || (step === 2 && !canNext2)
+                if (picData) {
+                    const map = new Map();
+                    for (const row of picData) {
+                        const raw = (row.pic || "").trim();
+                        if (!raw) continue;
+                        const key = raw.toLowerCase();
+                        const loket = row.loket || "";
+                        if (!map.has(key)) {
+                            map.set(key, { pic: raw, loket });
+                        } else {
+                            const existing = map.get(key);
+                            // kalau sebelumnya belum ada loket, tapi sekarang ada → update
+                            if (!existing.loket && loket) {
+                                map.set(key, { pic: existing.pic, loket });
+                            }
+                        }
                     }
-                  >
-                    Lanjut ⟶
-                  </button>
-                ) : (
-                  <button className="btn success" onClick={handleSubmit}>
-                    🚀 Submit
-                  </button>
-                )}
-              </div>
-            </main>
+                    const arr = Array.from(map.values()).sort((a, b) =>
+                        a.pic.localeCompare(b.pic, "id"),
+                    );
+                    setPicMaster(arr);
+                }
 
-            <aside className="aside">
-              <SidebarSummary
-                form={form}
-                step={step}
-                step1Errors={step1Errors}
-                step2Errors={step2Errors}
-                step3Errors={step3Errors}
-              />
-            </aside>
-          </div>
-        </div>
-      </div>
-      {showPopup && (
-        <div className="popup-cute">
-          <div className="popup-box">
-            <div className="popup-emoji">🌸</div>
-            <div className="popup-text">
-              Isi dulu semua kolom yang wajib yaa 💕
+                // 2) Master PT/CV + pemilik + HP I
+                const res2 = await fetch(
+                    "https://moveon-jr.alwaysdata.net/api/perusahaan",
+                );
+                const compData = await res2.json();
+
+                if (compData) {
+                    const map2 = new Map();
+
+                    for (const row of compData) {
+                        const raw = (row.nama_perusahaan || "").trim();
+                        if (!raw) continue;
+
+                        const key = raw.toLowerCase();
+
+                        if (!map2.has(key)) {
+                            map2.set(key, {
+                                nama_perusahaan: raw,
+                                nama_pemilik: row.nama_pemilik || "",
+                                hp: row.hp || "",
+                            });
+                        }
+                    }
+
+                    const arr2 = Array.from(map2.values()).sort((a, b) =>
+                        a.nama_perusahaan.localeCompare(
+                            b.nama_perusahaan,
+                            "id",
+                        ),
+                    );
+
+                    setCompanyMaster(arr2);
+                }
+            } catch (e) {
+                console.error("Error load master data IWKBU:", e);
+            }
+        })();
+    }, []);
+
+    useEffect(() => {
+        (async () => {
+            try {
+                const res = await fetch(
+                    "https://moveon-jr.alwaysdata.net/api/employees",
+                );
+
+                if (!res.ok) {
+                    throw new Error("Gagal load employees");
+                }
+
+                const data = await res.json();
+                setEmployeeMaster(data || []);
+            } catch (e) {
+                console.error("Gagal load employees+samsat:", e);
+                setEmployeeMaster([]);
+            }
+        })();
+    }, []);
+
+    // ================== URL SYNC (?step=1..4) ==================
+    useEffect(() => {
+        const s = Number(new URLSearchParams(location.search).get("step"));
+        if (s >= 1 && s <= 3) setStep(s);
+    }, []);
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        params.set("step", String(step));
+        history.replaceState(
+            {},
+            "",
+            `${location.pathname}?${params.toString()}`,
+        );
+    }, [step]);
+
+    // ================== UNSAVED GUARD ==================
+    useEffect(() => {
+        const onBeforeUnload = (e) => {
+            if (!dirty) return;
+            e.preventDefault();
+            e.returnValue = "";
+        };
+        onBeforeUnloadRef.current = onBeforeUnload;
+        window.addEventListener("beforeunload", onBeforeUnload);
+        return () => window.removeEventListener("beforeunload", onBeforeUnload);
+    }, [dirty]);
+
+    const setField = (key, value) => setForm((f) => ({ ...f, [key]: value }));
+
+    const steps = [
+        { id: 1, title: "Data Kunjungan" },
+        { id: 2, title: "Armada" },
+        { id: 3, title: "Upload & Penilaian" },
+    ];
+
+    const progressPct = useMemo(
+        () => (step - 1) * (100 / (steps.length - 1)),
+        [step],
+    );
+
+    // ================== VALIDASI ==================
+    const step1Errors = useMemo(() => {
+        const e = {};
+        if (!form.tanggal) e.tanggal = "Wajib diisi";
+        if (!form.waktu) e.waktu = "Wajib diisi";
+        if (!form.loket) e.loket = "Pilih loket";
+        if (!form.namaPetugas) e.namaPetugas = "Wajib diisi";
+        if (!form.jenisAngkutan) e.jenisAngkutan = "Pilih jenis angkutan";
+        if (!form.alamatKunjungan) e.alamatKunjungan = "Wajib diisi";
+        return e;
+    }, [form]);
+
+    const step2Errors = useMemo(() => {
+        const e = {};
+        const list = form.armadaList || [];
+
+        if (list.length === 0) {
+            e.list = "Tambah minimal 1 kendaraan";
+        }
+
+        list.forEach((k, i) => {
+            if (!k.nopol || !k.nopol.trim()) {
+                e[`nopol_${i}`] = "No. Polisi wajib diisi";
+            }
+            if (!k.status) {
+                e[`status_${i}`] = "Status kendaraan wajib dipilih";
+            }
+        });
+
+        if (!form.hasilKunjungan) {
+            e.hasilKunjungan = "Isi penjelasan hasil kunjungan";
+        }
+
+        if (!form.janjiBayar) {
+            e.janjiBayar = "Isi jadwal janji bayar";
+        }
+
+        return e;
+    }, [form.armadaList, form.hasilKunjungan, form.janjiBayar]);
+
+    const step3Errors = useMemo(() => {
+        const e = {};
+
+        if ((form.suratLainnyaFiles || []).length > 10) {
+            e.surat = "Maksimal 10 file.";
+        }
+
+        if (!form.nilaiKebersihan)
+            e.nilaiKebersihan = "Isi nilai respon pemilik/pengelola";
+        if (!form.nilaiKelengkapan)
+            e.nilaiKelengkapan = "Isi nilai keramaian penumpang";
+        if (!form.nilaiPelayanan)
+            e.nilaiPelayanan = "Isi nilai ketaatan pengurusan izin";
+
+        if (!form.tandaTanganPetugas)
+            e.tandaTanganPetugas = "Tanda tangan petugas wajib diisi";
+        if (!form.tandaTanganPemilik)
+            e.tandaTanganPemilik = "Tanda tangan pemilik wajib diisi";
+
+        return e;
+    }, [
+        form.suratLainnyaFiles,
+        form.nilaiKebersihan,
+        form.nilaiKelengkapan,
+        form.nilaiPelayanan,
+        form.tandaTanganPetugas,
+        form.tandaTanganPemilik,
+    ]);
+
+    const canNext1 = Object.keys(step1Errors).length === 0;
+    const canNext2 = Object.keys(step2Errors).length === 0;
+    const canNext3 = Object.keys(step3Errors).length === 0;
+
+    // ================== NAV ==================
+    const focusFirstError = useCallback(() => {
+        const el = document.querySelector("[data-error='true']");
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, []);
+
+    const guardNext = useCallback(() => {
+        if (
+            (step === 1 && !canNext1) ||
+            (step === 2 && !canNext2) ||
+            (step === 3 && !canNext3)
+        ) {
+            focusFirstError();
+            showCutePopup();
+            return;
+        }
+
+        setStep((s) => Math.min(3, s + 1));
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    }, [step, canNext1, canNext2, canNext3, focusFirstError]);
+
+    const prev = useCallback(() => {
+        setStep((s) => Math.max(1, s - 1));
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    }, []);
+
+    const handleSubmit = async () => {
+        if (
+            Object.keys(step1Errors).length ||
+            Object.keys(step2Errors).length ||
+            Object.keys(step3Errors).length
+        ) {
+            alert(
+                "Masih ada kolom yang belum lengkap. Cek lagi langkah 1–3 ya 😊",
+            );
+            return;
+        }
+
+        try {
+            const armadaListUploaded = await normalizeArmadaFiles(
+                form.armadaList || [],
+            );
+
+            const signPetugas = await uploadDataUrlImage(
+                form.tandaTanganPetugas,
+                "ttd-petugas.png",
+            );
+
+            const signPemilik = await uploadDataUrlImage(
+                form.tandaTanganPemilik,
+                "ttd-pemilik.png",
+            );
+
+            const step3Raw = {
+                fotoKunjungan: form.fotoKunjungan ? [form.fotoKunjungan] : [],
+                suratLainnya: form.suratLainnyaFiles || [],
+                responPemilik: form.nilaiKebersihan ?? 3,
+                ketertibanOperasional: form.nilaiKebersihan ?? 3,
+                ketaatanPerizinan: form.nilaiPelayanan ?? 3,
+                keramaianPenumpang: form.nilaiKelengkapan ?? 3,
+                ketaatanUjiKir: form.nilaiPelayanan ?? 3,
+                tandaTanganPetugas: signPetugas?.url || "",
+                tandaTanganPemilik: signPemilik?.url || "",
+            };
+
+            const finalStep3 = await normalizeStep3Files(step3Raw);
+
+            const rowPayload = buildCrmRowFromForm({
+                ...form,
+                armadaList: armadaListUploaded,
+                finalStep3,
+            });
+
+            console.log("FINAL PAYLOAD:", JSON.stringify(rowPayload, null, 2));
+
+            const { reportId, reportCode } = await saveCrmToServer(rowPayload);
+
+            setDirty(false);
+            localStorage.removeItem("form_crm_draft_v5");
+            setShowSuccessPopup(true);
+
+            setTimeout(() => {
+                window.location.replace("/");
+            }, 2500);
+        } catch (e) {
+            console.error("Gagal menyimpan data CRM:", e);
+            alert(e.message || "Terjadi kesalahan saat menyimpan ke server.");
+        }
+    };
+
+    const resetDraft = () => {
+        if (confirm("Hapus draft yang tersimpan?")) {
+            localStorage.removeItem("form_crm_draft_v5");
+            location.reload();
+        }
+    };
+
+    // ================== SHORTCUTS ==================
+    useEffect(() => {
+        const onKey = (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+                e.preventDefault();
+                guardNext();
+            }
+            if (e.shiftKey && e.key === "Enter") {
+                e.preventDefault();
+                prev();
+            }
+        };
+        window.addEventListener("keydown", onKey);
+        return () => window.removeEventListener("keydown", onKey);
+    }, [guardNext, prev]);
+
+    // ================== RENDER ==================
+    return (
+        <div className="crm-wrap full kawai">
+            <style>{css}</style>
+
+            <div className="crm-card">
+                <Header
+                    dirty={dirty}
+                    onReset={resetDraft}
+                    onBeforeUnloadRef={onBeforeUnloadRef}
+                />
+
+                <div className="container">
+                    <Stepper
+                        steps={steps}
+                        current={step}
+                        progressPct={progressPct}
+                        onJump={setStep}
+                        canNext1={canNext1}
+                        canNext2={canNext2}
+                        canNext3={canNext3}
+                    />
+                </div>
+
+                <div className="container">
+                    <div className="grid">
+                        <main className="main">
+                            <ErrorSummary
+                                step={step}
+                                step1Errors={step1Errors}
+                                step2Errors={step2Errors}
+                                step3Errors={step3Errors}
+                            />
+
+                            <div className="section">
+                                {step === 1 && (
+                                    <Step1Datakunjungan
+                                        form={form}
+                                        setField={setField}
+                                        errors={step1Errors}
+                                        employeeMaster={employeeMaster}
+                                        companyMaster={companyMaster}
+                                        picMaster={picMaster}
+                                    />
+                                )}
+                                {step === 2 && (
+                                    <Step2Armada
+                                        form={form}
+                                        setField={setField}
+                                        armadaList={form.armadaList}
+                                        setArmadaList={(list) =>
+                                            setField("armadaList", list)
+                                        }
+                                        errors={step2Errors}
+                                        onNext={() => setStep(3)}
+                                    />
+                                )}
+                                {step === 3 && (
+                                    <Step3UploadPenilaian
+                                        form={form}
+                                        setField={setField}
+                                        errors={step3Errors}
+                                        onPickMultiple={(key) => (e) => {
+                                            const files = Array.from(
+                                                e.target.files || [],
+                                            );
+
+                                            if (files.length > 10) {
+                                                setFileCountSelected(
+                                                    files.length,
+                                                );
+                                                setShowFileLimitPopup(true);
+                                                e.target.value = ""; // reset input file
+                                                return;
+                                            }
+
+                                            setField(key, files);
+                                        }}
+                                    />
+                                )}
+                            </div>
+
+                            <div className="crm-footer sticky">
+                                <button
+                                    className="btn ghost"
+                                    disabled={step === 1}
+                                    onClick={prev}
+                                >
+                                    ⟵ Kembali
+                                </button>
+                                <div className="spacer" />
+                                {step < 3 ? (
+                                    <button
+                                        className="btn primary"
+                                        onClick={guardNext}
+                                        disabled={
+                                            (step === 1 && !canNext1) ||
+                                            (step === 2 && !canNext2)
+                                        }
+                                    >
+                                        Lanjut ⟶
+                                    </button>
+                                ) : (
+                                    <button
+                                        className="btn success"
+                                        onClick={handleSubmit}
+                                    >
+                                        🚀 Submit
+                                    </button>
+                                )}
+                            </div>
+                        </main>
+
+                        <aside className="aside">
+                            <SidebarSummary
+                                form={form}
+                                step={step}
+                                step1Errors={step1Errors}
+                                step2Errors={step2Errors}
+                                step3Errors={step3Errors}
+                            />
+                        </aside>
+                    </div>
+                </div>
             </div>
-            <button onClick={() => setShowPopup(false)} className="popup-btn">
-              Oke deh~
-            </button>
-          </div>
+            {showPopup && (
+                <div className="popup-cute">
+                    <div className="popup-box">
+                        <div className="popup-emoji">🌸</div>
+                        <div className="popup-text">
+                            Isi dulu semua kolom yang wajib yaa 💕
+                        </div>
+                        <button
+                            onClick={() => setShowPopup(false)}
+                            className="popup-btn"
+                        >
+                            Oke deh~
+                        </button>
+                    </div>
+                </div>
+            )}
+            {showFileLimitPopup && (
+                <div className="popup-cute">
+                    <div className="popup-box">
+                        <div className="popup-emoji">📂💥</div>
+                        <div className="popup-text">
+                            Upss~ kamu pilih <b>{fileCountSelected} file</b> 😳
+                            <br />
+                            Maksimal cuma <b>10 file</b> yaa~
+                            <br />
+                            Pilih yang paling penting aja 💕
+                        </div>
+                        <button
+                            onClick={() => setShowFileLimitPopup(false)}
+                            className="popup-btn"
+                        >
+                            Okeee ✨
+                        </button>
+                    </div>
+                </div>
+            )}
+            {showSuccessPopup && (
+                <div className="popup-cute">
+                    <div className="popup-box success">
+                        <div className="popup-emoji">🎉✨</div>
+                        <div className="popup-text">
+                            <b>Sukses terkirim!</b> 💖
+                            <br />
+                            Data kunjungan berhasil disimpan 🌸
+                        </div>
+                        <div className="popup-sub">
+                            Kamu akan diarahkan ke halaman utama…
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
-      )}
-      {showFileLimitPopup && (
-        <div className="popup-cute">
-          <div className="popup-box">
-            <div className="popup-emoji">📂💥</div>
-            <div className="popup-text">
-              Upss~ kamu pilih <b>{fileCountSelected} file</b> 😳
-              <br />
-              Maksimal cuma <b>10 file</b> yaa~
-              <br />
-              Pilih yang paling penting aja 💕
-            </div>
-            <button
-              onClick={() => setShowFileLimitPopup(false)}
-              className="popup-btn"
-            >
-              Okeee ✨
-            </button>
-          </div>
-        </div>
-      )}
-      {showSuccessPopup && (
-        <div className="popup-cute">
-          <div className="popup-box success">
-            <div className="popup-emoji">🎉✨</div>
-            <div className="popup-text">
-              <b>Sukses terkirim!</b> 💖
-              <br />
-              Data kunjungan berhasil disimpan 🌸
-            </div>
-            <div className="popup-sub">
-              Kamu akan diarahkan ke halaman utama…
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+    );
 }
 
 /* ================ SUBS ================ */
 function Header({ dirty, onReset, onBeforeUnloadRef }) {
-  const handleGoHome = () => {
-    if (window.onbeforeunload) window.onbeforeunload = null;
-    if (onBeforeUnloadRef.current)
-      window.removeEventListener("beforeunload", onBeforeUnloadRef.current);
+    const handleGoHome = () => {
+        if (window.onbeforeunload) window.onbeforeunload = null;
+        if (onBeforeUnloadRef.current)
+            window.removeEventListener(
+                "beforeunload",
+                onBeforeUnloadRef.current,
+            );
 
-    localStorage.removeItem("form_crm_draft_v5");
-    window.location.replace("/");
-  };
+        localStorage.removeItem("form_crm_draft_v5");
+        window.location.replace("/");
+    };
 
-  return (
-    <div className="crm-header">
-      <div className="container header-inner">
-        <div className="title">
-          <span className="dot" />
-          <span>Formulir CRM</span>
+    return (
+        <div className="crm-header">
+            <div className="container header-inner">
+                <div className="title">
+                    <span className="dot" />
+                    <span>Formulir CRM</span>
+                </div>
+                <div className="header-actions">
+                    <button className="btn ghost sm" onClick={handleGoHome}>
+                        🏠 Kembali ke Home
+                    </button>
+                </div>
+            </div>
+            <div className="container">
+                <div className="subtitle">
+                    Isi data kunjungan, armada/kendaraan, lalu upload bukti &
+                    penilaian. Ikuti langkah-langkah di bawah ini.
+                </div>
+            </div>
         </div>
-        <div className="header-actions">
-          <button className="btn ghost sm" onClick={handleGoHome}>
-            🏠 Kembali ke Home
-          </button>
-        </div>
-      </div>
-      <div className="container">
-        <div className="subtitle">
-          Isi data kunjungan, armada/kendaraan, lalu upload bukti & penilaian.
-          Ikuti langkah-langkah di bawah ini.
-        </div>
-      </div>
-    </div>
-  );
+    );
 }
 
 function Stepper({
-  steps,
-  current,
-  progressPct,
-  onJump,
-  canNext1,
-  canNext2,
-  canNext3,
+    steps,
+    current,
+    progressPct,
+    onJump,
+    canNext1,
+    canNext2,
+    canNext3,
 }) {
-  const isStepAllowed = (id) => {
-    if (id === 1) return true;
-    if (id === 2) return canNext1;
-    if (id === 3) return canNext1 && canNext2;
-    return false;
-  };
+    const isStepAllowed = (id) => {
+        if (id === 1) return true;
+        if (id === 2) return canNext1;
+        if (id === 3) return canNext1 && canNext2;
+        return false;
+    };
 
-  return (
-    <div className="stepper">
-      <div className="progress">
-        <div className="bar" style={{ width: `${progressPct}%` }} />
-      </div>
-      <div className="steps">
-        {steps.map((s) => {
-          const active = s.id === current;
-          const done = s.id < current;
-          const allowed = isStepAllowed(s.id);
-          return (
-            <button
-              key={s.id}
-              className={`step ${active ? "active" : ""} ${done ? "done" : ""}`}
-              onClick={() => allowed && onJump(s.id)}
-              disabled={!allowed}
-              title={!allowed ? "Selesaikan langkah sebelumnya dulu ya 💕" : ""}
-            >
-              <div className="circle">{done ? "✓" : s.id}</div>
-              <div className="label">{s.title}</div>
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
+    return (
+        <div className="stepper">
+            <div className="progress">
+                <div className="bar" style={{ width: `${progressPct}%` }} />
+            </div>
+            <div className="steps">
+                {steps.map((s) => {
+                    const active = s.id === current;
+                    const done = s.id < current;
+                    const allowed = isStepAllowed(s.id);
+                    return (
+                        <button
+                            key={s.id}
+                            className={`step ${active ? "active" : ""} ${done ? "done" : ""}`}
+                            onClick={() => allowed && onJump(s.id)}
+                            disabled={!allowed}
+                            title={
+                                !allowed
+                                    ? "Selesaikan langkah sebelumnya dulu ya 💕"
+                                    : ""
+                            }
+                        >
+                            <div className="circle">{done ? "✓" : s.id}</div>
+                            <div className="label">{s.title}</div>
+                        </button>
+                    );
+                })}
+            </div>
+        </div>
+    );
 }
 
 function ErrorSummary({ step, step1Errors, step2Errors, step3Errors }) {
-  const list =
-    step === 1
-      ? Object.values(step1Errors)
-      : step === 2
-        ? Object.values(step2Errors)
-        : step === 3
-          ? Object.values(step3Errors)
-          : [];
-  if (list.length === 0) return null;
-  return (
-    <div className="alert warn" style={{ marginBottom: 16 }}>
-      <div className="alert-title">Perlu diisi</div>
-      <ul>
-        {list.map((v, i) => (
-          <li key={i}>{v}</li>
-        ))}
-      </ul>
-    </div>
-  );
+    const list =
+        step === 1
+            ? Object.values(step1Errors)
+            : step === 2
+              ? Object.values(step2Errors)
+              : step === 3
+                ? Object.values(step3Errors)
+                : [];
+    if (list.length === 0) return null;
+    return (
+        <div className="alert warn" style={{ marginBottom: 16 }}>
+            <div className="alert-title">Perlu diisi</div>
+            <ul>
+                {list.map((v, i) => (
+                    <li key={i}>{v}</li>
+                ))}
+            </ul>
+        </div>
+    );
 }
 
 function SidebarSummary({ form, step, step1Errors, step2Errors, step3Errors }) {
-  const totalArmada = form.armadaList?.length || 0;
-  const totalFiles = [
-  form.fotoKunjungan,
-  ...(form.evidenceFiles || []),
-  ...(form.suratPernyataanFiles || []),
-].filter(Boolean).length;
-  const badges = [
-    { label: "Langkah", value: `${step}/3` },
-    { label: "Armada", value: totalArmada },
-    { label: "Berkas", value: totalFiles },
-  ];
-  const errorCount =
-    (step === 1 && Object.keys(step1Errors).length) ||
-    (step === 2 && Object.keys(step2Errors).length) ||
-    (step === 3 && Object.keys(step3Errors).length) ||
-    0;
+    const totalArmada = form.armadaList?.length || 0;
+    const totalFiles = [
+        form.fotoKunjungan,
+        ...(form.suratLainnyaFiles || []),
+        ].filter(Boolean).length;
+    const badges = [
+        { label: "Langkah", value: `${step}/3` },
+        { label: "Armada", value: totalArmada },
+        { label: "Berkas", value: totalFiles },
+    ];
+    const errorCount =
+        (step === 1 && Object.keys(step1Errors).length) ||
+        (step === 2 && Object.keys(step2Errors).length) ||
+        (step === 3 && Object.keys(step3Errors).length) ||
+        0;
 
-  return (
-    <div className="aside-card">
-      <div className="aside-title">Ringkasan</div>
-      <div className="badges">
-        {badges.map((b, i) => (
-          <div className="badge stat" key={i}>
-            <div className="x-label">{b.label}</div>
-            <div className="x-value">{b.value}</div>
-          </div>
-        ))}
-      </div>
+    return (
+        <div className="aside-card">
+            <div className="aside-title">Ringkasan</div>
+            <div className="badges">
+                {badges.map((b, i) => (
+                    <div className="badge stat" key={i}>
+                        <div className="x-label">{b.label}</div>
+                        <div className="x-value">{b.value}</div>
+                    </div>
+                ))}
+            </div>
 
-      <div className="mini">
-        <div className="mini-title">Data Utama</div>
-        <div className="mini-grid">
-          <MiniItem label="Tanggal" value={form.tanggal || "—"} />
-          <MiniItem label="Waktu" value={form.waktu || "—"} />
-          <MiniItem label="Loket" value={form.loket || "—"} />
-          <MiniItem label="Petugas" value={form.namaPetugas || "—"} />
-          <MiniItem label="Jenis" value={form.jenisAngkutan || "—"} />
-          <MiniItem label="Pemilik" value={form.namaPemilik || "—"} />
+            <div className="mini">
+                <div className="mini-title">Data Utama</div>
+                <div className="mini-grid">
+                    <MiniItem label="Tanggal" value={form.tanggal || "—"} />
+                    <MiniItem label="Waktu" value={form.waktu || "—"} />
+                    <MiniItem label="Loket" value={form.loket || "—"} />
+                    <MiniItem label="Petugas" value={form.namaPetugas || "—"} />
+                    <MiniItem label="Jenis" value={form.jenisAngkutan || "—"} />
+                    <MiniItem label="Pemilik" value={form.namaPemilik || "—"} />
+                </div>
+            </div>
+
+            {errorCount > 0 && (
+                <div className="tip" style={{ marginTop: 10 }}>
+                    Ada {errorCount} kolom yang perlu dilengkapi pada langkah
+                    ini.
+                </div>
+            )}
         </div>
-      </div>
-
-      {errorCount > 0 && (
-        <div className="tip" style={{ marginTop: 10 }}>
-          Ada {errorCount} kolom yang perlu dilengkapi pada langkah ini.
-        </div>
-      )}
-    </div>
-  );
+    );
 }
 function MiniItem({ label, value }) {
-  return (
-    <div className="mini-item">
-      <div className="mini-label">{label}</div>
-      <div className="mini-value">{value}</div>
-    </div>
-  );
+    return (
+        <div className="mini-item">
+            <div className="mini-label">{label}</div>
+            <div className="mini-value">{value}</div>
+        </div>
+    );
 }
 
 /* ================ STEPS ================ */
 function Step1Datakunjungan({
-  form,
-  setField,
-  errors,
-  employeeMaster,
-  companyMaster,
-  picMaster,
+    form,
+    setField,
+    errors,
+    employeeMaster,
+    companyMaster,
+    picMaster,
 }) {
-  return (
-    <>
-      <h2 className="h2">Step 1 — Datakunjungan</h2>
-      <p className="lead">
-        Isi data kunjungan, detail badan usaha, dan lokasi yang dikunjungi.
-      </p>
+    return (
+        <>
+            <h2 className="h2">Step 1 — Datakunjungan</h2>
+            <p className="lead">
+                Isi data kunjungan, detail badan usaha, dan lokasi yang
+                dikunjungi.
+            </p>
 
-      <div className="form-grid">
-        <Field label="Tanggal Kunjungan" req error={errors.tanggal}>
-          <input
-            data-error={!!errors.tanggal}
-            type="date"
-            value={form.tanggal}
-            onChange={(e) => setField("tanggal", e.target.value)}
-          />
-        </Field>
+            <div className="form-grid">
+                <Field label="Tanggal Kunjungan" req error={errors.tanggal}>
+                    <input
+                        data-error={!!errors.tanggal}
+                        type="date"
+                        value={form.tanggal}
+                        onChange={(e) => setField("tanggal", e.target.value)}
+                    />
+                </Field>
 
-        <Field label="Waktu Kunjungan" req error={errors.waktu}>
-          <input
-            data-error={!!errors.waktu}
-            type="time"
-            value={form.waktu}
-            onChange={(e) => setField("waktu", e.target.value)}
-          />
-        </Field>
+                <Field label="Waktu Kunjungan" req error={errors.waktu}>
+                    <input
+                        data-error={!!errors.waktu}
+                        type="time"
+                        value={form.waktu}
+                        onChange={(e) => setField("waktu", e.target.value)}
+                    />
+                </Field>
 
-        <Field label="Nama Petugas" req error={errors.namaPetugas}>
-          <input
-            data-error={!!errors.namaPetugas}
-            list="employee-list"
-            value={form.namaPetugas}
-            onChange={(e) => {
-              const val = e.target.value;
-              setField("namaPetugas", val);
+                <Field label="Nama Petugas" req error={errors.namaPetugas}>
+                    <input
+                        data-error={!!errors.namaPetugas}
+                        list="employee-list"
+                        value={form.namaPetugas}
+                        onChange={(e) => {
+                            const val = e.target.value;
+                            setField("namaPetugas", val);
 
-              const match =
-                (employeeMaster || []).find(
-                  (x) =>
-                    (x.name || "").trim().toLowerCase() ===
-                    val.trim().toLowerCase(),
-                ) || null;
+                            const match =
+                                (employeeMaster || []).find(
+                                    (x) =>
+                                        (x.name || "").trim().toLowerCase() ===
+                                        val.trim().toLowerCase(),
+                                ) || null;
 
-              if (match?.samsat?.loket) {
-                setField("loket", match.samsat.name);
-              }
-            }}
-            placeholder="Nama petugas lapangan"
-            autoComplete="off"
-          />
-          <datalist id="employee-list">
-            {(employeeMaster || []).map((e) => (
-              <option key={e.id} value={e.name}>
-                {e.name}
-                {e.samsat?.name ? ` — ${e.samsat.name}` : ""}
-                {e.samsat?.loket ? ` (${e.samsat.loket})` : ""}
-              </option>
-            ))}
-          </datalist>
-        </Field>
+                            if (match?.samsat?.loket) {
+                                setField("loket", match.samsat.name);
+                            }
+                        }}
+                        placeholder="Nama petugas lapangan"
+                        autoComplete="off"
+                    />
+                    <datalist id="employee-list">
+                        {(employeeMaster || []).map((e) => (
+                            <option key={e.id} value={e.name}>
+                                {e.name}
+                                {e.samsat?.name ? ` — ${e.samsat.name}` : ""}
+                                {e.samsat?.loket ? ` (${e.samsat.loket})` : ""}
+                            </option>
+                        ))}
+                    </datalist>
+                </Field>
 
-        <Field label="Loket" req error={errors.loket}>
-          <input
-            data-error={!!errors.loket}
-            list="loket-list"
-            value={form.loket}
-            onChange={(e) => setField("loket", e.target.value)}
-            placeholder="Ketik nama loket…"
-            autoComplete="off"
-          />
-          <datalist id="loket-list">
-            {LOKET_OPTIONS.map((opt) => (
-              <option key={opt} value={opt} />
-            ))}
-          </datalist>
-        </Field>
+                <Field label="Loket" req error={errors.loket}>
+                    <input
+                        data-error={!!errors.loket}
+                        list="loket-list"
+                        value={form.loket}
+                        onChange={(e) => setField("loket", e.target.value)}
+                        placeholder="Ketik nama loket…"
+                        autoComplete="off"
+                    />
+                    <datalist id="loket-list">
+                        {LOKET_OPTIONS.map((opt) => (
+                            <option key={opt} value={opt} />
+                        ))}
+                    </datalist>
+                </Field>
 
-        {/* <Field span="2" label="Status Kunjungan">
+                {/* <Field span="2" label="Status Kunjungan">
           <label className="check">
             <input type="checkbox" checked={form.sudahKunjungan} onChange={e=>setField("sudahKunjungan", e.target.checked)} />
             Sudah melakukan kunjungan
           </label>
         </Field> */}
 
-        <Field label="Nama PT/CV yang Dikelola">
-          <input
-            list="perusahaan-list"
-            value={form.badanUsahaNama}
-            onChange={(e) => {
-              const val = e.target.value;
-              setField("badanUsahaNama", val);
-            }}
-            placeholder="Pilih / ketik nama PT/CV"
-            autoComplete="off"
-          />
-          <datalist id="perusahaan-list">
-            {(companyMaster || []).map((c) => (
-              <option
-                key={`${c.nama_perusahaan}-${c.nama_pemilik || "x"}`}
-                value={c.nama_perusahaan}
-              >
-                {c.nama_perusahaan}
-                {c.nama_pemilik ? ` — (${c.nama_pemilik})` : ""}
-              </option>
-            ))}
-          </datalist>
-        </Field>
+                <Field label="Nama PT/CV yang Dikelola">
+                    <input
+                        list="perusahaan-list"
+                        value={form.badanUsahaNama}
+                        onChange={(e) => {
+                            const val = e.target.value;
+                            setField("badanUsahaNama", val);
+                        }}
+                        placeholder="Pilih / ketik nama PT/CV"
+                        autoComplete="off"
+                    />
+                    <datalist id="perusahaan-list">
+                        {(companyMaster || []).map((c) => (
+                            <option
+                                key={`${c.nama_perusahaan}-${c.nama_pemilik || "x"}`}
+                                value={c.nama_perusahaan}
+                            >
+                                {c.nama_perusahaan}
+                                {c.nama_pemilik ? ` — (${c.nama_pemilik})` : ""}
+                            </option>
+                        ))}
+                    </datalist>
+                </Field>
 
-        <Field label="Nama Pemilik / Pengelola">
-          <input
-            value={form.namaPemilik}
-            onChange={(e) => {
-              const val = e.target.value;
-              setField("namaPemilik", val);
-            }}
-            placeholder="Nama pemilik atau pengelola"
-            autoComplete="off"
-          />
-        </Field>
+                <Field label="Nama Pemilik / Pengelola">
+                    <input
+                        value={form.namaPemilik}
+                        onChange={(e) => {
+                            const val = e.target.value;
+                            setField("namaPemilik", val);
+                        }}
+                        placeholder="Nama pemilik atau pengelola"
+                        autoComplete="off"
+                    />
+                </Field>
 
-        <Field label="Jenis Angkutan" req error={errors.jenisAngkutan}>
-          <select
-            data-error={!!errors.jenisAngkutan}
-            value={form.jenisAngkutan}
-            onChange={(e) => setField("jenisAngkutan", e.target.value)}
-          >
-            <option value="">— Pilih jenis —</option>
-            <option>Kendaraan Bermotor Umum</option>
-            <option>Kapal Penumpang Umum</option>
-          </select>
-        </Field>
+                <Field label="Jenis Angkutan" req error={errors.jenisAngkutan}>
+                    <select
+                        data-error={!!errors.jenisAngkutan}
+                        value={form.jenisAngkutan}
+                        onChange={(e) =>
+                            setField("jenisAngkutan", e.target.value)
+                        }
+                    >
+                        <option value="">— Pilih jenis —</option>
+                        <option>Kendaraan Bermotor Umum</option>
+                        <option>Kapal Penumpang Umum</option>
+                    </select>
+                </Field>
 
-        <Field
-          span="2"
-          label="Alamat yang Dikunjungi"
-          req
-          error={errors.alamatKunjungan}
-        >
-          <textarea
-            data-error={!!errors.alamatKunjungan}
-            value={form.alamatKunjungan}
-            onChange={(e) => setField("alamatKunjungan", e.target.value)}
-            placeholder="Tulis alamat lengkap lokasi kunjungan"
-          />
-        </Field>
+                <Field
+                    span="2"
+                    label="Alamat yang Dikunjungi"
+                    req
+                    error={errors.alamatKunjungan}
+                >
+                    <textarea
+                        data-error={!!errors.alamatKunjungan}
+                        value={form.alamatKunjungan}
+                        onChange={(e) =>
+                            setField("alamatKunjungan", e.target.value)
+                        }
+                        placeholder="Tulis alamat lengkap lokasi kunjungan"
+                    />
+                </Field>
 
-        <Field label="No. Telepon/HP Pemilik/Pengelola">
-          <input
-            value={form.telPemilik}
-            onChange={(e) => setField("telPemilik", e.target.value)}
-            placeholder="08xxxxxxxxxx"
-            autoComplete="off"
-          />
-        </Field>
-      </div>
-    </>
-  );
+                <Field label="No. Telepon/HP Pemilik/Pengelola">
+                    <input
+                        value={form.telPemilik}
+                        onChange={(e) => setField("telPemilik", e.target.value)}
+                        placeholder="08xxxxxxxxxx"
+                        autoComplete="off"
+                    />
+                </Field>
+            </div>
+        </>
+    );
 }
 
 function Step2Armada({
-  form,
-  setField,
-  armadaList,
-  setArmadaList,
-  errors,
-  onNext,
+    form,
+    setField,
+    armadaList,
+    setArmadaList,
+    errors,
+    onNext,
 }) {
-  const [iwkbuRows, setIwkbuRows] = useState([]);
-  const [loadingIwkbu, setLoadingIwkbu] = useState(false);
-  const [errorIwkbu, setErrorIwkbu] = useState(null);
+    const [iwkbuRows, setIwkbuRows] = useState([]);
+    const [loadingIwkbu, setLoadingIwkbu] = useState(false);
+    const [errorIwkbu, setErrorIwkbu] = useState(null);
 
-  // ====== LOAD DATA IWKBU BERDASARKAN NAMA PERUSAHAAN (STEP 1) ======
-  useEffect(() => {
-    const nama = (form.badanUsahaNama || "").trim();
-    if (!nama) {
-      setIwkbuRows([]);
-      return;
-    }
+    // ====== LOAD DATA IWKBU BERDASARKAN NAMA PERUSAHAAN (STEP 1) ======
+    useEffect(() => {
+        const nama = (form.badanUsahaNama || "").trim();
+        if (!nama) {
+            setIwkbuRows([]);
+            return;
+        }
 
-    let alive = true;
-    (async () => {
-      setLoadingIwkbu(true);
-      setErrorIwkbu(null);
-      try {
-  const res = await fetch(
-    `https://moveon-jr.alwaysdata.net/api/iwkbu?perusahaan=${encodeURIComponent(nama)}`
-  );
+        let alive = true;
+        (async () => {
+            setLoadingIwkbu(true);
+            setErrorIwkbu(null);
+            try {
+                const res = await fetch(
+                    `https://moveon-jr.alwaysdata.net/api/iwkbu?perusahaan=${encodeURIComponent(nama)}`,
+                );
 
-  if (!res.ok) {
-    throw new Error("Gagal load IWKBU");
-  }
+                if (!res.ok) {
+                    throw new Error("Gagal load IWKBU");
+                }
 
-  const data = await res.json();
+                const data = await res.json();
 
-if (!alive) return;
+                if (!alive) return;
 
-const rows = Array.isArray(data)
-  ? data
-  : Array.isArray(data?.data)
-    ? data.data
-    : [];
+                const rows = Array.isArray(data)
+                    ? data
+                    : Array.isArray(data?.data)
+                      ? data.data
+                      : [];
 
-console.log("IWKBU RAW:", data);
-console.log("IWKBU ROWS:", rows);
+                console.log("IWKBU RAW:", data);
+                console.log("IWKBU ROWS:", rows);
 
-setIwkbuRows(rows);
+                setIwkbuRows(rows);
+            } catch (e) {
+                if (!alive) return;
+                console.error("Load iwkbu for Step2Armada error:", e);
+                setErrorIwkbu(e.message || String(e));
+                setIwkbuRows([]);
+            } finally {
+                if (alive) setLoadingIwkbu(false);
+            }
+        })();
 
-} catch (e) {
-        if (!alive) return;
-        console.error("Load iwkbu for Step2Armada error:", e);
-        setErrorIwkbu(e.message || String(e));
-        setIwkbuRows([]);
-      } finally {
-        if (alive) setLoadingIwkbu(false);
-      }
-    })();
+        return () => {
+            alive = false;
+        };
+    }, [form.badanUsahaNama]);
 
-    return () => {
-      alive = false;
-    };
-  }, [form.badanUsahaNama]);
+    // daftar nopol unik buat datalist
+    const nopolOptions = useMemo(
+        () =>
+            Array.from(
+                new Set(
+                    (Array.isArray(iwkbuRows) ? iwkbuRows : [])
+                        .map((r) => r.nopol)
+                        .filter(Boolean)
+                        .map((n) => n.toUpperCase()),
+                ),
+            ).sort(),
+        [iwkbuRows],
+    );
 
-  // daftar nopol unik buat datalist
-  const nopolOptions = useMemo(
-  () =>
-    Array.from(
-      new Set(
-        (Array.isArray(iwkbuRows) ? iwkbuRows : [])
-          .map((r) => r.nopol)
-          .filter(Boolean)
-          .map((n) => n.toUpperCase()),
-      ),
-    ).sort(),
-  [iwkbuRows],
-);
+    const tipeArmadaOptions = useMemo(() => {
+        const fromMaster = TIPE_ARMADA_MASTER;
+        const fromIwkbu = (Array.isArray(iwkbuRows) ? iwkbuRows : [])
+            .map((r) => r.jenis)
+            .filter(Boolean)
+            .map((j) => j.toUpperCase());
 
-  const tipeArmadaOptions = useMemo(() => {
-  const fromMaster = TIPE_ARMADA_MASTER;
-  const fromIwkbu = (Array.isArray(iwkbuRows) ? iwkbuRows : [])
-    .map((r) => r.jenis)
-    .filter(Boolean)
-    .map((j) => j.toUpperCase());
+        return Array.from(new Set([...fromMaster, ...fromIwkbu])).sort();
+    }, [iwkbuRows]);
 
-  return Array.from(new Set([...fromMaster, ...fromIwkbu])).sort();
-}, [iwkbuRows]);
-
-  // pastikan tiap item armada punya field tambahan (osTarif, bayarOs, buktiFiles, rekomendasi)
-  const safeList = (armadaList || []).map((a) => ({
-    nopol: "",
-    status: "",
-    tipeArmada: "",
-    tahun: "",
-    osTarif: null,
-    bayarOs: "",
-    buktiFiles: [],
-    rekomendasi: "",
-    ...a,
-  }));
-
-  const setSafeList = (next) => setArmadaList(next);
-
-  const add = () =>
-    setSafeList([
-      ...safeList,
-      {
+    // pastikan tiap item armada punya field tambahan (osTarif, bayarOs, buktiFiles, rekomendasi)
+    const safeList = (armadaList || []).map((a) => ({
         nopol: "",
         status: "",
         tipeArmada: "",
@@ -1363,578 +1378,653 @@ setIwkbuRows(rows);
         bayarOs: "",
         buktiFiles: [],
         rekomendasi: "",
-      },
-    ]);
+        ...a,
+    }));
 
-  const remove = (idx) => setSafeList(safeList.filter((_, i) => i !== idx));
+    const setSafeList = (next) => setArmadaList(next);
 
-  const update = (idx, patch) => {
-    const next = [...safeList];
-    next[idx] = { ...next[idx], ...patch };
-    setSafeList(next);
-  };
+    const add = () =>
+        setSafeList([
+            ...safeList,
+            {
+                nopol: "",
+                status: "",
+                tipeArmada: "",
+                tahun: "",
+                osTarif: null,
+                bayarOs: "",
+                buktiFiles: [],
+                rekomendasi: "",
+            },
+        ]);
 
-  const handleNopolChange = (idx, raw) => {
-    const value = (raw || "").toUpperCase(); // ❌ trim DIHAPUS
+    const remove = (idx) => setSafeList(safeList.filter((_, i) => i !== idx));
 
-    const row = (Array.isArray(iwkbuRows) ? iwkbuRows : []).find(
-  (r) => (r.nopol || "").toUpperCase().trim() === value.trim(),
-);
+    const update = (idx, patch) => {
+        const next = [...safeList];
+        next[idx] = { ...next[idx], ...patch };
+        setSafeList(next);
+    };
 
-    if (row) {
-      update(idx, {
-        nopol: value,
-        osTarif: row.tarif ?? 0,
-        tipeArmada: row.jenis || "",
-        tahun: row.tahun || "",
-      });
-    } else {
-      update(idx, { nopol: value, osTarif: null });
-    }
-  };
+    const handleNopolChange = (idx, raw) => {
+        const value = (raw || "").toUpperCase(); // ❌ trim DIHAPUS
 
-  const handleStatusChange = (idx, newStatus) => {
-    const normalized = (newStatus || "").toUpperCase();
-    const current = safeList[idx];
-
-    const patch = { status: newStatus };
-
-    // kalau ganti dari "Beroperasi + Bayar" ke status lain → kosongkan bayarOs
-    if (
-      current.status === "Beroperasi + Bayar" &&
-      newStatus !== "Beroperasi + Bayar"
-    ) {
-      patch.bayarOs = "";
-    }
-
-    // kalau status baru tidak butuh upload → kosongkan buktiFiles
-    if (!ARMADA_STATUS_NEED_UPLOAD.has(normalized)) {
-      patch.buktiFiles = [];
-    }
-
-    update(idx, patch);
-  };
-
-  const handleBuktiChange = (idx, fileList) => {
-    const files = Array.from(fileList || []);
-    const MAX_FILES = 3;
-    const MAX_SIZE = 5 * 1024 * 1024; // 5 MB
-
-    const valid = [];
-    const rejected = [];
-
-    for (const f of files) {
-      if (valid.length >= MAX_FILES) {
-        rejected.push(`${f.name} (lebih dari 3 file)`);
-        continue;
-      }
-      if (f.size > MAX_SIZE) {
-        rejected.push(`${f.name} (lebih dari 5MB)`);
-        continue;
-      }
-      valid.push(f);
-    }
-
-    if (rejected.length) {
-      alert(
-        "Beberapa file tidak digunakan:\n" +
-          rejected.map((r) => "- " + r).join("\n") +
-          "\nSyarat: maks 3 file, masing-masing ≤ 5MB.",
-      );
-    }
-
-    update(idx, { buktiFiles: valid });
-  };
-
-  return (
-    <>
-      <h2 className="h2">Step 2 — Armada</h2>
-      <p className="lead">
-        Daftar kendaraan, status & nilai OS IWKBU untuk PT/CV:{" "}
-        <strong>{form.badanUsahaNama || "— belum dipilih di Step 1"}</strong>
-      </p>
-
-      {loadingIwkbu && (
-        <div className="hint" style={{ marginBottom: 8 }}>
-          Memuat riwayat armada dari IWKBU…
-        </div>
-      )}
-      {errorIwkbu && (
-        <div className="alert warn" style={{ marginBottom: 8 }}>
-          <div className="alert-title">Gagal memuat data IWKBU</div>
-          {errorIwkbu}
-        </div>
-      )}
-      {errors.list && (
-        <div className="alert warn" style={{ marginBottom: 12 }}>
-          <div className="alert-title">Perlu diisi</div>
-          {errors.list}
-        </div>
-      )}
-
-      {safeList.map((a, i) => {
-        const statusNorm = (a.status || "").toUpperCase();
-        const showBayarOs = a.status === "Beroperasi + Bayar";
-        const showUpload = ARMADA_STATUS_NEED_UPLOAD.has(statusNorm);
-
-        return (
-          <div className="card-sub" key={i}>
-            <div className="form-grid">
-              {/* NOPOL */}
-              <Field label="No. Polisi" req error={errors[`nopol_${i}`]}>
-                <input
-                  data-error={!!errors[`nopol_${i}`]}
-                  list="armada-nopol-list"
-                  value={a.nopol}
-                  onChange={(e) => handleNopolChange(i, e.target.value)}
-                  onBlur={(e) =>
-                    update(i, {
-                      nopol: e.target.value
-                        .toUpperCase()
-                        .replace(/\s+/g, " ")
-                        .trim(),
-                    })
-                  }
-                  placeholder="BM 1234 TU"
-                  autoComplete="off"
-                />
-                {a.osTarif != null && (
-                  <div className="hint" style={{ marginTop: 4 }}>
-                    Jumlah OS yang harus dibayar:{" "}
-                    <strong>{idr(a.osTarif)}</strong>
-                  </div>
-                )}
-              </Field>
-
-              {/* STATUS */}
-              <Field label="Status Kendaraan" req error={errors[`status_${i}`]}>
-                <select
-                  data-error={!!errors[`status_${i}`]}
-                  value={a.status}
-                  onChange={(e) => handleStatusChange(i, e.target.value)}
-                >
-                  <option value="">— Pilih Status —</option>
-                  {ARMADA_STATUS_OPTIONS.map((opt) => (
-                    <option key={opt} value={opt}>
-                      {opt}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-
-              {/* TIPE ARMADA (otomatis dari iwkbu.jenis tapi bisa edit) */}
-              <Field label="Tipe Armada">
-                <input
-                  list="tipe-armada-list"
-                  value={a.tipeArmada}
-                  onChange={
-                    (e) => update(i, { tipeArmada: e.target.value }) // ⬅️ JANGAN DIAPA-APAIN
-                  }
-                  onBlur={(e) =>
-                    update(i, {
-                      tipeArmada: e.target.value
-                        .toUpperCase()
-                        .replace(/\s+/g, " ")
-                        .trim(),
-                    })
-                  }
-                  placeholder="Pilih atau ketik tipe armada"
-                  autoComplete="off"
-                />
-              </Field>
-
-              {/* TAHUN (otomatis dari iwkbu.tahun tapi bisa edit) */}
-              <Field label="Tahun Pembuatan" error={errors[`tahun_${i}`]}>
-                <input
-                  data-error={!!errors[`tahun_${i}`]}
-                  type="number"
-                  value={a.tahun}
-                  onChange={(e) => update(i, { tahun: e.target.value })}
-                  placeholder="2020"
-                />
-              </Field>
-            </div>
-
-            {/* Jika status = Beroperasi + Bayar → input jumlah OS yang mau dibayar */}
-            {showBayarOs && (
-              <div className="form-grid" style={{ marginTop: 8 }}>
-                <Field
-                  label={
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: 6,
-                        alignItems: "baseline",
-                      }}
-                    >
-                      <span>Jumlah OS yang mau dibayar</span>
-                      {a.osTarif != null && (
-                        <small style={{ color: "#9CA3AF" }}>
-                          (minimal {idr(a.osTarif)})
-                        </small>
-                      )}
-                    </div>
-                  }
-                  error={errors[`bayarOs_${i}`]}
-                >
-                  <input
-                    data-error={!!errors[`bayarOs_${i}`]}
-                    type="number"
-                    min={0}
-                    value={a.bayarOs}
-                    onChange={(e) => update(i, { bayarOs: e.target.value })}
-                    placeholder="Masukkan jumlah yang dibayar"
-                  />
-
-                  {a.osTarif != null && (
-                    <div className="hint">
-                      Nilai OS penuh: <strong>{idr(a.osTarif)}</strong>
-                    </div>
-                  )}
-                </Field>
-              </div>
-            )}
-
-            {/* Status tertentu → upload bukti */}
-            {showUpload && (
-              <div className="form-grid" style={{ marginTop: 8 }}>
-                <Field label="Upload Bukti (Foto)">
-                  <input
-  type="file"
-  multiple
-  accept="image/*"
-  onChange={(e) => handleBuktiChange(i, e.target.files || [])}
-/>
-                  <div className="hint">
-                    Maksimal 3 file, masing-masing ≤ 5MB.
-                    {a.buktiFiles?.length
-                      ? ` (${a.buktiFiles.length} file terpilih)`
-                      : ""}
-                  </div>
-                </Field>
-              </div>
-            )}
-
-            {/* Rekomendasi tindak lanjut untuk armada ini */}
-            <div className="form-grid" style={{ marginTop: 8 }}>
-              <Field span="2" label="Rekomendasi Tindak Lanjut (Armada ini)">
-                <textarea
-                  value={a.rekomendasi}
-                  onChange={(e) => update(i, { rekomendasi: e.target.value })}
-                  placeholder="Contoh : Bayar IWKBU / Pemeliharaan Data KBU / Kunjungan Kembali"
-                />
-              </Field>
-            </div>
-
-            <div className="actions-right">
-              <button
-                type="button"
-                className="btn ghost"
-                onClick={() => remove(i)}
-              >
-                Hapus Armada
-              </button>
-            </div>
-          </div>
+        const row = (Array.isArray(iwkbuRows) ? iwkbuRows : []).find(
+            (r) => (r.nopol || "").toUpperCase().trim() === value.trim(),
         );
-      })}
 
-      {/* datalist nopol untuk semua armada */}
-      <datalist id="armada-nopol-list">
-        {nopolOptions.map((n) => (
-          <option key={n} value={n} />
-        ))}
-      </datalist>
+        if (row) {
+            update(idx, {
+                nopol: value,
+                osTarif: row.tarif ?? 0,
+                tipeArmada: row.jenis || "",
+                tahun: row.tahun || "",
+            });
+        } else {
+            update(idx, { nopol: value, osTarif: null });
+        }
+    };
 
-      <datalist id="tipe-armada-list">
-        {tipeArmadaOptions.map((t) => (
-          <option key={t} value={t} />
-        ))}
-      </datalist>
+    const handleStatusChange = (idx, newStatus) => {
+        const normalized = (newStatus || "").toUpperCase();
+        const current = safeList[idx];
 
-      {/* tombol tambah kendaraan */}
-      <button type="button" className="btn primary" onClick={add}>
-        + Tambah Kendaraan
-      </button>
+        const patch = { status: newStatus };
 
-      {/* B. Hasil Kunjungan (umum) */}
-      <div className="section" style={{ marginTop: 20 }}>
-        <h3 className="h2">B. Hasil Kunjungan</h3>
-        <Field span="2" label="Penjelasan Hasil Kunjungan">
-          <textarea
-            rows={3}
-            placeholder="Tuliskan hasil kunjungan…"
-            value={form?.hasilKunjungan || ""}
-            onChange={(e) => setField("hasilKunjungan", e.target.value)}
-          />
-        </Field>
-        <Field label="Janji Bayar Tunggakan">
-          <input
-            type="date"
-            value={form.janjiBayar}
-            onChange={(e) => setField("janjiBayar", e.target.value)}
-          />
-        </Field>
-      </div>
-    </>
-  );
+        // kalau ganti dari "Beroperasi + Bayar" ke status lain → kosongkan bayarOs
+        if (
+            current.status === "Beroperasi + Bayar" &&
+            newStatus !== "Beroperasi + Bayar"
+        ) {
+            patch.bayarOs = "";
+        }
+
+        // kalau status baru tidak butuh upload → kosongkan buktiFiles
+        if (!ARMADA_STATUS_NEED_UPLOAD.has(normalized)) {
+            patch.buktiFiles = [];
+        }
+
+        update(idx, patch);
+    };
+
+    const handleBuktiChange = (idx, fileList) => {
+        const files = Array.from(fileList || []);
+        const MAX_FILES = 3;
+        const MAX_SIZE = 5 * 1024 * 1024; // 5 MB
+
+        const valid = [];
+        const rejected = [];
+
+        for (const f of files) {
+            if (valid.length >= MAX_FILES) {
+                rejected.push(`${f.name} (lebih dari 3 file)`);
+                continue;
+            }
+            if (f.size > MAX_SIZE) {
+                rejected.push(`${f.name} (lebih dari 5MB)`);
+                continue;
+            }
+            valid.push(f);
+        }
+
+        if (rejected.length) {
+            alert(
+                "Beberapa file tidak digunakan:\n" +
+                    rejected.map((r) => "- " + r).join("\n") +
+                    "\nSyarat: maks 3 file, masing-masing ≤ 5MB.",
+            );
+        }
+
+        update(idx, { buktiFiles: valid });
+    };
+
+    return (
+        <>
+            <h2 className="h2">Step 2 — Armada</h2>
+            <p className="lead">
+                Daftar kendaraan, status & nilai OS IWKBU untuk PT/CV:{" "}
+                <strong>
+                    {form.badanUsahaNama || "— belum dipilih di Step 1"}
+                </strong>
+            </p>
+
+            {loadingIwkbu && (
+                <div className="hint" style={{ marginBottom: 8 }}>
+                    Memuat riwayat armada dari IWKBU…
+                </div>
+            )}
+            {errorIwkbu && (
+                <div className="alert warn" style={{ marginBottom: 8 }}>
+                    <div className="alert-title">Gagal memuat data IWKBU</div>
+                    {errorIwkbu}
+                </div>
+            )}
+            {errors.list && (
+                <div className="alert warn" style={{ marginBottom: 12 }}>
+                    <div className="alert-title">Perlu diisi</div>
+                    {errors.list}
+                </div>
+            )}
+
+            {safeList.map((a, i) => {
+                const statusNorm = (a.status || "").toUpperCase();
+                const showBayarOs = a.status === "Beroperasi + Bayar";
+                const showUpload = ARMADA_STATUS_NEED_UPLOAD.has(statusNorm);
+
+                return (
+                    <div className="card-sub" key={i}>
+                        <div className="form-grid">
+                            {/* NOPOL */}
+                            <Field
+                                label="No. Polisi"
+                                req
+                                error={errors[`nopol_${i}`]}
+                            >
+                                <input
+                                    data-error={!!errors[`nopol_${i}`]}
+                                    list="armada-nopol-list"
+                                    value={a.nopol}
+                                    onChange={(e) =>
+                                        handleNopolChange(i, e.target.value)
+                                    }
+                                    onBlur={(e) =>
+                                        update(i, {
+                                            nopol: e.target.value
+                                                .toUpperCase()
+                                                .replace(/\s+/g, " ")
+                                                .trim(),
+                                        })
+                                    }
+                                    placeholder="BM 1234 TU"
+                                    autoComplete="off"
+                                />
+                                {a.osTarif != null && (
+                                    <div
+                                        className="hint"
+                                        style={{ marginTop: 4 }}
+                                    >
+                                        Jumlah OS yang harus dibayar:{" "}
+                                        <strong>{idr(a.osTarif)}</strong>
+                                    </div>
+                                )}
+                            </Field>
+
+                            {/* STATUS */}
+                            <Field
+                                label="Status Kendaraan"
+                                req
+                                error={errors[`status_${i}`]}
+                            >
+                                <select
+                                    data-error={!!errors[`status_${i}`]}
+                                    value={a.status}
+                                    onChange={(e) =>
+                                        handleStatusChange(i, e.target.value)
+                                    }
+                                >
+                                    <option value="">— Pilih Status —</option>
+                                    {ARMADA_STATUS_OPTIONS.map((opt) => (
+                                        <option key={opt} value={opt}>
+                                            {opt}
+                                        </option>
+                                    ))}
+                                </select>
+                            </Field>
+
+                            {/* TIPE ARMADA (otomatis dari iwkbu.jenis tapi bisa edit) */}
+                            <Field label="Tipe Armada">
+                                <input
+                                    list="tipe-armada-list"
+                                    value={a.tipeArmada}
+                                    onChange={
+                                        (e) =>
+                                            update(i, {
+                                                tipeArmada: e.target.value,
+                                            }) // ⬅️ JANGAN DIAPA-APAIN
+                                    }
+                                    onBlur={(e) =>
+                                        update(i, {
+                                            tipeArmada: e.target.value
+                                                .toUpperCase()
+                                                .replace(/\s+/g, " ")
+                                                .trim(),
+                                        })
+                                    }
+                                    placeholder="Pilih atau ketik tipe armada"
+                                    autoComplete="off"
+                                />
+                            </Field>
+
+                            {/* TAHUN (otomatis dari iwkbu.tahun tapi bisa edit) */}
+                            <Field
+                                label="Tahun Pembuatan"
+                                error={errors[`tahun_${i}`]}
+                            >
+                                <input
+                                    data-error={!!errors[`tahun_${i}`]}
+                                    type="number"
+                                    value={a.tahun}
+                                    onChange={(e) =>
+                                        update(i, { tahun: e.target.value })
+                                    }
+                                    placeholder="2020"
+                                />
+                            </Field>
+                        </div>
+
+                        {/* Jika status = Beroperasi + Bayar → input jumlah OS yang mau dibayar */}
+                        {showBayarOs && (
+                            <div className="form-grid" style={{ marginTop: 8 }}>
+                                <Field
+                                    label={
+                                        <div
+                                            style={{
+                                                display: "flex",
+                                                gap: 6,
+                                                alignItems: "baseline",
+                                            }}
+                                        >
+                                            <span>
+                                                Jumlah OS yang mau dibayar
+                                            </span>
+                                            {a.osTarif != null && (
+                                                <small
+                                                    style={{ color: "#9CA3AF" }}
+                                                >
+                                                    (minimal {idr(a.osTarif)})
+                                                </small>
+                                            )}
+                                        </div>
+                                    }
+                                    error={errors[`bayarOs_${i}`]}
+                                >
+                                    <input
+                                        data-error={!!errors[`bayarOs_${i}`]}
+                                        type="number"
+                                        min={0}
+                                        value={a.bayarOs}
+                                        onChange={(e) =>
+                                            update(i, {
+                                                bayarOs: e.target.value,
+                                            })
+                                        }
+                                        placeholder="Masukkan jumlah yang dibayar"
+                                    />
+
+                                    {a.osTarif != null && (
+                                        <div className="hint">
+                                            Nilai OS penuh:{" "}
+                                            <strong>{idr(a.osTarif)}</strong>
+                                        </div>
+                                    )}
+                                </Field>
+                            </div>
+                        )}
+
+                        {/* Status tertentu → upload bukti */}
+                        {showUpload && (
+                            <div className="form-grid" style={{ marginTop: 8 }}>
+                                <Field label="Upload Bukti (Foto)">
+                                    <input
+                                        type="file"
+                                        multiple
+                                        accept="image/*"
+                                        onChange={(e) =>
+                                            handleBuktiChange(
+                                                i,
+                                                e.target.files || [],
+                                            )
+                                        }
+                                    />
+                                    <div className="hint">
+                                        Maksimal 3 file, masing-masing ≤ 5MB.
+                                        {a.buktiFiles?.length
+                                            ? ` (${a.buktiFiles.length} file terpilih)`
+                                            : ""}
+                                    </div>
+                                </Field>
+                            </div>
+                        )}
+
+                        {/* Rekomendasi tindak lanjut untuk armada ini */}
+                        <div className="form-grid" style={{ marginTop: 8 }}>
+                            <Field
+                                span="2"
+                                label="Rekomendasi Tindak Lanjut (Armada ini)"
+                            >
+                                <textarea
+                                    value={a.rekomendasi}
+                                    onChange={(e) =>
+                                        update(i, {
+                                            rekomendasi: e.target.value,
+                                        })
+                                    }
+                                    placeholder="Contoh : Bayar IWKBU / Pemeliharaan Data KBU / Kunjungan Kembali"
+                                />
+                            </Field>
+                        </div>
+
+                        <div className="actions-right">
+                            <button
+                                type="button"
+                                className="btn ghost"
+                                onClick={() => remove(i)}
+                            >
+                                Hapus Armada
+                            </button>
+                        </div>
+                    </div>
+                );
+            })}
+
+            {/* datalist nopol untuk semua armada */}
+            <datalist id="armada-nopol-list">
+                {nopolOptions.map((n) => (
+                    <option key={n} value={n} />
+                ))}
+            </datalist>
+
+            <datalist id="tipe-armada-list">
+                {tipeArmadaOptions.map((t) => (
+                    <option key={t} value={t} />
+                ))}
+            </datalist>
+
+            {/* tombol tambah kendaraan */}
+            <button type="button" className="btn primary" onClick={add}>
+                + Tambah Kendaraan
+            </button>
+
+            {/* B. Hasil Kunjungan (umum) */}
+            <div className="section" style={{ marginTop: 20 }}>
+                <h3 className="h2">B. Hasil Kunjungan</h3>
+                <Field span="2" label="Penjelasan Hasil Kunjungan">
+                    <textarea
+                        rows={3}
+                        placeholder="Tuliskan hasil kunjungan…"
+                        value={form?.hasilKunjungan || ""}
+                        onChange={(e) =>
+                            setField("hasilKunjungan", e.target.value)
+                        }
+                    />
+                </Field>
+                <Field label="Janji Bayar Tunggakan">
+                    <input
+                        type="date"
+                        value={form.janjiBayar}
+                        onChange={(e) => setField("janjiBayar", e.target.value)}
+                    />
+                </Field>
+            </div>
+        </>
+    );
 }
 
 /** SignaturePad sederhana (mouse & touch) */
 function SignaturePad({ value, onChange, height = 160 }) {
-  const canvasRef = useRef(null);
-  const drawing = useRef(false);
-  const last = useRef({ x: 0, y: 0 });
-  const ratioRef = useRef(1); // simpan ratio global
+    const canvasRef = useRef(null);
+    const drawing = useRef(false);
+    const last = useRef({ x: 0, y: 0 });
+    const ratioRef = useRef(1); // simpan ratio global
 
-  const getPos = (e) => {
-    const rect = canvasRef.current.getBoundingClientRect();
-    const ratio = ratioRef.current;
-    if (e.touches && e.touches[0]) {
-      return {
-        x: e.touches[0].clientX - rect.left,
-        y: e.touches[0].clientY - rect.top,
-      };
-    }
-    return {
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
+    const getPos = (e) => {
+        const rect = canvasRef.current.getBoundingClientRect();
+        const ratio = ratioRef.current;
+        if (e.touches && e.touches[0]) {
+            return {
+                x: e.touches[0].clientX - rect.left,
+                y: e.touches[0].clientY - rect.top,
+            };
+        }
+        return {
+            x: e.clientX - rect.left,
+            y: e.clientY - rect.top,
+        };
     };
-  };
 
-  const start = (e) => {
-    e.preventDefault();
-    drawing.current = true;
-    last.current = getPos(e);
-  };
-
-  const move = (e) => {
-    if (!drawing.current) return;
-    e.preventDefault();
-
-    const ctx = canvasRef.current.getContext("2d");
-    const pos = getPos(e);
-
-    ctx.lineWidth = 2;
-    ctx.lineCap = "round";
-    ctx.strokeStyle = "#111827";
-
-    ctx.beginPath();
-    ctx.moveTo(last.current.x, last.current.y);
-    ctx.lineTo(pos.x, pos.y);
-    ctx.stroke();
-
-    last.current = pos;
-  };
-
-  const end = () => {
-    if (!drawing.current) return;
-    drawing.current = false;
-    const data = canvasRef.current.toDataURL("image/png");
-    onChange(data);
-  };
-
-  const clear = () => {
-    const c = canvasRef.current;
-    c.getContext("2d").clearRect(0, 0, c.width, c.height);
-    onChange("");
-  };
-
-  // ✅ scale for crisp lines on HiDPI
-  useEffect(() => {
-    const c = canvasRef.current;
-    const ratio = window.devicePixelRatio || 1;
-    ratioRef.current = ratio;
-    const width = c.clientWidth;
-    const heightCss = c.clientHeight;
-    c.width = width * ratio;
-    c.height = heightCss * ratio;
-    const ctx = c.getContext("2d");
-    ctx.scale(ratio, ratio);
-    ctx.fillStyle = "#fff";
-    ctx.fillRect(0, 0, width, heightCss);
-  }, []);
-
-  // render ulang dari value (saat reload Step 3)
-  useEffect(() => {
-    if (!value || !canvasRef.current) return;
-    const ctx = canvasRef.current.getContext("2d");
-    const img = new Image();
-    img.onload = () => {
-      ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-      ctx.drawImage(
-        img,
-        0,
-        0,
-        canvasRef.current.width,
-        canvasRef.current.height,
-      );
+    const start = (e) => {
+        e.preventDefault();
+        drawing.current = true;
+        last.current = getPos(e);
     };
-    if (value.startsWith("data:image")) img.src = value;
-  }, []);
 
-  return (
-    <div>
-      <div
-        style={{
-          border: "1.5px dashed var(--border)",
-          borderRadius: 12,
-          background: "#fff",
-          position: "relative",
-        }}
-      >
-        <canvas
-          ref={canvasRef}
-          style={{
-            width: "100%",
-            height,
-            touchAction: "none",
-            borderRadius: 12,
-            display: "block",
-          }}
-          onPointerDown={start}
-          onPointerMove={move}
-          onPointerUp={end}
-          onPointerLeave={end}
-        />
-      </div>
-      <div className="actions-right" style={{ gap: 8 }}>
-        <button className="btn ghost" onClick={clear}>
-          Hapus
-        </button>
-      </div>
-    </div>
-  );
+    const move = (e) => {
+        if (!drawing.current) return;
+        e.preventDefault();
+
+        const ctx = canvasRef.current.getContext("2d");
+        const pos = getPos(e);
+
+        ctx.lineWidth = 2;
+        ctx.lineCap = "round";
+        ctx.strokeStyle = "#111827";
+
+        ctx.beginPath();
+        ctx.moveTo(last.current.x, last.current.y);
+        ctx.lineTo(pos.x, pos.y);
+        ctx.stroke();
+
+        last.current = pos;
+    };
+
+    const end = () => {
+        if (!drawing.current) return;
+        drawing.current = false;
+        const data = canvasRef.current.toDataURL("image/png");
+        onChange(data);
+    };
+
+    const clear = () => {
+        const c = canvasRef.current;
+        c.getContext("2d").clearRect(0, 0, c.width, c.height);
+        onChange("");
+    };
+
+    // ✅ scale for crisp lines on HiDPI
+    useEffect(() => {
+        const c = canvasRef.current;
+        const ratio = window.devicePixelRatio || 1;
+        ratioRef.current = ratio;
+        const width = c.clientWidth;
+        const heightCss = c.clientHeight;
+        c.width = width * ratio;
+        c.height = heightCss * ratio;
+        const ctx = c.getContext("2d");
+        ctx.scale(ratio, ratio);
+        ctx.fillStyle = "#fff";
+        ctx.fillRect(0, 0, width, heightCss);
+    }, []);
+
+    // render ulang dari value (saat reload Step 3)
+    useEffect(() => {
+        if (!value || !canvasRef.current) return;
+        const ctx = canvasRef.current.getContext("2d");
+        const img = new Image();
+        img.onload = () => {
+            ctx.clearRect(
+                0,
+                0,
+                canvasRef.current.width,
+                canvasRef.current.height,
+            );
+            ctx.drawImage(
+                img,
+                0,
+                0,
+                canvasRef.current.width,
+                canvasRef.current.height,
+            );
+        };
+        if (value.startsWith("data:image")) img.src = value;
+    }, []);
+
+    return (
+        <div>
+            <div
+                style={{
+                    border: "1.5px dashed var(--border)",
+                    borderRadius: 12,
+                    background: "#fff",
+                    position: "relative",
+                }}
+            >
+                <canvas
+                    ref={canvasRef}
+                    style={{
+                        width: "100%",
+                        height,
+                        touchAction: "none",
+                        borderRadius: 12,
+                        display: "block",
+                    }}
+                    onPointerDown={start}
+                    onPointerMove={move}
+                    onPointerUp={end}
+                    onPointerLeave={end}
+                />
+            </div>
+            <div className="actions-right" style={{ gap: 8 }}>
+                <button className="btn ghost" onClick={clear}>
+                    Hapus
+                </button>
+            </div>
+        </div>
+    );
 }
 
 function Step3UploadPenilaian({ form, setField, errors, onPickMultiple }) {
-  const totalSurat = (form.suratPernyataanEvidence || []).length;
+    return (
+        <>
+            <h2 className="h2">Step 3 — Upload & Penilaian</h2>
+            <p className="lead">
+                Unggah foto kunjungan dan surat lainnya (maks. 10 file, hanya gambar), lalu berikan penilaian dan tanda tangan.
+            </p>
 
-  return (
-    <>
-      <h2 className="h2">Step 3 — Upload & Penilaian</h2>
-      <p className="lead">
-        Unggah bukti kunjungan (1 foto wajib) dan surat/evidence (maks 10 file),
-        lalu berikan penilaian dan tanda tangan.
-      </p>
+            <div className="form-grid">
+                <Field label="Upload Foto Kunjungan (wajib)">
+                    <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) =>
+                            setField(
+                                "fotoKunjungan",
+                                e.target.files?.[0] || null,
+                            )
+                        }
+                    />
+                    <span className="hint">
+                        {form.fotoKunjungan
+                            ? `Terpilih: ${form.fotoKunjungan.name}`
+                            : "Belum ada file"}
+                    </span>
+                </Field>
 
-      <div className="form-grid">
-        <Field label="Upload Foto Kunjungan (wajib)">
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) =>
-              setField("fotoKunjungan", e.target.files?.[0] || null)
-            }
-          />
-          <span className="hint">
-            {form.fotoKunjungan
-              ? `Terpilih: ${form.fotoKunjungan.name}`
-              : "Belum ada file"}
-          </span>
-        </Field>
+                <Field label="Upload surat lainnya (maks. 10 file, hanya gambar)">
+                    <input
+                        type="file"
+                        multiple
+                        accept="image/*"
+                        onChange={onPickMultiple("suratLainnyaFiles")}
+                    />
+                    <span className="hint">
+                        {(form.suratLainnyaFiles || []).length > 0
+                            ? `${form.suratLainnyaFiles.length} file terpilih`
+                            : "Tidak wajib upload"}
+                    </span>
+                </Field>
+            </div>
 
-       <Field label="Upload Evidence (maks. 10 file, format gambar saja)">
-  <input
-    type="file"
-    multiple
-    accept="image/*"
-    onChange={onPickMultiple("evidenceFiles")}
-  />
-  <span className="hint">
-    {(form.evidenceFiles || []).length > 0
-      ? `${form.evidenceFiles.length} file terpilih`
-      : "Belum ada file"}
-  </span>
-</Field>
+            <div className="card-sub">
+                <div className="form-grid">
+                    <Field label="Respon Pemilik / Pengelola">
+                        <input
+                            type="range"
+                            min="1"
+                            max="5"
+                            value={form.nilaiKebersihan}
+                            onChange={(e) =>
+                                setField(
+                                    "nilaiKebersihan",
+                                    Number(e.target.value),
+                                )
+                            }
+                        />
+                        <span className="hint">
+                            Nilai: {form.nilaiKebersihan}
+                        </span>
+                    </Field>
+                    <Field label="Keramaian Penumpang">
+                        <input
+                            type="range"
+                            min="1"
+                            max="5"
+                            value={form.nilaiKelengkapan}
+                            onChange={(e) =>
+                                setField(
+                                    "nilaiKelengkapan",
+                                    Number(e.target.value),
+                                )
+                            }
+                        />
+                        <span className="hint">
+                            Nilai: {form.nilaiKelengkapan}
+                        </span>
+                    </Field>
+                    <Field label="Ketaatan Pengurusan Izin Angkutan">
+                        <input
+                            type="range"
+                            min="1"
+                            max="5"
+                            value={form.nilaiPelayanan}
+                            onChange={(e) =>
+                                setField(
+                                    "nilaiPelayanan",
+                                    Number(e.target.value),
+                                )
+                            }
+                        />
+                        <span className="hint">
+                            Nilai: {form.nilaiPelayanan}
+                        </span>
+                    </Field>
+                </div>
+            </div>
 
-<Field label="Upload Surat Pernyataan (maks. 10 file, format gambar saja)">
-  <input
-    type="file"
-    multiple
-    accept="image/*"
-    onChange={onPickMultiple("suratPernyataanFiles")}
-  />
-  <span className="hint">
-    {(form.suratPernyataanFiles || []).length > 0
-      ? `${form.suratPernyataanFiles.length} file terpilih`
-      : "Belum ada file"}
-  </span>
-</Field>
-      </div>
+            {/* Signature pads */}
+            <div className="form-grid" style={{ marginTop: 12 }}>
+                <Field span="2" label="Tanda Tangan Petugas">
+                    <SignaturePad
+                        value={form.tandaTanganPetugas}
+                        onChange={(dataUrl) =>
+                            setField("tandaTanganPetugas", dataUrl)
+                        }
+                    />
+                </Field>
 
-      <div className="card-sub">
-        <div className="form-grid">
-          <Field label="Respon Pemilik / Pengelola">
-            <input
-              type="range"
-              min="1"
-              max="5"
-              value={form.nilaiKebersihan}
-              onChange={(e) =>
-                setField("nilaiKebersihan", Number(e.target.value))
-              }
-            />
-            <span className="hint">Nilai: {form.nilaiKebersihan}</span>
-          </Field>
-          <Field label="Keramaian Penumpang">
-            <input
-              type="range"
-              min="1"
-              max="5"
-              value={form.nilaiKelengkapan}
-              onChange={(e) =>
-                setField("nilaiKelengkapan", Number(e.target.value))
-              }
-            />
-            <span className="hint">Nilai: {form.nilaiKelengkapan}</span>
-          </Field>
-          <Field label="Ketaatan Pengurusan Izin Angkutan">
-            <input
-              type="range"
-              min="1"
-              max="5"
-              value={form.nilaiPelayanan}
-              onChange={(e) =>
-                setField("nilaiPelayanan", Number(e.target.value))
-              }
-            />
-            <span className="hint">Nilai: {form.nilaiPelayanan}</span>
-          </Field>
-        </div>
-      </div>
-
-      {/* Signature pads */}
-      <div className="form-grid" style={{ marginTop: 12 }}>
-        <Field span="2" label="Tanda Tangan Petugas">
-          <SignaturePad
-            value={form.tandaTanganPetugas}
-            onChange={(dataUrl) => setField("tandaTanganPetugas", dataUrl)}
-          />
-        </Field>
-
-        <Field span="2" label="Tanda Tangan Pemilik">
-          <SignaturePad
-            value={form.tandaTanganPemilik}
-            onChange={(dataUrl) => setField("tandaTanganPemilik", dataUrl)}
-          />
-        </Field>
-      </div>
-    </>
-  );
+                <Field span="2" label="Tanda Tangan Pemilik">
+                    <SignaturePad
+                        value={form.tandaTanganPemilik}
+                        onChange={(dataUrl) =>
+                            setField("tandaTanganPemilik", dataUrl)
+                        }
+                    />
+                </Field>
+            </div>
+        </>
+    );
 }
 
 /* ================ ATOMS ================ */
 function Field({ label, req, error, span = "1", children }) {
-  return (
-    <div className={`field span-${span}`}>
-      <label className="field-label">
-        {label} {req && <span className="req">*</span>}
-      </label>
-      <div className="control">{children}</div>
-      {error && <span className="err">{error}</span>}
-    </div>
-  );
+    return (
+        <div className={`field span-${span}`}>
+            <label className="field-label">
+                {label} {req && <span className="req">*</span>}
+            </label>
+            <div className="control">{children}</div>
+            {error && <span className="err">{error}</span>}
+        </div>
+    );
 }
 
 /* ===== CSS ===== */

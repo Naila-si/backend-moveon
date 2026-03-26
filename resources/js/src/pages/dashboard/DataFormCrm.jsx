@@ -4,1761 +4,1914 @@ import autoTable from "jspdf-autotable";
 import { useNavigate } from "react-router-dom";
 
 async function addVerificationNotification({
-  reportId,
-  reportCode,
-  status,
-  note,
-  waktuValidasi,
-  perusahaan,
-  petugas,
+    reportId,
+    reportCode,
+    status,
+    note,
+    waktuValidasi,
+    perusahaan,
+    petugas,
 }) {
-  const now = new Date();
+    const now = new Date();
 
-  const ts = waktuValidasi
-    ? waktuValidasi
-    : `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+    const ts = waktuValidasi
+        ? waktuValidasi
+        : `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 
-  const payload = {
-  report_id: reportCode,
-  report_id_int: String(reportId),
-  report_uuid: null,
-  perusahaan,
-  status,
-  note,
-  ts,
-  petugas: petugas || "-",
-};
+    const payload = {
+        report_id: reportCode,
+        report_id_int: String(reportId),
+        report_uuid: null,
+        perusahaan,
+        status,
+        note,
+        ts,
+        petugas: petugas || "-",
+    };
 
-  const res = await fetch("https://moveon-jr.alwaysdata.net/api/crm-notifikasi", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  });
+    const res = await fetch(
+        "https://moveon-jr.alwaysdata.net/api/crm-notifikasi",
+        {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+        },
+    );
 
-  const text = await res.text();
+    const text = await res.text();
 
-  let data = null;
-  try {
-    data = JSON.parse(text);
-  } catch {
-  }
+    let data = null;
+    try {
+        data = JSON.parse(text);
+    } catch {}
 
-  if (!res.ok) {
-    throw new Error(`Gagal insert notifikasi: ${text}`);
-  }
+    if (!res.ok) {
+        throw new Error(`Gagal insert notifikasi: ${text}`);
+    }
 
-  return data;
+    return data;
 }
 
 const PAGE_SIZE = 50;
 
 function normalizeUploadedFiles(input, fallbackPrefix = "File") {
-  let arr = input;
+    let arr = input;
 
-  if (typeof arr === "string") {
-    try {
-      arr = JSON.parse(arr);
-    } catch {
-      arr = arr ? [arr] : [];
+    if (typeof arr === "string") {
+        try {
+            arr = JSON.parse(arr);
+        } catch {
+            arr = arr ? [arr] : [];
+        }
     }
-  }
 
-  if (!Array.isArray(arr)) return [];
+    if (!Array.isArray(arr)) return [];
 
-  return arr
-    .filter(Boolean)
-    .map((f, i) => {
-      if (typeof f === "string") {
+    return arr.filter(Boolean).map((f, i) => {
+        if (typeof f === "string") {
+            return {
+                name: `${fallbackPrefix} ${i + 1}`,
+                url: fixUrl(f),
+                mime: "",
+                original: f,
+            };
+        }
+
+        const rawUrl = f?.url || f?.file || f?.path || f?.src || f?.href || "";
+
+        const rawName =
+            f?.name ||
+            f?.filename ||
+            f?.fileName ||
+            f?.original_name ||
+            f?.originalName ||
+            `${fallbackPrefix} ${i + 1}`;
+
+        const mime = f?.mime || f?.mimetype || f?.type || f?.contentType || "";
+
         return {
-          name: `${fallbackPrefix} ${i + 1}`,
-          url: fixUrl(f),
-          mime: "",
-          original: f,
+            ...f,
+            name: rawName,
+            url: fixUrl(rawUrl),
+            mime,
+            original: f,
         };
-      }
-
-      const rawUrl =
-        f?.url ||
-        f?.file ||
-        f?.path ||
-        f?.src ||
-        f?.href ||
-        "";
-
-      const rawName =
-        f?.name ||
-        f?.filename ||
-        f?.fileName ||
-        f?.original_name ||
-        f?.originalName ||
-        `${fallbackPrefix} ${i + 1}`;
-
-      const mime =
-        f?.mime ||
-        f?.mimetype ||
-        f?.type ||
-        f?.contentType ||
-        "";
-
-      return {
-        ...f,
-        name: rawName,
-        url: fixUrl(rawUrl),
-        mime,
-        original: f,
-      };
     });
 }
 
 export default function DataFormCrm() {
-  const [query, setQuery] = useState("");
-  const navigate = useNavigate();
-  const [filterJenis, setFilterJenis] = useState("Semua");
-  const [filterValidasi, setFilterValidasi] = useState("Semua");
-  const [selected, setSelected] = useState(null);
-  const [page, setPage] = useState(1);
-
-  const [rows, setRows] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState("");
-  const [totalRows, setTotalRows] = useState(0);
-
-useEffect(() => {
-  if (!selected?.dbId || selected.step2?.rincianArmada?.length) return;
-
-  (async () => {
-    const BASE = "https://moveon-jr.alwaysdata.net";
-
-    const res = await fetch(
-      `https://moveon-jr.alwaysdata.net/api/crm-armada/${selected.dbId}`
-    );
-
-    const data = await res.json();
-
-    if (data) {
-      setSelected((prev) => ({
-        ...prev,
-        step2: {
-          ...prev.step2,
-          rincianArmada: data.map((a) => ({
-            nopol: a.nopol,
-            status: a.status,
-            tipeArmada: a.tipe_armada,
-            tahun: a.tahun,
-            bayarOs: a.bayar_os,
-            rekomendasi: a.rekomendasi,
-            bukti: (a.bukti || []).map(f => ({
-              ...f,
-              url: fixUrl(f.url)
-            })),
-          })),
-        },
-      }));
-    }
-  })();
-}, [selected?.dbId]);
-
-  useEffect(() => {
-async function fetchReports() {
-  setLoading(true);
-  setErrorMsg("");
-
-  try {
-    const url = `https://moveon-jr.alwaysdata.net/api/crm-reports?page=${page}&q=${query}&status=${filterValidasi}`;
-
-    const res = await fetch(url, {
-      method: "GET",
-      headers: {
-        Accept: "application/json",
-      },
-      cache: "no-store",
-    });
-
-    const rawText = await res.text();
-
-    if (!res.ok) {
-      throw new Error("API ERROR: " + rawText);
-    }
-
-    const result = JSON.parse(rawText);
-
-    const mapped = (result.data || []).map((r) => {
-  const step2 = r.step2 || {};
-  const step3 = r.step3 || {};
-
-  step3.fotoKunjungan = normalizeUploadedFiles(
-  step3.fotoKunjungan,
-  "Foto Kunjungan"
-).map((f) => f.url);
-
-  step3.evidence = normalizeUploadedFiles(step3.evidence, "Evidence");
-step3.suratPernyataan = normalizeUploadedFiles(
-  step3.suratPernyataan,
-  "Surat"
-);
-
-  if (Array.isArray(step2.rincianArmada)) {
-    step2.rincianArmada = step2.rincianArmada.map((a) => ({
-      ...a,
-      bukti: Array.isArray(a.bukti)
-  ? a.bukti.map((f, i) =>
-      typeof f === "string"
-        ? { name: `Bukti ${i + 1}`, url: fixUrl(f) }
-        : { ...f, url: fixUrl(f?.url || "") }
-    )
-  : [],
-    }));
-  }
-
-  return {
-    id: r.report_code || r.id,
-    dbId: r.pk_id,
-    step1: r.step1 || {},
-    step2,
-    step3,
-    step4: r.step4 || {},
-  };
-});
-
-    setRows(mapped);
-    setTotalRows(result.total || 0);
-  } catch (e) {
-  console.error("FETCH REPORTS ERROR:", e);
-  setErrorMsg("Gagal memuat data: " + (e.message || "unknown error"));
-} finally {
-  setLoading(false);
-}
-}
-
-    fetchReports();
-  }, [page, filterValidasi, query]);
-
-  const wrapRef = useRef(null);
-  const isDown = useRef(false);
-  const startX = useRef(0);
-  const scrollLeftStart = useRef(0);
-
-  function handleWheel(e) {
-    const el = wrapRef.current;
-    if (!el) return;
-    if (!e.shiftKey && Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
-      el.scrollLeft += e.deltaY;
-    }
-  }
-
-  function onMouseDown(e) {
-    const el = wrapRef.current;
-    if (!el) return;
-    isDown.current = true;
-    startX.current = e.pageX - el.offsetLeft;
-    scrollLeftStart.current = el.scrollLeft;
-    el.classList.add("dragging");
-  }
-  function onMouseLeave() {
-    isDown.current = false;
-    wrapRef.current?.classList.remove("dragging");
-  }
-  function onMouseUp() {
-    isDown.current = false;
-    wrapRef.current?.classList.remove("dragging");
-  }
-  function onMouseMove(e) {
-    const el = wrapRef.current;
-    if (!isDown.current || !el) return;
-    e.preventDefault();
-    const x = e.pageX - el.offsetLeft;
-    const walk = (x - startX.current) * 1;
-    el.scrollLeft = scrollLeftStart.current - walk;
-  }
-
-  const [verifyOpen, setVerifyOpen] = useState(false);
-  const [verifyNote, setVerifyNote] = useState("");
-  const [verifyStatus, setVerifyStatus] = useState("");
-
-  useEffect(() => {
-    if (!selected) return;
-
-    setVerifyOpen(false);
-    setVerifyNote(selected?.step4?.catatanValidasi || "");
-    setVerifyStatus(selected?.step4?.statusValidasi ?? "");
-  }, [selected]);
-
-const handleSaveVerification = async () => {
-  try {
-    if (!selected?.dbId) {
-      alert("ID laporan tidak ditemukan dari server");
-      console.log("Selected data:", selected);
-      return;
-    }
-
-    if (!verifyStatus) {
-      alert("Silakan pilih status validasi.");
-      return;
-    }
-
-    const now = new Date();
-    const pad = (n) => String(n).padStart(2, "0");
-    const ts = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(
-      now.getDate()
-    )} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
-
-    const normalizedStatus = normalizeStatusValidasi(verifyStatus);
-
-    const newStep4 = {
-      ...(selected.step4 || {}),
-      validasiOleh: "Petugas",
-      statusValidasi: normalizedStatus,
-      catatanValidasi: verifyNote || "",
-      waktuValidasi: ts,
-    };
-
-    const res = await fetch(
-      `https://moveon-jr.alwaysdata.net/api/crm-reports/${selected.dbId}`,
-      {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          step4: newStep4,
-        }),
-      }
-    );
-
-    const text = await res.text();
-    console.log("RAW SERVER RESPONSE:", text);
-
-    let updated = null;
-    try {
-      updated = JSON.parse(text);
-    } catch (e) {
-      console.error("Response bukan JSON:", text);
-    }
-
-    if (!res.ok) {
-      throw new Error("Gagal update laporan: " + text);
-    }
-
-    const finalStep4 = updated?.step4 || newStep4;
-
-    setRows((prev) =>
-      prev.map((row) =>
-        row.dbId === selected.dbId ? { ...row, step4: finalStep4 } : row
-      )
-    );
-
-    setSelected((prev) => (prev ? { ...prev, step4: finalStep4 } : prev));
-
-    await addVerificationNotification({
-      reportId: selected.dbId,
-      reportCode: selected.id,
-      status: finalStep4.statusValidasi,
-      note: finalStep4.catatanValidasi || "",
-      waktuValidasi: finalStep4.waktuValidasi,
-      perusahaan: selected.step1?.perusahaan || "-",
-      petugas: `${selected.step1?.petugasDepan || ""}`.trim(),
-    });
-
-    alert("Verifikasi berhasil disimpan dan notifikasi dikirim ke user.");
-    setVerifyOpen(false);
-  } catch (err) {
-    console.error(err);
-    alert(err.message || "Terjadi kesalahan saat menyimpan verifikasi.");
-  }
-};
-
- async function handleDelete(dbId) {
-  if (!window.confirm("Yakin ingin menghapus laporan ini?")) return;
-
-  const res = await fetch(
-    `https://moveon-jr.alwaysdata.net/api/crm-reports/${dbId}`,
-    { method: "DELETE" }
-  );
-
-  if (!res.ok) {
-    alert("Gagal menghapus data");
-    return;
-  }
-
-  setRows(prev => prev.filter(r => r.dbId !== dbId));
-}
-
-  useEffect(() => {
-    if (selected) {
-      const prev = document.body.style.overflow;
-      document.body.style.overflow = "hidden";
-      return () => {
-        document.body.style.overflow = prev;
-      };
-    }
-  }, [selected]);
-
-  function normalizeStatusValidasi(raw) {
-    if (!raw) return "Menunggu";
-
-    const v = String(raw).toLowerCase();
-
-    if (v.includes("valid")) return "Tervalidasi";
-    if (v.includes("pending")) return "Menunggu";
-    if (v.includes("menunggu")) return "Menunggu";
-
-    return "Menunggu";
-  }
-
-//   const filtered = useMemo(() => {
-//   const q = query.toLowerCase().trim();
-
-//   const filteredData = rows.filter((d) => {
-//     const s1 = d.step1 || {};
-//     const s2 = d.step2 || {};
-//     const s4 = d.step4 || {};
-
-//     // 🔥 gabung nama petugas
-//     const namaPetugas = `${s1.petugasDepan || ""} ${s1.petugasBelakang || ""}`.toLowerCase();
-//     const semuaNopol = Array.isArray(s2.rincianArmada)
-//       ? s2.rincianArmada.map((r) => r.nopol).filter(Boolean)
-//       : [];
-//     const nopolText = semuaNopol.join(" ");
-
-//     const searchableText = [
-//       d.id,
-//       s1.namaPemilik,
-//       s1.perusahaan,
-//       s1.loket,
-//       s1.jenisAngkutan,
-//       namaPetugas,
-//       nopolText,
-//       s2.janjiBayar,
-//       s4.statusValidasi,
-//     ]
-//       .filter(Boolean)
-//       .join(" ")
-//       .toLowerCase();
-
-//     const matchText = searchableText.includes(q);
-
-//     const matchJenis =
-//       filterJenis === "Semua" || s1.jenisAngkutan === filterJenis;
-
-//     const matchValidasi =
-//       filterValidasi === "Semua" ||
-//       normalizeStatusValidasi(s4.statusValidasi) === filterValidasi;
-
-//     return matchText && matchJenis && matchValidasi;
-//   });
-
-//   // 🔥 sort terbaru → terlama
-//   return filteredData.sort((a, b) => {
-//     const ta = new Date(a.step1?.tanggalWaktu || 0).getTime();
-//     const tb = new Date(b.step1?.tanggalWaktu || 0).getTime();
-//     return tb - ta;
-//   });
-// }, [rows, query, filterJenis, filterValidasi]);
-
-  // reset ke halaman 1 kalau filter / search berubah
-  useEffect(() => {
-    setPage(1);
-  }, [query, filterJenis, filterValidasi]);
-
-async function loadImageAsDataURL(src) {
-  try {
-    const finalSrc = fixUrl(src);
-    if (!finalSrc) return null;
-
-    const res = await fetch(finalSrc);
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status}`);
-    }
-
-    const blob = await res.blob();
-
-    return await new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result);
-      reader.readAsDataURL(blob);
-    });
-  } catch (err) {
-    console.warn("Image load gagal:", src, err);
-    return null;
-  }
-}
-
-  function drawKeyValue(doc, pad, y, label, value) {
-    const lineGap = 14;
-    const labelText = `${label}:`;
-    const valText = value ?? "-";
-
-    doc.setFont("helvetica", "bold");
-    doc.text(labelText, pad, y);
-
-    doc.setFont("helvetica", "normal");
-    const wrapped = doc.splitTextToSize(String(valText), 360);
-    doc.text(wrapped, pad + 140, y);
-
-    const lines = Math.max(1, wrapped.length);
-    return y + lineGap * lines;
-  }
-
-  function ensureSpace(doc, neededHeight, pad, y) {
-    const pageHeight = doc.internal.pageSize.height;
-    if (y + neededHeight > pageHeight - pad) {
-      doc.addPage();
-      return pad; // reset y di halaman baru
-    }
-    return y;
-  }
-
-  function checkPage(doc, y, pad, needed = 40) {
-    const pageHeight = doc.internal.pageSize.height;
-    if (y + needed >= pageHeight - pad) {
-      doc.addPage();
-      return pad;
-    }
-    return y;
-  }
-
-  function isImageFile(name = "") {
-    return /\.(jpg|jpeg|png|gif|webp)$/i.test(name);
-  }
-
-  async function handleDownloadPdf(row) {
-    const doc = new jsPDF({ unit: "pt", format: "a4" });
-    const pad = 36;
-    let y = pad;
-
-    // -----------------------------------------------------------
-    // HEADER
-    // -----------------------------------------------------------
-    const logoDataUrl = await loadImageAsDataURL("https://moveon-jr.alwaysdata.net/assets/logo-bulat.png");
-    const logoSize = 34;
-
-    doc.addImage(
-      logoDataUrl,
-      "PNG",
-      pad + 523 - logoSize,
-      y,
-      logoSize,
-      logoSize,
-    );
-
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(14);
-    doc.text("LAPORAN CRM / DTD", pad, y + 14);
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    doc.text(
-      `ID: ${row.id}  •  Validasi: ${row.step4.statusValidasi}`,
-      pad,
-      y + 28,
-    );
-
-    doc.line(pad, y + 36, pad + 523, y + 36);
-    y += 50;
-
-    // -----------------------------------------------------------
-    // STEP 1
-    // -----------------------------------------------------------
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
-    y = checkPage(doc, y, pad);
-    doc.text("1. Data Kunjungan", pad, y);
-    y += 16;
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-
-    const step1Fields = [
-      ["Tanggal & Waktu", row.step1.tanggalWaktu],
-      ["Loket", row.step1.loket],
-      [
-        "Nama Petugas",
-        `${row.step1.petugasDepan}`,
-      ],
-      ["Perusahaan", row.step1.perusahaan],
-      ["Jenis Angkutan", row.step1.jenisAngkutan],
-      ["Nama Pemilik", row.step1.namaPemilik],
-      ["Alamat", row.step1.alamat],
-      ["No. Telepon", row.step1.telepon],
-    ];
-
-    for (let [label, val] of step1Fields) {
-      y = checkPage(doc, y, pad, 20);
-      y = drawKeyValue(doc, pad, y, label, val);
-    }
-    y += 10;
-
-    // -----------------------------------------------------------
-    // STEP 2 - ARMADA
-    // -----------------------------------------------------------
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
-    y = checkPage(doc, y, pad);
-    doc.text("2. Armada", pad, y);
-    y += 16;
-
-    let rincian = row.step2?.rincianArmada || [];
-
-if (typeof rincian === "string") {
-  try {
-    rincian = JSON.parse(rincian);
-  } catch {
-    rincian = [];
-  }
-}
-
-if (!Array.isArray(rincian)) {
-  rincian = [];
-}
-
-    const totalOS = rincian.reduce(
-      (sum, a) => sum + (parseRupiah(a.bayarOs) || 0),
-      0,
-    );
-
-    // Build table text (basic)
-    const armadaBody =
-  rincian.length === 0
-    ? [["-", "-", "-", "-", "-", "-", "-"]]
-    : rincian.map((r, i) => [
-        i + 1,
-        r.nopol || "-",
-        r.status || "-",
-        `${r.tipeArmada || "-"}${r.tahun ? " (" + r.tahun + ")" : ""}`,
-        formatRupiah(parseRupiah(r.bayarOs || 0)),
-        r.rekomendasi || r.tindakLanjut || "-",
-        Array.isArray(r.bukti) && r.bukti.length ? "" : "-",
-      ]);
-
-    // ==== PRELOAD BUKTI Gambar untuk ARMADA ====
-    const buktiImages = {}; // { "row-file": dataURL }
-
-    for (let rIndex = 0; rIndex < rincian.length; rIndex++) {
-      const buktiList = rincian[rIndex]?.bukti || [];
-
-      for (let bIndex = 0; bIndex < buktiList.length; bIndex++) {
-        const f = buktiList[bIndex];
-
-        if (isImageFile(f.name)) {
-          try {
-            buktiImages[`${rIndex}-${bIndex}`] = await loadImageAsDataURL(
-              f.url,
+    const [query, setQuery] = useState("");
+    const navigate = useNavigate();
+    const [filterJenis, setFilterJenis] = useState("Semua");
+    const [filterValidasi, setFilterValidasi] = useState("Semua");
+    const [selected, setSelected] = useState(null);
+    const [page, setPage] = useState(1);
+
+    const [rows, setRows] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [errorMsg, setErrorMsg] = useState("");
+    const [totalRows, setTotalRows] = useState(0);
+
+    useEffect(() => {
+        if (!selected?.dbId || selected.step2?.rincianArmada?.length) return;
+
+        (async () => {
+            const BASE = "https://moveon-jr.alwaysdata.net";
+
+            const res = await fetch(
+                `https://moveon-jr.alwaysdata.net/api/crm-armada/${selected.dbId}`,
             );
-          } catch {}
+
+            const data = await res.json();
+
+            if (data) {
+                setSelected((prev) => ({
+                    ...prev,
+                    step2: {
+                        ...prev.step2,
+                        rincianArmada: data.map((a) => ({
+                            nopol: a.nopol,
+                            status: a.status,
+                            tipeArmada: a.tipe_armada,
+                            tahun: a.tahun,
+                            bayarOs: a.bayar_os,
+                            rekomendasi: a.rekomendasi,
+                            bukti: (a.bukti || []).map((f) => ({
+                                ...f,
+                                url: fixUrl(f.url),
+                            })),
+                        })),
+                    },
+                }));
+            }
+        })();
+    }, [selected?.dbId]);
+
+    useEffect(() => {
+        async function fetchReports() {
+            setLoading(true);
+            setErrorMsg("");
+
+            try {
+                const url = `https://moveon-jr.alwaysdata.net/api/crm-reports?page=${page}&q=${query}&status=${filterValidasi}`;
+
+                const res = await fetch(url, {
+                    method: "GET",
+                    headers: {
+                        Accept: "application/json",
+                    },
+                    cache: "no-store",
+                });
+
+                const rawText = await res.text();
+
+                if (!res.ok) {
+                    throw new Error("API ERROR: " + rawText);
+                }
+
+                const result = JSON.parse(rawText);
+
+                const mapped = (result.data || []).map((r) => {
+                    const step2 = r.step2 || {};
+                    const step3 = r.step3 || {};
+
+                    step3.fotoKunjungan = normalizeUploadedFiles(
+                        step3.fotoKunjungan,
+                        "Foto Kunjungan",
+                    ).map((f) => f.url);
+
+                    step3.suratLainnya = normalizeUploadedFiles(step3.suratLainnya, "Surat Lainnya");
+
+                    if (Array.isArray(step2.rincianArmada)) {
+                        step2.rincianArmada = step2.rincianArmada.map((a) => ({
+                            ...a,
+                            bukti: Array.isArray(a.bukti)
+                                ? a.bukti.map((f, i) =>
+                                      typeof f === "string"
+                                          ? {
+                                                name: `Bukti ${i + 1}`,
+                                                url: fixUrl(f),
+                                            }
+                                          : { ...f, url: fixUrl(f?.url || "") },
+                                  )
+                                : [],
+                        }));
+                    }
+
+                    return {
+                        id: r.report_code || r.id,
+                        dbId: r.pk_id,
+                        step1: r.step1 || {},
+                        step2,
+                        step3,
+                        step4: r.step4 || {},
+                    };
+                });
+
+                setRows(mapped);
+                setTotalRows(result.total || 0);
+            } catch (e) {
+                console.error("FETCH REPORTS ERROR:", e);
+                setErrorMsg(
+                    "Gagal memuat data: " + (e.message || "unknown error"),
+                );
+            } finally {
+                setLoading(false);
+            }
         }
-      }
+
+        fetchReports();
+    }, [page, filterValidasi, query]);
+
+    const wrapRef = useRef(null);
+    const isDown = useRef(false);
+    const startX = useRef(0);
+    const scrollLeftStart = useRef(0);
+
+    function handleWheel(e) {
+        const el = wrapRef.current;
+        if (!el) return;
+        if (!e.shiftKey && Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+            el.scrollLeft += e.deltaY;
+        }
     }
 
-    autoTable(doc, {
-      startY: y,
-      head: [
-        [
-          "No",
-          "Nopol",
-          "Status",
-          "Tipe/Tahun",
-          "OS Dibayar",
-          "Rekomendasi",
-          "Bukti",
-        ],
-      ],
-      body: armadaBody,
-      theme: "grid",
-      styles: { font: "times", fontSize: 9, cellPadding: 3 },
-      headStyles: { fillColor: [230, 230, 230] },
+    function onMouseDown(e) {
+        const el = wrapRef.current;
+        if (!el) return;
+        isDown.current = true;
+        startX.current = e.pageX - el.offsetLeft;
+        scrollLeftStart.current = el.scrollLeft;
+        el.classList.add("dragging");
+    }
+    function onMouseLeave() {
+        isDown.current = false;
+        wrapRef.current?.classList.remove("dragging");
+    }
+    function onMouseUp() {
+        isDown.current = false;
+        wrapRef.current?.classList.remove("dragging");
+    }
+    function onMouseMove(e) {
+        const el = wrapRef.current;
+        if (!isDown.current || !el) return;
+        e.preventDefault();
+        const x = e.pageX - el.offsetLeft;
+        const walk = (x - startX.current) * 1;
+        el.scrollLeft = scrollLeftStart.current - walk;
+    }
 
-      // 1) INI PENTING → BESARKAN ROW HEIGHT SEBELUM GAMBAR
-      willDrawCell: (data) => {
-        if (data.column.index === 6 && data.section === "body") {
-          const rIndex = data.row.index;
-          const buktiList = rincian[rIndex]?.bukti || [];
+    const [verifyOpen, setVerifyOpen] = useState(false);
+    const [verifyNote, setVerifyNote] = useState("");
+    const [verifyStatus, setVerifyStatus] = useState("");
 
-          if (buktiList.length > 0) {
-            data.row.height = 48; // tinggi cell fix yang MUAT GAMBAR
-          }
-        }
-      },
+    useEffect(() => {
+        if (!selected) return;
 
-      // 2) GAMBAR BUKTI DALAM CELL
-      didDrawCell: (data) => {
-        // Hanya kolom Bukti
-        if (data.column.index !== 6 || data.cell.section !== "body") return;
+        setVerifyOpen(false);
+        setVerifyNote(selected?.step4?.catatanValidasi || "");
+        setVerifyStatus(selected?.step4?.statusValidasi ?? "");
+    }, [selected]);
 
-        const rIndex = data.row.index;
-        const buktiList = rincian[rIndex]?.bukti || [];
-        if (!buktiList.length) return;
+    const handleSaveVerification = async () => {
+        try {
+            if (!selected?.dbId) {
+                alert("ID laporan tidak ditemukan dari server");
+                console.log("Selected data:", selected);
+                return;
+            }
 
-        // ---- batas cell ----
-        const cellX = data.cell.x;
-        const cellY = data.cell.y;
-        const cellW = data.cell.width;
-        const cellH = data.cell.height;
+            if (!verifyStatus) {
+                alert("Silakan pilih status validasi.");
+                return;
+            }
 
-        let dx = cellX + 2; // padding kiri
-        const maxH = cellH - 4; // tinggi maksimum dalam cell
-        const maxW = cellW - 4; // lebar maksimum dalam cell
+            const now = new Date();
+            const pad = (n) => String(n).padStart(2, "0");
+            const ts = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(
+                now.getDate(),
+            )} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
 
-        buktiList.forEach((f, i) => {
-          const key = `${rIndex}-${i}`;
-          const url = f.url;
+            const normalizedStatus = normalizeStatusValidasi(verifyStatus);
 
-          // ---- jika PDF ----
-          if (/\.pdf$/i.test(f.name)) {
-            const size = Math.min(maxW, maxH);
+            const newStep4 = {
+                ...(selected.step4 || {}),
+                validasiOleh: "Petugas",
+                statusValidasi: normalizedStatus,
+                catatanValidasi: verifyNote || "",
+                waktuValidasi: ts,
+            };
 
-            doc.setFontSize(7);
-            doc.text("PDF", dx + size / 2, cellY + size / 2 + 2, {
-              align: "center",
+            const res = await fetch(
+                `https://moveon-jr.alwaysdata.net/api/crm-reports/${selected.dbId}`,
+                {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        step4: newStep4,
+                    }),
+                },
+            );
+
+            const text = await res.text();
+            console.log("RAW SERVER RESPONSE:", text);
+
+            let updated = null;
+            try {
+                updated = JSON.parse(text);
+            } catch (e) {
+                console.error("Response bukan JSON:", text);
+            }
+
+            if (!res.ok) {
+                throw new Error("Gagal update laporan: " + text);
+            }
+
+            const finalStep4 = updated?.step4 || newStep4;
+
+            setRows((prev) =>
+                prev.map((row) =>
+                    row.dbId === selected.dbId
+                        ? { ...row, step4: finalStep4 }
+                        : row,
+                ),
+            );
+
+            setSelected((prev) =>
+                prev ? { ...prev, step4: finalStep4 } : prev,
+            );
+
+            await addVerificationNotification({
+                reportId: selected.dbId,
+                reportCode: selected.id,
+                status: finalStep4.statusValidasi,
+                note: finalStep4.catatanValidasi || "",
+                waktuValidasi: finalStep4.waktuValidasi,
+                perusahaan: selected.step1?.perusahaan || "-",
+                petugas: `${selected.step1?.petugasDepan || ""}`.trim(),
             });
 
-            doc.rect(dx, cellY + 2, size, size);
-            doc.link(dx, cellY + 2, size, size, { url });
+            alert(
+                "Verifikasi berhasil disimpan dan notifikasi dikirim ke user.",
+            );
+            setVerifyOpen(false);
+        } catch (err) {
+            console.error(err);
+            alert(
+                err.message || "Terjadi kesalahan saat menyimpan verifikasi.",
+            );
+        }
+    };
 
-            dx += size + 3;
+    async function handleDelete(dbId) {
+        if (!window.confirm("Yakin ingin menghapus laporan ini?")) return;
+
+        const res = await fetch(
+            `https://moveon-jr.alwaysdata.net/api/crm-reports/${dbId}`,
+            { method: "DELETE" },
+        );
+
+        if (!res.ok) {
+            alert("Gagal menghapus data");
             return;
-          }
+        }
 
-          // ---- jika Gambar ----
-          const img = buktiImages[key];
-          if (!img) return;
+        setRows((prev) => prev.filter((r) => r.dbId !== dbId));
+    }
 
-          // hitung ratio gambar
-          const temp = new Image();
-          temp.src = img;
+    useEffect(() => {
+        if (selected) {
+            const prev = document.body.style.overflow;
+            document.body.style.overflow = "hidden";
+            return () => {
+                document.body.style.overflow = prev;
+            };
+        }
+    }, [selected]);
 
-          let iw = temp.naturalWidth || 100;
-          let ih = temp.naturalHeight || 100;
+    function normalizeStatusValidasi(raw) {
+        if (!raw) return "Menunggu";
 
-          let ratio = iw / ih;
-          let w = maxH * ratio;
-          let h = maxH;
+        const v = String(raw).toLowerCase();
 
-          // Jika terlalu lebar → kecilkan lagi
-          if (w > maxW) {
-            w = maxW;
-            h = w / ratio;
-          }
+        if (v.includes("valid")) return "Tervalidasi";
+        if (v.includes("pending")) return "Menunggu";
+        if (v.includes("menunggu")) return "Menunggu";
 
-          // gambar di posisi aman dalam cell
-          const cx = dx;
-          const cy = cellY + (cellH - h) / 2;
+        return "Menunggu";
+    }
 
-          doc.addImage(img, "JPEG", cx, cy, w, h);
-          doc.link(cx, cy, w, h, { url });
+    //   const filtered = useMemo(() => {
+    //   const q = query.toLowerCase().trim();
 
-          dx += w + 3;
+    //   const filteredData = rows.filter((d) => {
+    //     const s1 = d.step1 || {};
+    //     const s2 = d.step2 || {};
+    //     const s4 = d.step4 || {};
+
+    //     // 🔥 gabung nama petugas
+    //     const namaPetugas = `${s1.petugasDepan || ""} ${s1.petugasBelakang || ""}`.toLowerCase();
+    //     const semuaNopol = Array.isArray(s2.rincianArmada)
+    //       ? s2.rincianArmada.map((r) => r.nopol).filter(Boolean)
+    //       : [];
+    //     const nopolText = semuaNopol.join(" ");
+
+    //     const searchableText = [
+    //       d.id,
+    //       s1.namaPemilik,
+    //       s1.perusahaan,
+    //       s1.loket,
+    //       s1.jenisAngkutan,
+    //       namaPetugas,
+    //       nopolText,
+    //       s2.janjiBayar,
+    //       s4.statusValidasi,
+    //     ]
+    //       .filter(Boolean)
+    //       .join(" ")
+    //       .toLowerCase();
+
+    //     const matchText = searchableText.includes(q);
+
+    //     const matchJenis =
+    //       filterJenis === "Semua" || s1.jenisAngkutan === filterJenis;
+
+    //     const matchValidasi =
+    //       filterValidasi === "Semua" ||
+    //       normalizeStatusValidasi(s4.statusValidasi) === filterValidasi;
+
+    //     return matchText && matchJenis && matchValidasi;
+    //   });
+
+    //   // 🔥 sort terbaru → terlama
+    //   return filteredData.sort((a, b) => {
+    //     const ta = new Date(a.step1?.tanggalWaktu || 0).getTime();
+    //     const tb = new Date(b.step1?.tanggalWaktu || 0).getTime();
+    //     return tb - ta;
+    //   });
+    // }, [rows, query, filterJenis, filterValidasi]);
+
+    // reset ke halaman 1 kalau filter / search berubah
+    useEffect(() => {
+        setPage(1);
+    }, [query, filterJenis, filterValidasi]);
+
+    async function loadImageAsDataURL(src) {
+        try {
+            const finalSrc = fixUrl(src);
+            if (!finalSrc) return null;
+
+            const res = await fetch(finalSrc);
+            if (!res.ok) {
+                throw new Error(`HTTP ${res.status}`);
+            }
+
+            const blob = await res.blob();
+
+            return await new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.readAsDataURL(blob);
+            });
+        } catch (err) {
+            console.warn("Image load gagal:", src, err);
+            return null;
+        }
+    }
+
+    function drawKeyValue(doc, pad, y, label, value) {
+        const lineGap = 14;
+        const labelText = `${label}:`;
+        const valText = value ?? "-";
+
+        doc.setFont("helvetica", "bold");
+        doc.text(labelText, pad, y);
+
+        doc.setFont("helvetica", "normal");
+        const wrapped = doc.splitTextToSize(String(valText), 360);
+        doc.text(wrapped, pad + 140, y);
+
+        const lines = Math.max(1, wrapped.length);
+        return y + lineGap * lines;
+    }
+
+    function ensureSpace(doc, neededHeight, pad, y) {
+        const pageHeight = doc.internal.pageSize.height;
+        if (y + neededHeight > pageHeight - pad) {
+            doc.addPage();
+            return pad; // reset y di halaman baru
+        }
+        return y;
+    }
+
+    function checkPage(doc, y, pad, needed = 40) {
+        const pageHeight = doc.internal.pageSize.height;
+        if (y + needed >= pageHeight - pad) {
+            doc.addPage();
+            return pad;
+        }
+        return y;
+    }
+
+    function isImageFile(name = "") {
+        return /\.(jpg|jpeg|png|gif|webp)$/i.test(name);
+    }
+
+    async function handleDownloadPdf(row) {
+        const doc = new jsPDF({ unit: "pt", format: "a4" });
+        const pad = 36;
+        let y = pad;
+
+        // -----------------------------------------------------------
+        // HEADER
+        // -----------------------------------------------------------
+        const logoDataUrl = await loadImageAsDataURL("/assets/logo-bulat.png");
+        const logoSize = 34;
+
+        if (logoDataUrl) {
+            doc.addImage(
+                logoDataUrl,
+                "PNG",
+                pad + 523 - logoSize,
+                y,
+                logoSize,
+                logoSize
+            );
+        }
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(14);
+        doc.text("LAPORAN CRM / DTD", pad, y + 14);
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10);
+        doc.text(
+            `ID: ${row.id}  •  Validasi: ${row.step4.statusValidasi}`,
+            pad,
+            y + 28,
+        );
+
+        doc.line(pad, y + 36, pad + 523, y + 36);
+        y += 50;
+
+        // -----------------------------------------------------------
+        // STEP 1
+        // -----------------------------------------------------------
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(11);
+        y = checkPage(doc, y, pad);
+        doc.text("1. Data Kunjungan", pad, y);
+        y += 16;
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10);
+
+        const step1Fields = [
+            ["Tanggal & Waktu", row.step1.tanggalWaktu],
+            ["Loket", row.step1.loket],
+            ["Nama Petugas", `${row.step1.petugasDepan}`],
+            ["Perusahaan", row.step1.perusahaan],
+            ["Jenis Angkutan", row.step1.jenisAngkutan],
+            ["Nama Pemilik", row.step1.namaPemilik],
+            ["Alamat", row.step1.alamat],
+            ["No. Telepon", row.step1.telepon],
+        ];
+
+        for (let [label, val] of step1Fields) {
+            y = checkPage(doc, y, pad, 20);
+            y = drawKeyValue(doc, pad, y, label, val);
+        }
+        y += 10;
+
+        // -----------------------------------------------------------
+        // STEP 2 - ARMADA
+        // -----------------------------------------------------------
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(11);
+        y = checkPage(doc, y, pad);
+        doc.text("2. Armada", pad, y);
+        y += 16;
+
+        let rincian = row.step2?.rincianArmada || [];
+
+        if (typeof rincian === "string") {
+            try {
+                rincian = JSON.parse(rincian);
+            } catch {
+                rincian = [];
+            }
+        }
+
+        if (!Array.isArray(rincian)) {
+            rincian = [];
+        }
+
+        const totalOS = rincian.reduce(
+            (sum, a) => sum + (parseRupiah(a.bayarOs) || 0),
+            0,
+        );
+
+        // Build table text (basic)
+        const armadaBody =
+            rincian.length === 0
+                ? [["-", "-", "-", "-", "-", "-", "-"]]
+                : rincian.map((r, i) => [
+                      i + 1,
+                      r.nopol || "-",
+                      r.status || "-",
+                      `${r.tipeArmada || "-"}${r.tahun ? " (" + r.tahun + ")" : ""}`,
+                      formatRupiah(parseRupiah(r.bayarOs || 0)),
+                      r.rekomendasi || r.tindakLanjut || "-",
+                      Array.isArray(r.bukti) && r.bukti.length ? "" : "-",
+                  ]);
+
+        // ==== PRELOAD BUKTI Gambar untuk ARMADA ====
+        const buktiImages = {}; // { "row-file": dataURL }
+
+        for (let rIndex = 0; rIndex < rincian.length; rIndex++) {
+            const buktiList = rincian[rIndex]?.bukti || [];
+
+            for (let bIndex = 0; bIndex < buktiList.length; bIndex++) {
+                const f = buktiList[bIndex];
+
+                if (isImageFile(f.name)) {
+                    try {
+                        buktiImages[`${rIndex}-${bIndex}`] =
+                            await loadImageAsDataURL(f.url);
+                    } catch {}
+                }
+            }
+        }
+
+        autoTable(doc, {
+            startY: y,
+            head: [
+                [
+                    "No",
+                    "Nopol",
+                    "Status",
+                    "Tipe/Tahun",
+                    "OS Dibayar",
+                    "Rekomendasi",
+                    "Bukti",
+                ],
+            ],
+            body: armadaBody,
+            theme: "grid",
+            styles: { font: "times", fontSize: 9, cellPadding: 3 },
+            headStyles: { fillColor: [230, 230, 230] },
+
+            // 1) INI PENTING → BESARKAN ROW HEIGHT SEBELUM GAMBAR
+            willDrawCell: (data) => {
+                if (data.column.index === 6 && data.section === "body") {
+                    const rIndex = data.row.index;
+                    const buktiList = rincian[rIndex]?.bukti || [];
+
+                    if (buktiList.length > 0) {
+                        data.row.height = 48; // tinggi cell fix yang MUAT GAMBAR
+                    }
+                }
+            },
+
+            // 2) GAMBAR BUKTI DALAM CELL
+            didDrawCell: (data) => {
+                // Hanya kolom Bukti
+                if (data.column.index !== 6 || data.cell.section !== "body")
+                    return;
+
+                const rIndex = data.row.index;
+                const buktiList = rincian[rIndex]?.bukti || [];
+                if (!buktiList.length) return;
+
+                // ---- batas cell ----
+                const cellX = data.cell.x;
+                const cellY = data.cell.y;
+                const cellW = data.cell.width;
+                const cellH = data.cell.height;
+
+                let dx = cellX + 2; // padding kiri
+                const maxH = cellH - 4; // tinggi maksimum dalam cell
+                const maxW = cellW - 4; // lebar maksimum dalam cell
+
+                buktiList.forEach((f, i) => {
+                    const key = `${rIndex}-${i}`;
+                    const url = f.url;
+
+                    // ---- jika PDF ----
+                    if (/\.pdf$/i.test(f.name)) {
+                        const size = Math.min(maxW, maxH);
+
+                        doc.setFontSize(7);
+                        doc.text("PDF", dx + size / 2, cellY + size / 2 + 2, {
+                            align: "center",
+                        });
+
+                        doc.rect(dx, cellY + 2, size, size);
+                        doc.link(dx, cellY + 2, size, size, { url });
+
+                        dx += size + 3;
+                        return;
+                    }
+
+                    // ---- jika Gambar ----
+                    const img = buktiImages[key];
+                    if (!img) return;
+
+                    // hitung ratio gambar
+                    const temp = new Image();
+                    temp.src = img;
+
+                    let iw = temp.naturalWidth || 100;
+                    let ih = temp.naturalHeight || 100;
+
+                    let ratio = iw / ih;
+                    let w = maxH * ratio;
+                    let h = maxH;
+
+                    // Jika terlalu lebar → kecilkan lagi
+                    if (w > maxW) {
+                        w = maxW;
+                        h = w / ratio;
+                    }
+
+                    // gambar di posisi aman dalam cell
+                    const cx = dx;
+                    const cy = cellY + (cellH - h) / 2;
+
+                    doc.addImage(img, "JPEG", cx, cy, w, h);
+                    doc.link(cx, cy, w, h, { url });
+
+                    dx += w + 3;
+                });
+            },
         });
-      },
-    });
 
-    y = doc.lastAutoTable.finalY + 12;
+        y = doc.lastAutoTable.finalY + 12;
 
-    // Summary
-    doc.setFont("helvetica", "normal");
-    y = checkPage(doc, y, pad);
-    doc.text(`Total OS Harus Dibayar: ${formatRupiah(totalOS || 0)}`, pad, y);
-    y += 14;
-    doc.setFont("helvetica", "normal"); // Arial equivalent
-    doc.setFontSize(12);
+        // Summary
+        doc.setFont("helvetica", "normal");
+        y = checkPage(doc, y, pad);
+        doc.text(
+            `Total OS Harus Dibayar: ${formatRupiah(totalOS || 0)}`,
+            pad,
+            y,
+        );
+        y += 14;
+        doc.setFont("helvetica", "normal"); // Arial equivalent
+        doc.setFontSize(12);
 
-    y = checkPage(doc, y, pad, 60);
+        y = checkPage(doc, y, pad, 60);
 
-    doc.text("Hasil Kunjungan :", pad, y);
-    y += 16;
+        doc.text("Hasil Kunjungan :", pad, y);
+        y += 16;
 
-    // WRAP TEXT
-    const hasilText = doc.splitTextToSize(
-      row.step2.hasilKunjungan || "-",
-      420 // lebar aman halaman A4
-    );
+        // WRAP TEXT
+        const hasilText = doc.splitTextToSize(
+            row.step2.hasilKunjungan || "-",
+            420, // lebar aman halaman A4
+        );
 
-    doc.text(hasilText, pad, y);
+        doc.text(hasilText, pad, y);
 
-    // hitung tinggi otomatis
-    y += hasilText.length * 16;
-    doc.text(`Janji Bayar     : ${row.step2.janjiBayar || "-"}`, pad, y);
-    y += 24;
+        // hitung tinggi otomatis
+        y += hasilText.length * 16;
+        doc.text(`Janji Bayar     : ${row.step2.janjiBayar || "-"}`, pad, y);
+        y += 24;
 
-    // -----------------------------------------------------------
-    // STEP 3 – Upload & Penilaian
-    // -----------------------------------------------------------
-    doc.setFont("helvetica", "bold");
-    doc.text("3. Upload & Penilaian", pad, y);
-    y += 18;
+        // -----------------------------------------------------------
+        // STEP 3 – Upload & Penilaian
+        // -----------------------------------------------------------
+        doc.setFont("helvetica", "bold");
+        doc.text("3. Upload & Penilaian", pad, y);
+        y += 18;
 
-    // ====== FILE TERLAMPIR ======
-    doc.text("File Terlampir:", pad, y);
-    y += 14;
+        // ====== FILE TERLAMPIR ======
+        doc.text("File Terlampir:", pad, y);
+        y += 14;
 
-    let files = [
-  ...(row.step3?.suratPernyataan || []),
-  ...(row.step3?.evidence || [])
-];
+        let files = Array.isArray(row.step3?.suratLainnya)
+            ? row.step3.suratLainnya
+            : [];
 
-const filesUnique = Array.from(
-  new Map(files.map(f => [f.url, f])).values()
-);
+        const filesUnique = Array.from(
+            new Map(files.map((f) => [f.url, f])).values(),
+        );
 
-if (typeof files === "string") {
-  try {
-    files = JSON.parse(files);
-  } catch {
-    files = [];
-  }
-}
+        if (typeof files === "string") {
+            try {
+                files = JSON.parse(files);
+            } catch {
+                files = [];
+            }
+        }
 
-    if (!files.length) {
-      doc.setFont("helvetica", "normal");
-      doc.text("- Tidak ada file", pad, y);
-      y += 14;
-    } else {
-      for (let f of filesUnique) {
-        y = checkPage(doc, y, pad, 16);
-
-        if (isImageFile(f.name)) {
-          // tampilkan gambar
-          const dataURL = await loadImageAsDataURL(f.url);
-
-          if (!dataURL) continue;
-          const maxW = 140;
-          const maxH = 110;
-
-          const img2 = new Image();
-
-          await new Promise((resolve, reject) => {
-            img2.onload = resolve;
-            img2.onerror = reject;
-            img2.src = dataURL;
-          });
-
-          // ukuran asli
-          let iw = img2.naturalWidth;
-          let ih = img2.naturalHeight;
-          if (!iw || !ih) {
-            iw = 100;
-            ih = 100;
-          } // fallback
-
-          let ratio2 = iw / ih;
-          if (!isFinite(ratio2) || ratio2 <= 0) ratio2 = 1;
-
-          // scaling aman
-          let w2 = maxW;
-          let h2 = w2 / ratio2;
-
-          if (h2 > maxH) {
-            h2 = maxH;
-            w2 = h2 * ratio2;
-          }
-
-          doc.addImage(dataURL, "JPEG", pad, y, w2, h2);
-          y += h2 + 12;
+        if (!files.length) {
+            doc.setFont("helvetica", "normal");
+            doc.text("- Tidak ada file", pad, y);
+            y += 14;
         } else {
-          // tampilkan link PDF / file
-          doc.setFont("helvetica", "normal");
-          doc.text(`• ${f.name}`, pad, y);
-          doc.link(pad, y - 10, 200, 20, { url: f.url });
-          y += 18;
+            for (let f of filesUnique) {
+                y = checkPage(doc, y, pad, 16);
+
+                if (isImageFile(f.name)) {
+                    // tampilkan gambar
+                    const dataURL = await loadImageAsDataURL(f.url);
+
+                    if (!dataURL) continue;
+                    const maxW = 140;
+                    const maxH = 110;
+
+                    const img2 = new Image();
+
+                    await new Promise((resolve, reject) => {
+                        img2.onload = resolve;
+                        img2.onerror = reject;
+                        img2.src = dataURL;
+                    });
+
+                    // ukuran asli
+                    let iw = img2.naturalWidth;
+                    let ih = img2.naturalHeight;
+                    if (!iw || !ih) {
+                        iw = 100;
+                        ih = 100;
+                    } // fallback
+
+                    let ratio2 = iw / ih;
+                    if (!isFinite(ratio2) || ratio2 <= 0) ratio2 = 1;
+
+                    // scaling aman
+                    let w2 = maxW;
+                    let h2 = w2 / ratio2;
+
+                    if (h2 > maxH) {
+                        h2 = maxH;
+                        w2 = h2 * ratio2;
+                    }
+
+                    doc.addImage(dataURL, "JPEG", pad, y, w2, h2);
+                    y += h2 + 12;
+                } else {
+                    // tampilkan link PDF / file
+                    doc.setFont("helvetica", "normal");
+                    doc.text(`• ${f.name}`, pad, y);
+                    doc.link(pad, y - 10, 200, 20, { url: f.url });
+                    y += 18;
+                }
+            }
         }
-      }
-    }
 
-    y += 10;
+        y += 10;
 
-    // ====== PENILAIAN ======
-    doc.setFont("helvetica", "bold");
-    doc.text("Penilaian:", pad, y);
-    y += 16;
+        // ====== PENILAIAN ======
+        doc.setFont("helvetica", "bold");
+        doc.text("Penilaian:", pad, y);
+        y += 16;
 
-    doc.setFont("helvetica", "normal");
-    const penilaian = [
-      `Respon Pemilik/Pengelola: ${row.step3.responPemilik || "-"}`,
-      `Ketaatan Perizinan      : ${row.step3.ketaatanPerizinan || "-"}/5`,
-      `Keramaian Penumpang     : ${row.step3.keramaianPenumpang || "-"}/5`,
-    ];
+        doc.setFont("helvetica", "normal");
+        const penilaian = [
+            `Respon Pemilik/Pengelola: ${row.step3.responPemilik || "-"}`,
+            `Ketaatan Perizinan      : ${row.step3.ketaatanPerizinan || "-"}/5`,
+            `Keramaian Penumpang     : ${row.step3.keramaianPenumpang || "-"}/5`,
+        ];
 
-    penilaian.forEach((t) => {
-      y = checkPage(doc, y, pad, 16);
-      doc.text(t, pad, y);
-      y += 14;
-    });
+        penilaian.forEach((t) => {
+            y = checkPage(doc, y, pad, 16);
+            doc.text(t, pad, y);
+            y += 14;
+        });
 
-    y += 10;
+        y += 10;
 
-    const fotoList = Array.isArray(row.step3?.fotoKunjungan)
-  ? row.step3.fotoKunjungan
-  : [];
+        const fotoList = Array.isArray(row.step3?.fotoKunjungan)
+            ? row.step3.fotoKunjungan
+            : [];
 
-    // -----------------------------------------------------------
-    // FOTO KUNJUNGAN
-    // -----------------------------------------------------------
-    const maxW = 180;
-    const maxH = 130;
+        // -----------------------------------------------------------
+        // FOTO KUNJUNGAN
+        // -----------------------------------------------------------
+        const maxW = 180;
+        const maxH = 130;
 
-    if (fotoList.length) {
-      doc.setFont("helvetica", "bold");
-      y = checkPage(doc, y, pad, 20);
-      doc.text("Foto Kunjungan:", pad, y);
-      y += 10;
+        if (fotoList.length) {
+            doc.setFont("helvetica", "bold");
+            y = checkPage(doc, y, pad, 20);
+            doc.text("Foto Kunjungan:", pad, y);
+            y += 10;
 
-      let x = pad;
+            let x = pad;
 
-      for (let src of fotoList) {
-        try {
-          const img = new Image();
-          img.crossOrigin = "anonymous";
+            for (let src of fotoList) {
+                try {
+                    const img = new Image();
+                    img.crossOrigin = "anonymous";
 
-          await new Promise((res, rej) => {
-            img.onload = res;
-            img.onerror = rej;
-            img.src = src;
-          });
+                    await new Promise((res, rej) => {
+                        img.onload = res;
+                        img.onerror = rej;
+                        img.src = src;
+                    });
 
-          const ratio = img.naturalWidth / img.naturalHeight;
+                    const ratio = img.naturalWidth / img.naturalHeight;
 
-          let w = maxW;
-          let h = w / ratio;
+                    let w = maxW;
+                    let h = w / ratio;
 
-          if (h > maxH) {
-            h = maxH;
-            w = h * ratio;
-          }
+                    if (h > maxH) {
+                        h = maxH;
+                        w = h * ratio;
+                    }
 
-          const dataURL = await loadImageAsDataURL(src);
+                    const dataURL = await loadImageAsDataURL(src);
 
-          // cek halaman
-          y = checkPage(doc, y, pad, h + 20);
+                    // cek halaman
+                    y = checkPage(doc, y, pad, h + 20);
 
-          // cek horizontal overflow
-          if (x + w > pad + 523) {
-            x = pad;
+                    // cek horizontal overflow
+                    if (x + w > pad + 523) {
+                        x = pad;
+                        y += maxH + 20;
+                    }
+
+                    doc.addImage(dataURL, "JPEG", x, y, w, h);
+                    x += w + 15;
+                } catch (e) {
+                    console.warn("Gagal load foto:", src, e);
+                }
+            }
+
             y += maxH + 20;
-          }
-
-          doc.addImage(dataURL, "JPEG", x, y, w, h);
-          x += w + 15;
-        } catch (e) {
-          console.warn("Gagal load foto:", src, e);
         }
-      }
 
-      y += maxH + 20;
-    }
+        // -----------------------------------------------------------
+        // TANDA TANGAN (PETUGAS & PEMILIK)
+        // -----------------------------------------------------------
+        const ttdPetugas = row.step3?.tandaTanganPetugas;
+        const ttdPemilik = row.step3?.tandaTanganPemilik;
 
-    // -----------------------------------------------------------
-    // TANDA TANGAN (PETUGAS & PEMILIK)
-    // -----------------------------------------------------------
-    const ttdPetugas = row.step3?.tandaTanganPetugas;
-    const ttdPemilik = row.step3?.tandaTanganPemilik;
+        if (ttdPetugas || ttdPemilik) {
+            const maxW = 140;
+            const maxH = 90;
+            const sectionHeightNeeded = maxH + 60; // ruang aman
 
-    if (ttdPetugas || ttdPemilik) {
+            // ✅ CEK SPACE SEBELUM MASUK SECTION
+            if (y + sectionHeightNeeded > doc.internal.pageSize.height - pad) {
+                doc.addPage();
+                y = pad;
+            }
 
-      const maxW = 140;
-      const maxH = 90;
-      const sectionHeightNeeded = maxH + 60; // ruang aman
+            doc.setFont("helvetica", "bold");
+            doc.text("Tanda Tangan", pad, y);
+            y += 20;
 
-      // ✅ CEK SPACE SEBELUM MASUK SECTION
-      if (y + sectionHeightNeeded > doc.internal.pageSize.height - pad) {
-        doc.addPage();
-        y = pad;
-      }
+            let x = pad;
 
-      doc.setFont("helvetica", "bold");
-      doc.text("Tanda Tangan", pad, y);
-      y += 20;
+            // === TTD PETUGAS ===
+            if (ttdPetugas) {
+                try {
+                    const imgPetugas = await loadImageAsDataURL(ttdPetugas);
 
-      let x = pad;
+                    // cek lagi kalau gambar sendiri tidak muat
+                    if (y + maxH > doc.internal.pageSize.height - pad) {
+                        doc.addPage();
+                        y = pad;
+                    }
 
-      // === TTD PETUGAS ===
-      if (ttdPetugas) {
-        try {
-          const imgPetugas = await loadImageAsDataURL(ttdPetugas);
+                    doc.setFont("helvetica", "normal");
+                    doc.text("Petugas", x, y);
 
-          // cek lagi kalau gambar sendiri tidak muat
-          if (y + maxH > doc.internal.pageSize.height - pad) {
+                    doc.addImage(
+                        imgPetugas,
+                        "PNG",
+                        x,
+                        y + 8,
+                        maxW,
+                        maxH,
+                        undefined,
+                        "FAST",
+                    );
+
+                    x += maxW + 60;
+                } catch (e) {
+                    console.warn("Gagal load TTD Petugas", e);
+                }
+            }
+
+            // === TTD PEMILIK ===
+            if (ttdPemilik) {
+                try {
+                    const imgPemilik = await loadImageAsDataURL(ttdPemilik);
+
+                    if (y + maxH > doc.internal.pageSize.height - pad) {
+                        doc.addPage();
+                        y = pad;
+                    }
+
+                    doc.setFont("helvetica", "normal");
+                    doc.text("Pemilik / Pengelola", x, y);
+
+                    doc.addImage(
+                        imgPemilik,
+                        "PNG",
+                        x,
+                        y + 8,
+                        maxW,
+                        maxH,
+                        undefined,
+                        "FAST",
+                    );
+                } catch (e) {
+                    console.warn("Gagal load TTD Pemilik", e);
+                }
+            }
+
+            y += maxH + 40;
+        }
+        // -----------------------------------------------------------
+        // STEP 4 – Validasi
+        // -----------------------------------------------------------
+        doc.setFont("helvetica", "bold");
+        doc.text("4. Validasi", pad, y);
+        y += 16;
+
+        doc.setFont("helvetica", "normal");
+
+        const valSimple = [
+            `Validasi oleh : ${row.step4.validasiOleh || "-"}`,
+            `Status        : ${row.step4.statusValidasi || "-"}`,
+            `Waktu         : ${row.step4.waktuValidasi || "-"}`,
+            `Wilayah       : ${row.step4.wilayah || "-"}`,
+        ];
+
+        valSimple.forEach((t) => {
+            if (y + 14 > doc.internal.pageSize.height - pad) {
+                doc.addPage();
+                y = pad;
+            }
+            doc.text(t, pad, y);
+            y += 14;
+        });
+
+        // ===== CATATAN =====
+        if (y + 40 > doc.internal.pageSize.height - pad) {
             doc.addPage();
             y = pad;
-          }
-
-          doc.setFont("helvetica", "normal");
-          doc.text("Petugas", x, y);
-
-          doc.addImage(
-            imgPetugas,
-            "PNG",
-            x,
-            y + 8,
-            maxW,
-            maxH,
-            undefined,
-            "FAST"
-          );
-
-          x += maxW + 60;
-        } catch (e) {
-          console.warn("Gagal load TTD Petugas", e);
         }
-      }
 
-      // === TTD PEMILIK ===
-      if (ttdPemilik) {
-        try {
-          const imgPemilik = await loadImageAsDataURL(ttdPemilik);
+        doc.setFont("helvetica", "bold");
+        doc.text("Catatan :", pad, y);
+        y += 14;
 
-          if (y + maxH > doc.internal.pageSize.height - pad) {
-            doc.addPage();
-            y = pad;
-          }
+        doc.setFont("helvetica", "normal");
 
-          doc.setFont("helvetica", "normal");
-          doc.text("Pemilik / Pengelola", x, y);
+        const catatanLines = doc.splitTextToSize(
+            row.step4.catatanValidasi || "-",
+            420,
+        );
 
-          doc.addImage(
-            imgPemilik,
-            "PNG",
-            x,
-            y + 8,
-            maxW,
-            maxH,
-            undefined,
-            "FAST"
-          );
-        } catch (e) {
-          console.warn("Gagal load TTD Pemilik", e);
-        }
-      }
+        const lineHeight = 14;
 
-      y += maxH + 40;
+        catatanLines.forEach((line) => {
+            if (y + lineHeight > doc.internal.pageSize.height - pad) {
+                doc.addPage();
+                y = pad;
+            }
+            doc.text(line, pad, y);
+            y += lineHeight;
+        });
+
+        // -----------------------------------------------------------
+        // SAVE
+        // -----------------------------------------------------------
+        const rawPerusahaan =
+            row.step1.perusahaan ||
+            row.step1.namaPerusahaan ||
+            row.step1.namaPemilik ||
+            "Perusahaan";
+
+        const perusahaanSafe = rawPerusahaan
+            .toString()
+            .trim()
+            .replace(/[^a-z0-9 ]/gi, "")
+            .replace(/\s+/g, "_");
+
+        doc.save(`Laporan_CRM_${perusahaanSafe}.pdf`);
     }
-    // -----------------------------------------------------------
-    // STEP 4 – Validasi
-    // -----------------------------------------------------------
-doc.setFont("helvetica", "bold");
-doc.text("4. Validasi", pad, y);
-y += 16;
-
-doc.setFont("helvetica", "normal");
-
-const valSimple = [
-  `Validasi oleh : ${row.step4.validasiOleh || "-"}`,
-  `Status        : ${row.step4.statusValidasi || "-"}`,
-  `Waktu         : ${row.step4.waktuValidasi || "-"}`,
-  `Wilayah       : ${row.step4.wilayah || "-"}`,
-];
-
-valSimple.forEach((t) => {
-  if (y + 14 > doc.internal.pageSize.height - pad) {
-    doc.addPage();
-    y = pad;
-  }
-  doc.text(t, pad, y);
-  y += 14;
-});
-
-// ===== CATATAN =====
-if (y + 40 > doc.internal.pageSize.height - pad) {
-  doc.addPage();
-  y = pad;
-}
-
-doc.setFont("helvetica", "bold");
-doc.text("Catatan :", pad, y);
-y += 14;
-
-doc.setFont("helvetica", "normal");
-
-const catatanLines = doc.splitTextToSize(
-  row.step4.catatanValidasi || "-",
-  420
-);
-
-const lineHeight = 14;
-
-catatanLines.forEach((line) => {
-  if (y + lineHeight > doc.internal.pageSize.height - pad) {
-    doc.addPage();
-    y = pad;
-  }
-  doc.text(line, pad, y);
-  y += lineHeight;
-});
-
-    // -----------------------------------------------------------
-    // SAVE
-    // -----------------------------------------------------------
-    const rawPerusahaan =
-  row.step1.perusahaan ||
-  row.step1.namaPerusahaan ||
-  row.step1.namaPemilik ||
-  "Perusahaan";
-
-const perusahaanSafe = rawPerusahaan
-  .toString()
-  .trim()
-  .replace(/[^a-z0-9 ]/gi, "")
-  .replace(/\s+/g, "_");
-
-doc.save(`Laporan_CRM_${perusahaanSafe}.pdf`);
-
-  }
-
-  return (
-    <div className="dfc-container kawaii">
-      <header className="dfc-header">
-        <div className="dfc-title">
-          <KawaiiCloud />
-          <h1>Hasil Input Form CRM</h1>
-        </div>
-      </header>
-
-      <section className="dfc-controls">
-        <div className="dfc-search">
-          <IconSearch />
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Cari ID, petugas, pemilik, nopol, status, dll..."
-          />
-        </div>
-        <div className="dfc-filters">
-          <label>
-            Status Validasi
-            <select
-              value={filterValidasi}
-              onChange={(e) => setFilterValidasi(e.target.value)}
-            >
-              <option>Semua</option>
-              <option>Tervalidasi</option>
-              <option>Menunggu</option>
-            </select>
-          </label>
-        </div>
-      </section>
-
-      {errorMsg && (
-        <div
-          style={{
-            margin: "8px 0 12px",
-            padding: "10px 12px",
-            border: "2px solid #fecaca",
-            background: "#fff1f2",
-            borderRadius: 12,
-            color: "#991b1b",
-            fontSize: 13,
-            fontWeight: 600,
-          }}
-        >
-          {errorMsg}
-        </div>
-      )}
-
-      <section
-        className="dfc-table-wrap"
-        ref={wrapRef}
-        onWheel={selected ? undefined : handleWheel}
-        onMouseDown={selected ? undefined : onMouseDown}
-        onMouseLeave={selected ? undefined : onMouseLeave}
-        onMouseUp={selected ? undefined : onMouseUp}
-        onMouseMove={selected ? undefined : onMouseMove}
-      >
-        <table className="dfc-table">
-          <thead>
-            <tr>
-              <th style={{ textAlign: "right" }}>Aksi</th>
-              <th>Validasi</th>
-              <th>Tanggal & Waktu</th>
-              <th>Loket</th>
-              <th>Petugas</th>
-              <th>Jenis</th>
-              <th>Pemilik / Pengelola</th>
-              <th>Nopol/Nama Kapal</th>
-              <th>Status Kendaraan</th>
-              <th>Janji Bayar</th>
-              <th>Rating (Ops/Perizinan/Pnp)</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={12} className="dfc-empty">
-                  Memuat data...
-                </td>
-              </tr>
-            ) : rows.length > 0 ? (
-              rows.map((d) => {
-                // ⬇️ pindahin isi logic row kamu yang tadi ada di map ke sini
-                const s2 = d.step2 || {};
-                const rincian = Array.isArray(s2.rincianArmada)
-                  ? s2.rincianArmada
-                  : [];
-
-                const statusValidasi = normalizeStatusValidasi(
-                  d.step4?.statusValidasi,
-                );
-                const semuaNopol = rincian.map((r) => r.nopol).filter(Boolean);
-                const totalArmada =
-                  semuaNopol.length || (s2.nopolAtauNamaKapal ? 1 : 0);
-
-                const nopolDisplay =
-                  semuaNopol.length === 0
-                    ? s2.nopolAtauNamaKapal || "-"
-                    : semuaNopol.length <= 2
-                      ? semuaNopol.join(", ")
-                      : `${semuaNopol[0]}, ${semuaNopol[1]} (+${semuaNopol.length - 2} armada)`;
-
-                const statusDisplay =
-                  totalArmada <= 1
-                    ? s2.statusKendaraan || "-"
-                    : `Lihat detail (${totalArmada} armada)`;
-
-                const statusTone =
-                  s2.statusKendaraan === "Beroperasi" ||
-                  s2.statusKendaraan === "Aktif"
-                    ? "green"
-                    : "gray";
-
-                return (
-                  <tr key={d.dbId ?? d.id}>
-                    <td
-                      style={{
-                        textAlign: "right",
-                        display: "flex",
-                        gap: 6,
-                        justifyContent: "flex-end",
-                      }}
-                    >
-                      <button
-                        className="btn btn-soft"
-                        onClick={() => {
-  setSelected(d);
-}}
-                      >
-                        Detail
-                      </button>
-
-                      <button
-                        className="btn btn-danger"
-                        onClick={() => handleDelete(d.dbId)}
-                      >
-                        Hapus
-                      </button>
-                    </td>
-
-                    <td>
-                      <Badge
-                        tone={
-                          statusValidasi === "Tervalidasi"
-                            ? "green"
-                            : statusValidasi === "Menunggu"
-                              ? "amber"
-                              : "gray"
-                        }
-                      >
-                        {statusValidasi}
-                      </Badge>
-                    </td>
-
-                    <td>{d.step1.tanggalWaktu}</td>
-                    <td>{d.step1.loket}</td>
-                    <td>
-                      {d.step1.petugasDepan}
-                    </td>
-                    <td>{d.step1.jenisAngkutan}</td>
-                    <td>{d.step1.namaPemilik}</td>
-
-                    <td>
-                      {nopolDisplay}
-                      {totalArmada > 1 && (
-                        <div
-                          style={{
-                            fontSize: 11,
-                            color: "#64748b",
-                            marginTop: 2,
-                          }}
-                        >
-                          Total {totalArmada} armada
-                        </div>
-                      )}
-                    </td>
-
-                    <td>
-                      <Badge tone={statusTone}>{statusDisplay}</Badge>
-                    </td>
-
-                    <td>{d.step2.janjiBayar}</td>
-
-                    <td>
-                      {d.step3.ketertibanOperasional}/5 •{" "}
-                      {d.step3.ketaatanPerizinan}/5 •{" "}
-                      {d.step3.keramaianPenumpang}/5
-                    </td>
-                  </tr>
-                );
-              })
-            ) : (
-              <tr>
-                <td colSpan={12} className="dfc-empty">
-                  Tidak ada data yang cocok dengan filter.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </section>
-      {/* Pagination */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginTop: 12,
-        }}
-      >
-        <div style={{ fontSize: 12, color: "#475569" }}>
-          Halaman {page} • Menampilkan {rows.length} dari {totalRows} data
-        </div>
-
-        <div style={{ display: "flex", gap: 8 }}>
-          <button
-            className="btn btn-soft"
-            disabled={page <= 1}
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-          >
-            ← Prev
-          </button>
-
-          <button
-            className="btn btn-soft"
-            disabled={rows.length < PAGE_SIZE}
-            onClick={() => setPage((p) => p + 1)}
-          >
-            Next →
-          </button>
-        </div>
-      </div>
-
-      {/* Modal Detail */}
-      {selected && (
-        <div className="dfc-modal" role="dialog" aria-modal="true">
-          <div className="dfc-modal-card">
-            <div className="dfc-modal-head">
-              <div className="dfc-drawer-title">
-                <h2>
-                  Detail Laporan — {selected.id}
-                  {selected.step4?.statusValidasi && (
-                    <span className="badge" style={{ marginLeft: 8 }}>
-                      {selected.step4.statusValidasi}
-                    </span>
-                  )}
-                </h2>
-              </div>
-              <div className="dfc-modal-actions">
-                <button
-                  className="btn btn-soft"
-                  onClick={() => handleDownloadPdf(selected)}
-                >
-                  Download PDF
-                </button>
-
-                <button
-                  className="btn primary"
-                  onClick={() => setVerifyOpen((v) => !v)}
-                >
-                  {verifyOpen ? "Tutup Panel" : "Verifikasi"}
-                </button>
-
-                <button className="btn" onClick={() => setSelected(null)}>
-                  Tutup
-                </button>
-              </div>
-            </div>
-
-            <div className="dfc-modal-body">
-              {verifyOpen && (
-                <Section title="Verifikasi">
-                  <div className="field" style={{ gridColumn: "1 / -1" }}>
-                    <label>Status Validasi</label>
-
-                    <select
-                      className={`verify-select ${verifyStatus.toLowerCase()}`}
-                      value={verifyStatus}
-                      onChange={(e) => setVerifyStatus(e.target.value)}
-                    >
-                      {/* OPTION KOSONG → TIDAK KELIHATAN */}
-                      <option value="" hidden />
-
-                      <option value="Tervalidasi">✅ Tervalidasi</option>
-                      <option value="Pending">⏳ Pending</option>
-                    </select>
-                  </div>
-                  <div className="field" style={{ gridColumn: "1 / -1" }}>
-                    <label>Catatan Verifikasi (opsional)</label>
-                    <textarea
-                      rows={3}
-                      placeholder="Boleh dikosongkan…"
-                      value={verifyNote}
-                      onChange={(e) => setVerifyNote(e.target.value)}
-                    />
-                    <small className="muted">
-  Menyimpan akan memperbarui status verifikasi sesuai pilihan.
-</small>
-                  </div>
-                  <div className="dfc-modal-actions" style={{ marginTop: 8 }}>
-                    <button
-                      className="btn ghost"
-                      onClick={() => setVerifyOpen(false)}
-                    >
-                      Batal
-                    </button>
-                    <button
-                      className="btn primary"
-                      onClick={handleSaveVerification}
-                    >
-                      Simpan Verifikasi
-                    </button>
-                  </div>
-                </Section>
-              )}
-              {/* Step 1 */}
-              <Section title="1) Data Kunjungan">
-                <dl className="grid-2">
-                  <Item
-                    label="Tanggal & Waktu Kunjungan"
-                    value={selected.step1.tanggalWaktu}
-                  />
-                  <Item label="Loket" value={selected.step1.loket} />
-                  <Item
-                    label="Nama Petugas"
-                    value={`${selected.step1.petugasDepan}`}
-                  />
-                  <Item
-                    label="Nama Perusahaan (PT/CV)"
-                    value={selected.step1.perusahaan}
-                  />
-                  <Item
-                    label="Jenis Angkutan"
-                    value={selected.step1.jenisAngkutan}
-                  />
-                  <Item
-                    label="Nama Pemilik/Pengelola"
-                    value={selected.step1.namaPemilik}
-                  />
-                  <Item label="Alamat" value={selected.step1.alamat} />
-                  <Item label="No. Telepon/HP" value={selected.step1.telepon} />
-                </dl>
-              </Section>
-
-              {/* Step 2 */}
-              <Section title="2) Armada">
-                {(() => {
-                  const rincian = Array.isArray(selected.step2?.rincianArmada)
-                    ? selected.step2.rincianArmada
-                    : [];
-
-                  // total OS yang harus dibayar (sum semua bayarOs yang terisi)
-                  const totalOsHarusDibayar = rincian.reduce((sum, a) => {
-                    const raw = parseRupiah(a?.bayarOs);
-                    return sum + (Number.isFinite(raw) ? raw : 0);
-                  }, 0);
-
-                  return (
-                    <>
-                      <dl className="grid-2">
-                        <Item
-                          label="Hasil Kunjungan"
-                          value={
-                            selected.step2.hasilKunjungan ||
-                            selected.step2.penjelasanKunjungan ||
-                            "-"
-                          }
-                        />
-                        <Item
-                          label="Total OS yang harus dibayar"
-                          value={formatRupiah(totalOsHarusDibayar)}
-                        />
-                        <Item
-                          label="Janji Bayar Tunggakan"
-                          value={selected.step2.janjiBayar || "-"}
-                        />
-                      </dl>
-
-                      {/* 👉 TABEL DETAIL SEMUA ARMADA */}
-                      {rincian.length > 0 && (
-                        <div className="armada-table-mini">
-                          <table>
-                            <thead>
-                              <tr>
-                                <th>No</th>
-                                <th>Nopol / Nama Kapal</th>
-                                <th>Status</th>
-                                <th>Tipe / Tahun</th>
-                                <th>OS Dibayar</th>
-                                <th>Rekomendasi / Tindak Lanjut</th>
-                                <th>Bukti</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {rincian.map((a, idx) => {
-                                const rawOs = parseRupiah(a.bayarOs);
-                                const osValue = Number.isFinite(rawOs)
-                                  ? rawOs
-                                  : 0;
-
-                                const tipe = a.tipeArmada || "Tidak diisi";
-                                const tahun = a.tahun ? ` (${a.tahun})` : "";
-
-                                return (
-                                  <tr key={idx}>
-                                    <td>{idx + 1}</td>
-                                    <td>{a.nopol || "-"}</td>
-                                    <td>{a.status || "-"}</td>
-                                    <td>{`${tipe}${tahun}`}</td>
-                                    <td>{formatRupiah(osValue)}</td>
-                                    <td>
-                                      {a.rekomendasi || a.tindakLanjut || "-"}
-                                    </td>
-                                    <td>
-  {Array.isArray(a.bukti) && a.bukti.length > 0 ? (
-    <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
-      {a.bukti.map((f, i) => (
-        <a
-          key={i}
-          href={f.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{
-            fontSize:11,
-            padding:"4px 6px",
-            borderRadius:8,
-            border:"1px solid #cbd5e1",
-            background:"#f8fafc",
-            textDecoration:"none"
-          }}
-        >
-          📎 {f.name || `Bukti ${i+1}`}
-        </a>
-      ))}
-    </div>
-  ) : (
-                                        <span
-                                          style={{
-                                            fontSize: 11,
-                                            color: "#94a3b8",
-                                          }}
-                                        >
-                                          Tidak ada
-                                        </span>
-                                      )}
-                                    </td>
-                                  </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-                    </>
-                  );
-                })()}
-              </Section>
-
-{/* Step 3 */}
-<Section title="3) Upload & Penilaian">
-  {(() => {
-    const fotoKunjungan = Array.isArray(selected.step3?.fotoKunjungan)
-      ? selected.step3.fotoKunjungan
-      : [];
-
-    const evidenceList = Array.isArray(selected.step3?.evidence)
-      ? selected.step3.evidence
-      : [];
-
-    const suratList = Array.isArray(selected.step3?.suratPernyataan)
-      ? selected.step3.suratPernyataan
-      : [];
-
-    const getRaw = (file) =>
-      typeof file === "string" ? file : file?.url || "";
-
-    const getName = (file, fallback = "File") =>
-      typeof file === "string" ? fallback : file?.name || fallback;
-
-    const isImageFile = (file) => {
-      const raw = String(getRaw(file) || "").toLowerCase();
-      const decoded = decodeURIComponent(raw);
-      const name = String(getName(file, "") || "").toLowerCase();
-      const mime = String(file?.mime || file?.type || "").toLowerCase();
-
-      return (
-        decoded.startsWith("data:image/") ||
-        mime.startsWith("image/") ||
-        decoded.includes(".png") ||
-        decoded.includes(".jpg") ||
-        decoded.includes(".jpeg") ||
-        decoded.includes(".webp") ||
-        decoded.includes(".gif") ||
-        decoded.includes(".bmp") ||
-        decoded.includes(".svg") ||
-        name.endsWith(".png") ||
-        name.endsWith(".jpg") ||
-        name.endsWith(".jpeg") ||
-        name.endsWith(".webp") ||
-        name.endsWith(".gif") ||
-        name.endsWith(".bmp") ||
-        name.endsWith(".svg")
-      );
-    };
-
-    const isPdfFile = (file) => {
-      const raw = `${getRaw(file)} ${getName(file, "")}`.toLowerCase();
-      const mime = String(file?.mime || file?.type || "").toLowerCase();
-
-      return raw.includes(".pdf") || mime.includes("pdf");
-    };
-
-evidenceList.forEach((f, i) => {});
-
-fotoKunjungan.forEach((f, i) => {});
 
     return (
-      <>
-        {/* FOTO KUNJUNGAN */}
-        <div style={{ marginBottom: 12 }}>
-          <div style={{ fontWeight: 700, marginBottom: 6 }}>Foto Kunjungan</div>
-          <div className="gallery">
-            {fotoKunjungan.length > 0 ? (
-              fotoKunjungan.map((src, idx) => (
-                <div className="thumb" key={`foto-${idx}`}>
-                  <img
-                    src={src}
-                    alt={`Foto Kunjungan ${idx + 1}`}
-                    onError={(e) => {
-                      console.log("Gagal load foto kunjungan:", src);
-                      e.currentTarget.style.display = "none";
-                    }}
-                  />
+        <div className="dfc-container kawaii">
+            <header className="dfc-header">
+                <div className="dfc-title">
+                    <KawaiiCloud />
+                    <h1>Hasil Input Form CRM</h1>
                 </div>
-              ))
-            ) : (
-              <span style={{ fontSize: 12, color: "#64748b" }}>
-                Tidak ada foto kunjungan
-              </span>
+            </header>
+
+            <section className="dfc-controls">
+                <div className="dfc-search">
+                    <IconSearch />
+                    <input
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                        placeholder="Cari ID, petugas, pemilik, nopol, status, dll..."
+                    />
+                </div>
+                <div className="dfc-filters">
+                    <label>
+                        Status Validasi
+                        <select
+                            value={filterValidasi}
+                            onChange={(e) => setFilterValidasi(e.target.value)}
+                        >
+                            <option>Semua</option>
+                            <option>Tervalidasi</option>
+                            <option>Menunggu</option>
+                        </select>
+                    </label>
+                </div>
+            </section>
+
+            {errorMsg && (
+                <div
+                    style={{
+                        margin: "8px 0 12px",
+                        padding: "10px 12px",
+                        border: "2px solid #fecaca",
+                        background: "#fff1f2",
+                        borderRadius: 12,
+                        color: "#991b1b",
+                        fontSize: 13,
+                        fontWeight: 600,
+                    }}
+                >
+                    {errorMsg}
+                </div>
             )}
-          </div>
-        </div>
 
-        {/* EVIDENCE GAMBAR */}
-        <div style={{ marginBottom: 12 }}>
-          <div style={{ fontWeight: 700, marginBottom: 6 }}>Evidence</div>
-          <div className="gallery">
-  {evidenceList.filter((f) => f?.url).length > 0 ? (
-    evidenceList
-      .filter((f) => f?.url)
-      .map((f, i) => (
-        <div className="thumb" key={`evidence-img-${i}`}>
-          <img
-            src={f.url}
-            alt={f?.name || `Evidence ${i + 1}`}
-            onLoad={() => {
-            }}
-            onError={(e) => {
-              e.currentTarget.style.display = "none";
-            }}
-          />
-        </div>
-      ))
-  ) : (
-    <span style={{ fontSize: 12, color: "#64748b" }}>
-      Tidak ada evidence gambar
-    </span>
-  )}
-</div>
-        </div>
+            <section
+                className="dfc-table-wrap"
+                ref={wrapRef}
+                onWheel={selected ? undefined : handleWheel}
+                onMouseDown={selected ? undefined : onMouseDown}
+                onMouseLeave={selected ? undefined : onMouseLeave}
+                onMouseUp={selected ? undefined : onMouseUp}
+                onMouseMove={selected ? undefined : onMouseMove}
+            >
+                <table className="dfc-table">
+                    <thead>
+                        <tr>
+                            <th style={{ textAlign: "right" }}>Aksi</th>
+                            <th>Validasi</th>
+                            <th>Tanggal & Waktu</th>
+                            <th>Loket</th>
+                            <th>Petugas</th>
+                            <th>Jenis</th>
+                            <th>Pemilik / Pengelola</th>
+                            <th>Nopol/Nama Kapal</th>
+                            <th>Status Kendaraan</th>
+                            <th>Janji Bayar</th>
+                            <th>Rating (Ops/Perizinan/Pnp)</th>
+                        </tr>
+                    </thead>
 
-        {/* SURAT PERNYATAAN */}
-       <div style={{ marginBottom: 12 }}>
+                    <tbody>
+                        {loading ? (
+                            <tr>
+                                <td colSpan={12} className="dfc-empty">
+                                    Memuat data...
+                                </td>
+                            </tr>
+                        ) : rows.length > 0 ? (
+                            rows.map((d) => {
+                                // ⬇️ pindahin isi logic row kamu yang tadi ada di map ke sini
+                                const s2 = d.step2 || {};
+                                const rincian = Array.isArray(s2.rincianArmada)
+                                    ? s2.rincianArmada
+                                    : [];
+
+                                const statusValidasi = normalizeStatusValidasi(
+                                    d.step4?.statusValidasi,
+                                );
+                                const semuaNopol = rincian
+                                    .map((r) => r.nopol)
+                                    .filter(Boolean);
+                                const totalArmada =
+                                    semuaNopol.length ||
+                                    (s2.nopolAtauNamaKapal ? 1 : 0);
+
+                                const nopolDisplay =
+                                    semuaNopol.length === 0
+                                        ? s2.nopolAtauNamaKapal || "-"
+                                        : semuaNopol.length <= 2
+                                          ? semuaNopol.join(", ")
+                                          : `${semuaNopol[0]}, ${semuaNopol[1]} (+${semuaNopol.length - 2} armada)`;
+
+                                const statusDisplay =
+                                    totalArmada <= 1
+                                        ? s2.statusKendaraan || "-"
+                                        : `Lihat detail (${totalArmada} armada)`;
+
+                                const statusTone =
+                                    s2.statusKendaraan === "Beroperasi" ||
+                                    s2.statusKendaraan === "Aktif"
+                                        ? "green"
+                                        : "gray";
+
+                                return (
+                                    <tr key={d.dbId ?? d.id}>
+                                        <td
+                                            style={{
+                                                textAlign: "right",
+                                                display: "flex",
+                                                gap: 6,
+                                                justifyContent: "flex-end",
+                                            }}
+                                        >
+                                            <button
+                                                className="btn btn-soft"
+                                                onClick={() => {
+                                                    setSelected(d);
+                                                }}
+                                            >
+                                                Detail
+                                            </button>
+
+                                            <button
+                                                className="btn btn-danger"
+                                                onClick={() =>
+                                                    handleDelete(d.dbId)
+                                                }
+                                            >
+                                                Hapus
+                                            </button>
+                                        </td>
+
+                                        <td>
+                                            <Badge
+                                                tone={
+                                                    statusValidasi ===
+                                                    "Tervalidasi"
+                                                        ? "green"
+                                                        : statusValidasi ===
+                                                            "Menunggu"
+                                                          ? "amber"
+                                                          : "gray"
+                                                }
+                                            >
+                                                {statusValidasi}
+                                            </Badge>
+                                        </td>
+
+                                        <td>{d.step1.tanggalWaktu}</td>
+                                        <td>{d.step1.loket}</td>
+                                        <td>{d.step1.petugasDepan}</td>
+                                        <td>{d.step1.jenisAngkutan}</td>
+                                        <td>{d.step1.namaPemilik}</td>
+
+                                        <td>
+                                            {nopolDisplay}
+                                            {totalArmada > 1 && (
+                                                <div
+                                                    style={{
+                                                        fontSize: 11,
+                                                        color: "#64748b",
+                                                        marginTop: 2,
+                                                    }}
+                                                >
+                                                    Total {totalArmada} armada
+                                                </div>
+                                            )}
+                                        </td>
+
+                                        <td>
+                                            <Badge tone={statusTone}>
+                                                {statusDisplay}
+                                            </Badge>
+                                        </td>
+
+                                        <td>{d.step2.janjiBayar}</td>
+
+                                        <td>
+                                            {d.step3.ketertibanOperasional}/5 •{" "}
+                                            {d.step3.ketaatanPerizinan}/5 •{" "}
+                                            {d.step3.keramaianPenumpang}/5
+                                        </td>
+                                    </tr>
+                                );
+                            })
+                        ) : (
+                            <tr>
+                                <td colSpan={12} className="dfc-empty">
+                                    Tidak ada data yang cocok dengan filter.
+                                </td>
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
+            </section>
+            {/* Pagination */}
+            <div
+                style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginTop: 12,
+                }}
+            >
+                <div style={{ fontSize: 12, color: "#475569" }}>
+                    Halaman {page} • Menampilkan {rows.length} dari {totalRows}{" "}
+                    data
+                </div>
+
+                <div style={{ display: "flex", gap: 8 }}>
+                    <button
+                        className="btn btn-soft"
+                        disabled={page <= 1}
+                        onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    >
+                        ← Prev
+                    </button>
+
+                    <button
+                        className="btn btn-soft"
+                        disabled={rows.length < PAGE_SIZE}
+                        onClick={() => setPage((p) => p + 1)}
+                    >
+                        Next →
+                    </button>
+                </div>
+            </div>
+
+            {/* Modal Detail */}
+            {selected && (
+                <div className="dfc-modal" role="dialog" aria-modal="true">
+                    <div className="dfc-modal-card">
+                        <div className="dfc-modal-head">
+                            <div className="dfc-drawer-title">
+                                <h2>
+                                    Detail Laporan — {selected.id}
+                                    {selected.step4?.statusValidasi && (
+                                        <span
+                                            className="badge"
+                                            style={{ marginLeft: 8 }}
+                                        >
+                                            {selected.step4.statusValidasi}
+                                        </span>
+                                    )}
+                                </h2>
+                            </div>
+                            <div className="dfc-modal-actions">
+                                <button
+                                    className="btn btn-soft"
+                                    onClick={() => handleDownloadPdf(selected)}
+                                >
+                                    Download PDF
+                                </button>
+
+                                <button
+                                    className="btn primary"
+                                    onClick={() => setVerifyOpen((v) => !v)}
+                                >
+                                    {verifyOpen ? "Tutup Panel" : "Verifikasi"}
+                                </button>
+
+                                <button
+                                    className="btn"
+                                    onClick={() => setSelected(null)}
+                                >
+                                    Tutup
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="dfc-modal-body">
+                            {verifyOpen && (
+                                <Section title="Verifikasi">
+                                    <div
+                                        className="field"
+                                        style={{ gridColumn: "1 / -1" }}
+                                    >
+                                        <label>Status Validasi</label>
+
+                                        <select
+                                            className={`verify-select ${verifyStatus.toLowerCase()}`}
+                                            value={verifyStatus}
+                                            onChange={(e) =>
+                                                setVerifyStatus(e.target.value)
+                                            }
+                                        >
+                                            {/* OPTION KOSONG → TIDAK KELIHATAN */}
+                                            <option value="" hidden />
+
+                                            <option value="Tervalidasi">
+                                                ✅ Tervalidasi
+                                            </option>
+                                            <option value="Pending">
+                                                ⏳ Pending
+                                            </option>
+                                        </select>
+                                    </div>
+                                    <div
+                                        className="field"
+                                        style={{ gridColumn: "1 / -1" }}
+                                    >
+                                        <label>
+                                            Catatan Verifikasi (opsional)
+                                        </label>
+                                        <textarea
+                                            rows={3}
+                                            placeholder="Boleh dikosongkan…"
+                                            value={verifyNote}
+                                            onChange={(e) =>
+                                                setVerifyNote(e.target.value)
+                                            }
+                                        />
+                                        <small className="muted">
+                                            Menyimpan akan memperbarui status
+                                            verifikasi sesuai pilihan.
+                                        </small>
+                                    </div>
+                                    <div
+                                        className="dfc-modal-actions"
+                                        style={{ marginTop: 8 }}
+                                    >
+                                        <button
+                                            className="btn ghost"
+                                            onClick={() => setVerifyOpen(false)}
+                                        >
+                                            Batal
+                                        </button>
+                                        <button
+                                            className="btn primary"
+                                            onClick={handleSaveVerification}
+                                        >
+                                            Simpan Verifikasi
+                                        </button>
+                                    </div>
+                                </Section>
+                            )}
+                            {/* Step 1 */}
+                            <Section title="1) Data Kunjungan">
+                                <dl className="grid-2">
+                                    <Item
+                                        label="Tanggal & Waktu Kunjungan"
+                                        value={selected.step1.tanggalWaktu}
+                                    />
+                                    <Item
+                                        label="Loket"
+                                        value={selected.step1.loket}
+                                    />
+                                    <Item
+                                        label="Nama Petugas"
+                                        value={`${selected.step1.petugasDepan}`}
+                                    />
+                                    <Item
+                                        label="Nama Perusahaan (PT/CV)"
+                                        value={selected.step1.perusahaan}
+                                    />
+                                    <Item
+                                        label="Jenis Angkutan"
+                                        value={selected.step1.jenisAngkutan}
+                                    />
+                                    <Item
+                                        label="Nama Pemilik/Pengelola"
+                                        value={selected.step1.namaPemilik}
+                                    />
+                                    <Item
+                                        label="Alamat"
+                                        value={selected.step1.alamat}
+                                    />
+                                    <Item
+                                        label="No. Telepon/HP"
+                                        value={selected.step1.telepon}
+                                    />
+                                </dl>
+                            </Section>
+
+                            {/* Step 2 */}
+                            <Section title="2) Armada">
+                                {(() => {
+                                    const rincian = Array.isArray(
+                                        selected.step2?.rincianArmada,
+                                    )
+                                        ? selected.step2.rincianArmada
+                                        : [];
+
+                                    // total OS yang harus dibayar (sum semua bayarOs yang terisi)
+                                    const totalOsHarusDibayar = rincian.reduce(
+                                        (sum, a) => {
+                                            const raw = parseRupiah(a?.bayarOs);
+                                            return (
+                                                sum +
+                                                (Number.isFinite(raw) ? raw : 0)
+                                            );
+                                        },
+                                        0,
+                                    );
+
+                                    return (
+                                        <>
+                                            <dl className="grid-2">
+                                                <Item
+                                                    label="Hasil Kunjungan"
+                                                    value={
+                                                        selected.step2
+                                                            .hasilKunjungan ||
+                                                        selected.step2
+                                                            .penjelasanKunjungan ||
+                                                        "-"
+                                                    }
+                                                />
+                                                <Item
+                                                    label="Total OS yang harus dibayar"
+                                                    value={formatRupiah(
+                                                        totalOsHarusDibayar,
+                                                    )}
+                                                />
+                                                <Item
+                                                    label="Janji Bayar Tunggakan"
+                                                    value={
+                                                        selected.step2
+                                                            .janjiBayar || "-"
+                                                    }
+                                                />
+                                            </dl>
+
+                                            {/* 👉 TABEL DETAIL SEMUA ARMADA */}
+                                            {rincian.length > 0 && (
+                                                <div className="armada-table-mini">
+                                                    <table>
+                                                        <thead>
+                                                            <tr>
+                                                                <th>No</th>
+                                                                <th>
+                                                                    Nopol / Nama
+                                                                    Kapal
+                                                                </th>
+                                                                <th>Status</th>
+                                                                <th>
+                                                                    Tipe / Tahun
+                                                                </th>
+                                                                <th>
+                                                                    OS Dibayar
+                                                                </th>
+                                                                <th>
+                                                                    Rekomendasi
+                                                                    / Tindak
+                                                                    Lanjut
+                                                                </th>
+                                                                <th>Bukti</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {rincian.map(
+                                                                (a, idx) => {
+                                                                    const rawOs =
+                                                                        parseRupiah(
+                                                                            a.bayarOs,
+                                                                        );
+                                                                    const osValue =
+                                                                        Number.isFinite(
+                                                                            rawOs,
+                                                                        )
+                                                                            ? rawOs
+                                                                            : 0;
+
+                                                                    const tipe =
+                                                                        a.tipeArmada ||
+                                                                        "Tidak diisi";
+                                                                    const tahun =
+                                                                        a.tahun
+                                                                            ? ` (${a.tahun})`
+                                                                            : "";
+
+                                                                    return (
+                                                                        <tr
+                                                                            key={
+                                                                                idx
+                                                                            }
+                                                                        >
+                                                                            <td>
+                                                                                {idx +
+                                                                                    1}
+                                                                            </td>
+                                                                            <td>
+                                                                                {a.nopol ||
+                                                                                    "-"}
+                                                                            </td>
+                                                                            <td>
+                                                                                {a.status ||
+                                                                                    "-"}
+                                                                            </td>
+                                                                            <td>{`${tipe}${tahun}`}</td>
+                                                                            <td>
+                                                                                {formatRupiah(
+                                                                                    osValue,
+                                                                                )}
+                                                                            </td>
+                                                                            <td>
+                                                                                {a.rekomendasi ||
+                                                                                    a.tindakLanjut ||
+                                                                                    "-"}
+                                                                            </td>
+                                                                            <td>
+                                                                                {Array.isArray(
+                                                                                    a.bukti,
+                                                                                ) &&
+                                                                                a
+                                                                                    .bukti
+                                                                                    .length >
+                                                                                    0 ? (
+                                                                                    <div
+                                                                                        style={{
+                                                                                            display:
+                                                                                                "flex",
+                                                                                            flexWrap:
+                                                                                                "wrap",
+                                                                                            gap: 4,
+                                                                                        }}
+                                                                                    >
+                                                                                        {a.bukti.map(
+                                                                                            (
+                                                                                                f,
+                                                                                                i,
+                                                                                            ) => (
+                                                                                                <a
+                                                                                                    key={
+                                                                                                        i
+                                                                                                    }
+                                                                                                    href={
+                                                                                                        f.url
+                                                                                                    }
+                                                                                                    target="_blank"
+                                                                                                    rel="noopener noreferrer"
+                                                                                                    style={{
+                                                                                                        fontSize: 11,
+                                                                                                        padding:
+                                                                                                            "4px 6px",
+                                                                                                        borderRadius: 8,
+                                                                                                        border: "1px solid #cbd5e1",
+                                                                                                        background:
+                                                                                                            "#f8fafc",
+                                                                                                        textDecoration:
+                                                                                                            "none",
+                                                                                                    }}
+                                                                                                >
+                                                                                                    📎{" "}
+                                                                                                    {f.name ||
+                                                                                                        `Bukti ${i + 1}`}
+                                                                                                </a>
+                                                                                            ),
+                                                                                        )}
+                                                                                    </div>
+                                                                                ) : (
+                                                                                    <span
+                                                                                        style={{
+                                                                                            fontSize: 11,
+                                                                                            color: "#94a3b8",
+                                                                                        }}
+                                                                                    >
+                                                                                        Tidak
+                                                                                        ada
+                                                                                    </span>
+                                                                                )}
+                                                                            </td>
+                                                                        </tr>
+                                                                    );
+                                                                },
+                                                            )}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            )}
+                                        </>
+                                    );
+                                })()}
+                            </Section>
+
+                            {/* Step 3 */}
+                            <Section title="3) Upload & Penilaian">
+                                {(() => {
+                                    const fotoKunjungan = Array.isArray(
+                                        selected.step3?.fotoKunjungan,
+                                    )
+                                        ? selected.step3.fotoKunjungan
+                                        : [];
+
+                                    const suratLainnyaList = Array.isArray(selected.step3?.suratLainnya)
+                                        ? selected.step3.suratLainnya
+                                        : [];
+
+                                    const getRaw = (file) =>
+                                        typeof file === "string"
+                                            ? file
+                                            : file?.url || "";
+
+                                    const getName = (
+                                        file,
+                                        fallback = "File",
+                                    ) =>
+                                        typeof file === "string"
+                                            ? fallback
+                                            : file?.name || fallback;
+
+                                    const isImageFile = (file) => {
+                                        const raw = String(
+                                            getRaw(file) || "",
+                                        ).toLowerCase();
+                                        const decoded = decodeURIComponent(raw);
+                                        const name = String(
+                                            getName(file, "") || "",
+                                        ).toLowerCase();
+                                        const mime = String(
+                                            file?.mime || file?.type || "",
+                                        ).toLowerCase();
+
+                                        return (
+                                            decoded.startsWith("data:image/") ||
+                                            mime.startsWith("image/") ||
+                                            decoded.includes(".png") ||
+                                            decoded.includes(".jpg") ||
+                                            decoded.includes(".jpeg") ||
+                                            decoded.includes(".webp") ||
+                                            decoded.includes(".gif") ||
+                                            decoded.includes(".bmp") ||
+                                            decoded.includes(".svg") ||
+                                            name.endsWith(".png") ||
+                                            name.endsWith(".jpg") ||
+                                            name.endsWith(".jpeg") ||
+                                            name.endsWith(".webp") ||
+                                            name.endsWith(".gif") ||
+                                            name.endsWith(".bmp") ||
+                                            name.endsWith(".svg")
+                                        );
+                                    };
+
+                                    const isPdfFile = (file) => {
+                                        const raw =
+                                            `${getRaw(file)} ${getName(file, "")}`.toLowerCase();
+                                        const mime = String(
+                                            file?.mime || file?.type || "",
+                                        ).toLowerCase();
+
+                                        return (
+                                            raw.includes(".pdf") ||
+                                            mime.includes("pdf")
+                                        );
+                                    };
+
+
+                                    fotoKunjungan.forEach((f, i) => {});
+
+                                    return (
+                                        <>
+                                            {/* FOTO KUNJUNGAN */}
+                                            <div style={{ marginBottom: 12 }}>
+                                                <div
+                                                    style={{
+                                                        fontWeight: 700,
+                                                        marginBottom: 6,
+                                                    }}
+                                                >
+                                                    Foto Kunjungan
+                                                </div>
+                                                <div className="gallery">
+                                                    {fotoKunjungan.length >
+                                                    0 ? (
+                                                        fotoKunjungan.map(
+                                                            (src, idx) => (
+                                                                <div
+                                                                    className="thumb"
+                                                                    key={`foto-${idx}`}
+                                                                >
+                                                                    <img
+                                                                        src={
+                                                                            src
+                                                                        }
+                                                                        alt={`Foto Kunjungan ${idx + 1}`}
+                                                                        onError={(
+                                                                            e,
+                                                                        ) => {
+                                                                            console.log(
+                                                                                "Gagal load foto kunjungan:",
+                                                                                src,
+                                                                            );
+                                                                            e.currentTarget.style.display =
+                                                                                "none";
+                                                                        }}
+                                                                    />
+                                                                </div>
+                                                            ),
+                                                        )
+                                                    ) : (
+                                                        <span
+                                                            style={{
+                                                                fontSize: 12,
+                                                                color: "#64748b",
+                                                            }}
+                                                        >
+                                                            Tidak ada foto
+                                                            kunjungan
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            <div style={{ marginBottom: 12 }}>
   <div style={{ fontWeight: 700, marginBottom: 6 }}>
-    Surat Pernyataan
+    Surat Lainnya
   </div>
 
   <div className="gallery">
-    {suratList.filter((f) => f?.url).length > 0 ? (
-      suratList
-        .filter((f) => f?.url)
-        .map((f, i) => (
-          <div className="thumb" key={`surat-img-${i}`}>
+    {suratLainnyaList.length > 0 ? (
+      suratLainnyaList.map((f, i) => {
+        const url = typeof f === "string" ? f : f?.url || "";
+        const name =
+          typeof f === "string" ? `File ${i + 1}` : f?.name || `File ${i + 1}`;
+
+        return (
+          <div className="thumb" key={`surat-lainnya-${i}`}>
             <img
-              src={f.url}
-              alt={f?.name || `Surat ${i + 1}`}
-              onLoad={() => {
-              }}
+              src={url}
+              alt={name}
               onError={(e) => {
                 e.currentTarget.style.display = "none";
               }}
             />
           </div>
-        ))
+        );
+      })
     ) : (
       <span style={{ fontSize: 12, color: "#64748b" }}>
-        Tidak ada surat pernyataan
+        Tidak ada surat lainnya
       </span>
     )}
   </div>
 </div>
-      </>
-    );
-  })()}
+                                        </>
+                                    );
+                                })()}
 
-  <div className="ratings">
-    <Rating
-      label="Respon Pemilik/Pengelola"
-      value={`${selected.step3.responPemilik}/5`}
-    />
-    <Rating
-      label="Ketaatan Perizinan"
-      value={`${selected.step3.ketaatanPerizinan}/5`}
-    />
-    <Rating
-      label="Keramaian Penumpang"
-      value={`${selected.step3.keramaianPenumpang}/5`}
-    />
-  </div>
+                                <div className="ratings">
+                                    <Rating
+                                        label="Respon Pemilik/Pengelola"
+                                        value={`${selected.step3.responPemilik}/5`}
+                                    />
+                                    <Rating
+                                        label="Ketaatan Perizinan"
+                                        value={`${selected.step3.ketaatanPerizinan}/5`}
+                                    />
+                                    <Rating
+                                        label="Keramaian Penumpang"
+                                        value={`${selected.step3.keramaianPenumpang}/5`}
+                                    />
+                                </div>
 
-  {(selected.step3.tandaTanganPetugas ||
-    selected.step3.tandaTanganPemilik) && (
-    <div className="signatures">
-      {selected.step3.tandaTanganPetugas && (
-        <div className="sig-card">
-          <div className="sig-label">Tanda Tangan Petugas</div>
-          <img
-            src={fixUrl(selected.step3.tandaTanganPetugas)}
-            alt="Tanda tangan petugas"
-          />
-        </div>
-      )}
-      {selected.step3.tandaTanganPemilik && (
-        <div className="sig-card">
-          <div className="sig-label">
-            Tanda Tangan Pemilik/Pengelola
-          </div>
-          <img
-            src={fixUrl(selected.step3.tandaTanganPemilik)}
-            alt="Tanda tangan pemilik/pengelola"
-          />
-        </div>
-      )}
-    </div>
-  )}
-</Section>
-            </div>
-          </div>
-        </div>
-      )}
+                                {(selected.step3.tandaTanganPetugas ||
+                                    selected.step3.tandaTanganPemilik) && (
+                                    <div className="signatures">
+                                        {selected.step3.tandaTanganPetugas && (
+                                            <div className="sig-card">
+                                                <div className="sig-label">
+                                                    Tanda Tangan Petugas
+                                                </div>
+                                                <img
+                                                    src={fixUrl(
+                                                        selected.step3
+                                                            .tandaTanganPetugas,
+                                                    )}
+                                                    alt="Tanda tangan petugas"
+                                                />
+                                            </div>
+                                        )}
+                                        {selected.step3.tandaTanganPemilik && (
+                                            <div className="sig-card">
+                                                <div className="sig-label">
+                                                    Tanda Tangan
+                                                    Pemilik/Pengelola
+                                                </div>
+                                                <img
+                                                    src={fixUrl(
+                                                        selected.step3
+                                                            .tandaTanganPemilik,
+                                                    )}
+                                                    alt="Tanda tangan pemilik/pengelola"
+                                                />
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </Section>
+                        </div>
+                    </div>
+                </div>
+            )}
 
-      <style>{`
+            <style>{`
       :root{
         --sky-50:#f0f9ff; --sky-100:#e0f2fe; --sky-200:#bae6fd; --sky-300:#93c5fd; --sky-400:#60a5fa; --sky-500:#3b82f6;
         --pink-200:#fbcfe8; --yellow-200:#fef08a; --mint-200:#bbf7d0; --text:#0f172a; --muted:#475569; --border:#cbd5e1;
@@ -2200,207 +2353,204 @@ table.dfc-table{
   filter:brightness(1.05);
 }
 `}</style>
-    </div>
-  );
+        </div>
+    );
 }
 
 function Section({ title, children }) {
-  return (
-    <section className="section">
-      <h3>🌈 {title}</h3>
-      {children}
-    </section>
-  );
+    return (
+        <section className="section">
+            <h3>🌈 {title}</h3>
+            {children}
+        </section>
+    );
 }
 
 function Item({ label, value }) {
-  return (
-    <div className="item">
-      <label>{label}</label>
-      <div className="value">{value || "-"}</div>
-    </div>
-  );
+    return (
+        <div className="item">
+            <label>{label}</label>
+            <div className="value">{value || "-"}</div>
+        </div>
+    );
 }
 
 function Rating({ label, value }) {
-  const numeric = (() => {
-    if (typeof value === "string" && value.endsWith("/5")) {
-      const n = Number(value.replace("/5", ""));
-      return Number.isFinite(n) ? n : null;
-    }
-    if (typeof value === "number") return value;
-    return null;
-  })();
+    const numeric = (() => {
+        if (typeof value === "string" && value.endsWith("/5")) {
+            const n = Number(value.replace("/5", ""));
+            return Number.isFinite(n) ? n : null;
+        }
+        if (typeof value === "number") return value;
+        return null;
+    })();
 
-  return (
-    <div className="rating">
-      <div>
-        <div style={{ fontSize: 12, color: "#64748b" }}>{label}</div>
-        <div style={{ fontWeight: 600 }}>{value || "-"}</div>
-      </div>
+    return (
+        <div className="rating">
+            <div>
+                <div style={{ fontSize: 12, color: "#64748b" }}>{label}</div>
+                <div style={{ fontWeight: 600 }}>{value || "-"}</div>
+            </div>
 
-      {numeric != null && (
-        <div style={{ display: "flex", gap: 2 }}>
-          {[1, 2, 3, 4, 5].map((i) => (
-            <Star key={i} filled={i <= numeric} />
-          ))}
+            {numeric != null && (
+                <div style={{ display: "flex", gap: 2 }}>
+                    {[1, 2, 3, 4, 5].map((i) => (
+                        <Star key={i} filled={i <= numeric} />
+                    ))}
+                </div>
+            )}
         </div>
-      )}
-    </div>
-  );
+    );
 }
 
 function Note({ label, text }) {
-  return (
-    <div className="note">
-      <strong>{label}</strong>
-      <div>{text ?? "-"}</div>
-    </div>
-  );
+    return (
+        <div className="note">
+            <strong>{label}</strong>
+            <div>{text ?? "-"}</div>
+        </div>
+    );
 }
 
 function Badge({ tone = "gray", children }) {
-  return <span className={`badge dot ${tone}`}>{children}</span>;
+    return <span className={`badge dot ${tone}`}>{children}</span>;
 }
 
 function Star({ filled }) {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill={filled ? "#60a5fa" : "none"}
-      stroke="#60a5fa"
-      strokeWidth="1.5"
-      style={{ opacity: filled ? 1 : 0.35 }}
-    >
-      <path d="M12 3l2.9 5.88 6.5.95-4.7 4.58 1.1 6.42L12 18.9 6.2 20.83l1.1-6.42-4.7-4.58 6.5-.95L12 3z" />
-    </svg>
-  );
+    return (
+        <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill={filled ? "#60a5fa" : "none"}
+            stroke="#60a5fa"
+            strokeWidth="1.5"
+            style={{ opacity: filled ? 1 : 0.35 }}
+        >
+            <path d="M12 3l2.9 5.88 6.5.95-4.7 4.58 1.1 6.42L12 18.9 6.2 20.83l1.1-6.42-4.7-4.58 6.5-.95L12 3z" />
+        </svg>
+    );
 }
 
 function IconSearch() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="#0284c7"
-      strokeWidth="1.8"
-    >
-      <circle cx="11" cy="11" r="7" />
-      <path d="M21 21l-3.5-3.5" />
-    </svg>
-  );
+    return (
+        <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#0284c7"
+            strokeWidth="1.8"
+        >
+            <circle cx="11" cy="11" r="7" />
+            <path d="M21 21l-3.5-3.5" />
+        </svg>
+    );
 }
 
 function IconFile() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="#0ea5e9"
-      strokeWidth="1.8"
-    >
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-      <path d="M14 2v6h6" />
-    </svg>
-  );
+    return (
+        <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#0ea5e9"
+            strokeWidth="1.8"
+        >
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <path d="M14 2v6h6" />
+        </svg>
+    );
 }
 
 function KawaiiCloud() {
-  return (
-    <svg width="26" height="26" viewBox="0 0 24 24" fill="#93c5fd">
-      <path d="M6 18a4 4 0 0 1 0-8 5 5 0 0 1 9.6-1.2A4.5 4.5 0 1 1 19 18H6z" />
-      <circle cx="9" cy="13.5" r=".8" fill="#0f172a" />
-      <circle cx="12.5" cy="13.5" r=".8" fill="#0f172a" />
-      <path
-        d="M9.2 15.6c1.2 1 2.4 1 3.6 0"
-        stroke="#0f172a"
-        strokeWidth="1"
-        fill="none"
-      />
-    </svg>
-  );
+    return (
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="#93c5fd">
+            <path d="M6 18a4 4 0 0 1 0-8 5 5 0 0 1 9.6-1.2A4.5 4.5 0 1 1 19 18H6z" />
+            <circle cx="9" cy="13.5" r=".8" fill="#0f172a" />
+            <circle cx="12.5" cy="13.5" r=".8" fill="#0f172a" />
+            <path
+                d="M9.2 15.6c1.2 1 2.4 1 3.6 0"
+                stroke="#0f172a"
+                strokeWidth="1"
+                fill="none"
+            />
+        </svg>
+    );
 }
 
 function formatRupiah(value) {
-  if (value == null) return "Rp 0";
+    if (value == null) return "Rp 0";
 
-  // ubah string jadi angka aman
-  let str = String(value).replace(/[^0-9,-]/g, ""); // buang huruf
-  str = str.replace(/\./g, ""); // buang separator ribuan seperti 100.000
-  str = str.replace(/,/g, "."); // kalau ada koma → ganti jadi titik
+    // ubah string jadi angka aman
+    let str = String(value).replace(/[^0-9,-]/g, ""); // buang huruf
+    str = str.replace(/\./g, ""); // buang separator ribuan seperti 100.000
+    str = str.replace(/,/g, "."); // kalau ada koma → ganti jadi titik
 
-  const num = Number(str);
+    const num = Number(str);
 
-  if (isNaN(num)) return "Rp 0";
+    if (isNaN(num)) return "Rp 0";
 
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(num);
+    return new Intl.NumberFormat("id-ID", {
+        style: "currency",
+        currency: "IDR",
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+    }).format(num);
 }
 
 function parseRupiah(val) {
-  if (val == null) return 0;
+    if (val == null) return 0;
 
-  let str = String(val)
-    .replace(/[^0-9,-]/g, "") // buang huruf
-    .replace(/\./g, "")       // hapus titik ribuan
-    .replace(/,/g, ".");      // koma jadi desimal
+    let str = String(val)
+        .replace(/[^0-9,-]/g, "") // buang huruf
+        .replace(/\./g, "") // hapus titik ribuan
+        .replace(/,/g, "."); // koma jadi desimal
 
-  const num = Number(str);
-  return isNaN(num) ? 0 : num;
+    const num = Number(str);
+    return isNaN(num) ? 0 : num;
 }
 
 const BASE_URL = "https://moveon-jr.alwaysdata.net";
 
 function fixUrl(url) {
-  if (!url) return "";
+    if (!url) return "";
 
-  const clean = String(url).trim().replace(/\\/g, "/");
+    const clean = String(url).trim().replace(/\\/g, "/");
 
-  if (clean.startsWith("data:image/")) return clean;
+    if (clean.startsWith("data:image/")) return clean;
 
-  // kalau sudah URL proxy crm-file, pakai apa adanya
-  if (clean.includes("/api/crm-file?url=")) return clean;
+    // kalau sudah URL proxy crm-file, pakai apa adanya
+    if (clean.includes("/api/crm-file?url=")) return clean;
 
-  // kalau absolute URL tapi domain sendiri dan ada /storage/, ubah ke proxy crm-file
-  if (clean.startsWith("http://") || clean.startsWith("https://")) {
-    try {
-      const u = new URL(clean);
+    // kalau absolute URL tapi domain sendiri dan ada /storage/, ubah ke proxy crm-file
+    if (clean.startsWith("http://") || clean.startsWith("https://")) {
+        try {
+            const u = new URL(clean);
 
-      // kalau file langsung di /storage/... dari domain sendiri, bungkus ke api/crm-file
-      if (
-        u.origin === BASE_URL &&
-        u.pathname.startsWith("/storage/")
-      ) {
-        return `${BASE_URL}/api/crm-file?url=${encodeURIComponent(u.pathname)}`;
-      }
+            // kalau file langsung di /storage/... dari domain sendiri, bungkus ke api/crm-file
+            if (u.origin === BASE_URL && u.pathname.startsWith("/storage/")) {
+                return `${BASE_URL}/api/crm-file?url=${encodeURIComponent(u.pathname)}`;
+            }
 
-      // selain itu biarkan
-      return clean;
-    } catch {
-      return clean;
+            // selain itu biarkan
+            return clean;
+        } catch {
+            return clean;
+        }
     }
-  }
 
-  // kalau sudah path /storage/... → bungkus ke proxy
-  if (clean.startsWith("/storage/")) {
-    return `${BASE_URL}/api/crm-file?url=${encodeURIComponent(clean)}`;
-  }
+    // kalau sudah path /storage/... → bungkus ke proxy
+    if (clean.startsWith("/storage/")) {
+        return `${BASE_URL}/api/crm-file?url=${encodeURIComponent(clean)}`;
+    }
 
-  // kalau absolute path lain
-  if (clean.startsWith("/")) {
-    return `${BASE_URL}${clean}`;
-  }
+    // kalau absolute path lain
+    if (clean.startsWith("/")) {
+        return `${BASE_URL}${clean}`;
+    }
 
-  // fallback: anggap file ada di bawah /
-  return `${BASE_URL}/api/crm-file?url=${encodeURIComponent("/" + clean)}`;
+    // fallback: anggap file ada di bawah /
+    return `${BASE_URL}/api/crm-file?url=${encodeURIComponent("/" + clean)}`;
 }
