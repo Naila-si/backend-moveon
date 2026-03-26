@@ -3,47 +3,56 @@ import { useNavigate } from "react-router-dom";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 
+function parseRupiah(val) {
+    if (val == null) return 0;
+
+    let str = String(val)
+        .replace(/[^0-9,-]/g, "") // buang huruf
+        .replace(/\./g, "") // hapus titik ribuan
+        .replace(/,/g, "."); // koma jadi desimal
+
+    const num = Number(str);
+    return isNaN(num) ? 0 : num;
+}
+
 const BASE_URL = "https://moveon-jr.alwaysdata.net";
 
 function fixUrl(url) {
-  if (!url) return "";
+    if (!url) return "";
 
-  const clean = String(url).trim().replace(/\\/g, "/");
+    const clean = String(url).trim().replace(/\\/g, "/");
 
-  if (clean.startsWith("data:image/")) return clean;
-  if (clean.includes("/api/crm-file?url=")) return clean;
+    if (clean.startsWith("data:image/")) return clean;
 
-  // kalau absolute URL
-  if (clean.startsWith("http://") || clean.startsWith("https://")) {
-    try {
-      const u = new URL(clean);
+    // asset lokal dari public -> jangan diubah ke backend
+    if (clean.startsWith("/assets/")) return clean;
 
-      // kalau file dari domain sendiri /storage/...
-      if (u.origin === BASE_URL && u.pathname.startsWith("/storage/")) {
-        return `${BASE_URL}/api/crm-file?url=${encodeURIComponent(u.pathname)}`;
-      }
+    // kalau sudah URL proxy crm-file, pakai apa adanya
+    if (clean.includes("/api/crm-file?url=")) return clean;
 
-      // kalau dari supabase -> ambil path-nya lalu lempar ke proxy juga
-      if (
-        u.hostname.includes("supabase.co") &&
-        u.pathname.includes("/storage/v1/object/public/")
-      ) {
-        const parts = u.pathname.split("/storage/v1/object/public/");
-        const relative = parts[1] || "";
-        return `${BASE_URL}/api/crm-file?url=${encodeURIComponent("/" + relative)}`;
-      }
+    if (clean.startsWith("http://") || clean.startsWith("https://")) {
+        try {
+            const u = new URL(clean);
 
-      return clean;
-    } catch {
-      return clean;
+            if (u.origin === BASE_URL && u.pathname.startsWith("/storage/")) {
+                return `${BASE_URL}/api/crm-file?url=${encodeURIComponent(u.pathname)}`;
+            }
+
+            return clean;
+        } catch {
+            return clean;
+        }
     }
-  }
 
-  if (clean.startsWith("/storage/")) {
-    return `${BASE_URL}/api/crm-file?url=${encodeURIComponent(clean)}`;
-  }
+    if (clean.startsWith("/storage/")) {
+        return `${BASE_URL}/api/crm-file?url=${encodeURIComponent(clean)}`;
+    }
 
-  return `${BASE_URL}/api/crm-file?url=${encodeURIComponent("/" + clean.replace(/^\/+/, ""))}`;
+    if (clean.startsWith("/")) {
+        return `${BASE_URL}${clean}`;
+    }
+
+    return `${BASE_URL}/api/crm-file?url=${encodeURIComponent("/" + clean)}`;
 }
 
 /* ===========================
@@ -51,15 +60,15 @@ function fixUrl(url) {
    =========================== */
 
 function formatRupiah(n) {
-  try {
-    return new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: "IDR",
-      maximumFractionDigits: 0,
-    }).format(Number(n) || 0);
-  } catch {
-    return `Rp ${n}`;
-  }
+    try {
+        return new Intl.NumberFormat("id-ID", {
+            style: "currency",
+            currency: "IDR",
+            maximumFractionDigits: 0,
+        }).format(Number(n) || 0);
+    } catch {
+        return `Rp ${n}`;
+    }
 }
 
 /* ===========================
@@ -67,164 +76,201 @@ function formatRupiah(n) {
    =========================== */
 
 async function loadImageAsDataURL(src) {
-  const finalSrc = fixUrl(src);
-  if (!finalSrc) throw new Error("Image source kosong");
+    try {
+        const finalSrc = fixUrl(src);
+        if (!finalSrc) return null;
 
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onload = () => {
-      const c = document.createElement("canvas");
-      c.width = img.naturalWidth;
-      c.height = img.naturalHeight;
-      const ctx = c.getContext("2d");
-      ctx.drawImage(img, 0, 0);
-      resolve(c.toDataURL("image/png"));
-    };
-    img.onerror = reject;
-    img.src = finalSrc;
-  });
+        const res = await fetch(finalSrc);
+        if (!res.ok) {
+            throw new Error(`HTTP ${res.status}`);
+        }
+
+        const blob = await res.blob();
+
+        return await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.readAsDataURL(blob);
+        });
+    } catch (err) {
+        console.warn("Image load gagal:", src, err);
+        return null;
+    }
 }
 
 function isImageFile(name = "") {
-  return /\.(jpg|jpeg|png|gif|webp)$/i.test(name);
+    return /\.(jpg|jpeg|png|gif|webp)$/i.test(name);
 }
 
 function checkPage(doc, y, pad, needed = 40) {
-  const h = doc.internal.pageSize.height;
-  if (y + needed >= h - pad) {
-    doc.addPage();
-    return pad;
-  }
-  return y;
+    const h = doc.internal.pageSize.height;
+    if (y + needed >= h - pad) {
+        doc.addPage();
+        return pad;
+    }
+    return y;
 }
 
 /* ===========================
    FONT UTILITIES (ARIAL / HELVETICA)
    =========================== */
 function setFontNormal(doc, size = 12) {
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(size);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(size);
 }
 
 function setFontBold(doc, size = 12) {
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(size);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(size);
 }
 
 async function fetchReportFull(reportId) {
-  const cleanId = String(reportId || "").trim();
+    const cleanId = String(reportId || "").trim();
 
-  const res = await fetch(`https://moveon-jr.alwaysdata.net/api/crm-reports/${encodeURIComponent(cleanId)}`);
+    const res = await fetch(
+        `https://moveon-jr.alwaysdata.net/api/crm-reports/${encodeURIComponent(cleanId)}`,
+    );
 
-  if (!res.ok) {
-    const errText = await res.text();
-    console.error("fetchReportFull gagal:", cleanId, errText);
-    throw new Error(`Report ${cleanId} tidak ditemukan (${res.status})`);
-  }
+    if (!res.ok) {
+        const errText = await res.text();
+        console.error("fetchReportFull gagal:", cleanId, errText);
+        throw new Error(`Report ${cleanId} tidak ditemukan (${res.status})`);
+    }
 
-  const report = await res.json();
-  if (!report) throw new Error("Report tidak ditemukan");
+    const report = await res.json();
+    if (!report) throw new Error("Report tidak ditemukan");
 
-  const resArmada = await fetch(
-    `https://moveon-jr.alwaysdata.net/api/crm-armada/${report.pk_id}`
-  );
+    const armadaId = report.pk_id || report.id || cleanId;
 
-  const armadaRows = resArmada.ok ? await resArmada.json() : [];
+    console.log("REPORT DETAIL:", report);
+    console.log("ARMADA ID DIPAKAI:", armadaId);
 
-  report.step1 =
-    typeof report.step1 === "string" ? JSON.parse(report.step1 || "{}") : (report.step1 || {});
-  report.step2 =
-    typeof report.step2 === "string" ? JSON.parse(report.step2 || "{}") : (report.step2 || {});
-  report.step3 =
-    typeof report.step3 === "string" ? JSON.parse(report.step3 || "{}") : (report.step3 || {});
-  report.step4 =
-    typeof report.step4 === "string" ? JSON.parse(report.step4 || "{}") : (report.step4 || {});
+    const resArmada = await fetch(
+        `https://moveon-jr.alwaysdata.net/api/crm-armada/${encodeURIComponent(armadaId)}`,
+    );
+
+    if (!resArmada.ok) {
+        const armadaErr = await resArmada.text();
+        console.error("FETCH ARMADA GAGAL:", armadaId, armadaErr);
+    }
+
+    const armadaRows = resArmada.ok ? await resArmada.json() : [];
+    console.log("ARMADA ROWS:", armadaRows);
+
+    report.step1 =
+        typeof report.step1 === "string"
+            ? JSON.parse(report.step1 || "{}")
+            : report.step1 || {};
+    report.step2 =
+        typeof report.step2 === "string"
+            ? JSON.parse(report.step2 || "{}")
+            : report.step2 || {};
+    report.step3 =
+        typeof report.step3 === "string"
+            ? JSON.parse(report.step3 || "{}")
+            : report.step3 || {};
+    report.step4 =
+        typeof report.step4 === "string"
+            ? JSON.parse(report.step4 || "{}")
+            : report.step4 || {};
 
     const normalizeFiles = (arr = [], prefix = "File") =>
-  Array.isArray(arr)
-    ? arr.map((f, i) =>
-        typeof f === "string"
-          ? { name: `${prefix} ${i + 1}`, url: fixUrl(f) }
-          : { ...f, url: fixUrl(f?.url || "") }
-      )
-    : [];
+        Array.isArray(arr)
+            ? arr.map((f, i) =>
+                  typeof f === "string"
+                      ? { name: `${prefix} ${i + 1}`, url: fixUrl(f) }
+                      : { ...f, url: fixUrl(f?.url || "") },
+              )
+            : [];
 
-report.step3 = report.step3 || {};
+    report.step3 = report.step3 || {};
 
-report.step3.evidence = normalizeFiles(report.step3.evidence, "Evidence");
-report.step3.suratPernyataan = normalizeFiles(report.step3.suratPernyataan, "Surat");
+    report.step3.suratLainnya = normalizeFiles(
+        report.step3.suratLainnya,
+        "Surat Lainnya",
+    );
 
-report.step3.fotoKunjungan = Array.isArray(report.step3.fotoKunjungan)
-  ? report.step3.fotoKunjungan.map((x) => fixUrl(x))
-  : [];
+    report.step3.fotoKunjungan = Array.isArray(report.step3.fotoKunjungan)
+        ? report.step3.fotoKunjungan.map((x) => fixUrl(x))
+        : [];
 
-report.step3.tandaTanganPetugas = fixUrl(report.step3.tandaTanganPetugas || "");
-report.step3.tandaTanganPemilik = fixUrl(report.step3.tandaTanganPemilik || "");
+    report.step3.tandaTanganPetugas = fixUrl(
+        report.step3.tandaTanganPetugas || "",
+    );
+    report.step3.tandaTanganPemilik = fixUrl(
+        report.step3.tandaTanganPemilik || "",
+    );
 
-  const rincianArmada = (armadaRows || []).map((a) => ({
-  nopol: a.nopol ?? "",
-  status: a.status ?? "",
-  tipeArmada: a.tipe_armada ?? "",
-  tahun: a.tahun ?? null,
-  bayarOs: a.bayar_os ?? 0,
-  rekomendasi: a.rekomendasi ?? "",
-  tindakLanjut: a.rekomendasi ?? "",
-  bukti:
-    (typeof a.bukti === "string"
-      ? JSON.parse(a.bukti || "[]")
-      : Array.isArray(a.bukti)
-      ? a.bukti
-      : []
-    ).map((f, i) =>
-      typeof f === "string"
-        ? { name: `Bukti ${i + 1}`, url: fixUrl(f) }
-        : { ...f, url: fixUrl(f?.url || "") }
-    ),
-}));
+    const rawRincianArmada =
+        Array.isArray(armadaRows) && armadaRows.length > 0
+            ? armadaRows
+            : Array.isArray(report.step2?.rincianArmada)
+              ? report.step2.rincianArmada
+              : [];
 
-  const totalOsHarusDibayar = rincianArmada.reduce((s, a) => {
-    const x = Number(a.bayarOs);
-    return s + (Number.isFinite(x) ? x : 0);
-  }, 0);
+    const rincianArmada = rawRincianArmada.map((a, i) => ({
+        nopol: a.nopol ?? "",
+        status: a.status ?? "",
+        tipeArmada: a.tipe_armada ?? a.tipeArmada ?? "",
+        tahun: a.tahun ?? null,
+        bayarOs: a.bayar_os ?? a.bayarOs ?? 0,
+        rekomendasi: a.rekomendasi ?? "",
+        tindakLanjut: a.tindakLanjut ?? a.rekomendasi ?? "",
+        bukti: (typeof a.bukti === "string"
+            ? JSON.parse(a.bukti || "[]")
+            : Array.isArray(a.bukti)
+              ? a.bukti
+              : []
+        ).map((f, j) =>
+            typeof f === "string"
+                ? { name: `Bukti ${j + 1}`, url: fixUrl(f) }
+                : { ...f, url: fixUrl(f?.url || "") },
+        ),
+    }));
 
-  return {
-    id: report.report_code || report.pk_id,
-    step1: report.step1 || {},
-    step2: {
-      ...(report.step2 || {}),
-      rincianArmada,
-      hasilKunjungan:
-        report.step2?.hasilKunjungan ||
-        report.step2?.penjelasanKunjungan ||
-        report.step2?.penjelasanHasil ||
-        "",
-      janjiBayar: report.step2?.janjiBayar || report.step2?.janji_bayar || "-",
-    },
-    step3: report.step3 || {},
-    step4: report.step4 || {},
-    totalOS: totalOsHarusDibayar,
-  };
+    const totalOsHarusDibayar = rincianArmada.reduce((s, a) => {
+        const x = Number(a.bayarOs);
+        return s + (Number.isFinite(x) ? x : 0);
+    }, 0);
+
+    return {
+        id: report.report_code || report.pk_id,
+        step1: report.step1 || {},
+        step2: {
+            ...(report.step2 || {}),
+            rincianArmada,
+            hasilKunjungan:
+                report.step2?.hasilKunjungan ||
+                report.step2?.penjelasanKunjungan ||
+                report.step2?.penjelasanHasil ||
+                "",
+            janjiBayar:
+                report.step2?.janjiBayar || report.step2?.janji_bayar || "-",
+        },
+        step3: report.step3 || {},
+        step4: report.step4 || {},
+        totalOS: totalOsHarusDibayar,
+    };
 }
 
 function drawKeyValue(doc, pad, y, label, value) {
-  const pageWidth = doc.internal.pageSize.width;
-  const rightMargin = pad;
-  const labelWidth = 150;
-  const lineGap = 16;
+    const pageWidth = doc.internal.pageSize.width;
+    const rightMargin = pad;
+    const labelWidth = 150;
+    const lineGap = 16;
 
-  const valText = value ? String(value) : "-";
-  const maxValueWidth = pageWidth - pad - rightMargin - labelWidth;
+    const valText = value ? String(value) : "-";
+    const maxValueWidth = pageWidth - pad - rightMargin - labelWidth;
 
-  setFontBold(doc, 12);
-  doc.text(`${label} :`, pad, y);
+    setFontBold(doc, 12);
+    doc.text(`${label} :`, pad, y);
 
-  setFontNormal(doc, 12);
-  const wrapped = doc.splitTextToSize(valText, maxValueWidth);
+    setFontNormal(doc, 12);
+    const wrapped = doc.splitTextToSize(valText, maxValueWidth);
 
-  doc.text(wrapped, pad + labelWidth, y);
+    doc.text(wrapped, pad + labelWidth, y);
 
-  return y + wrapped.length * lineGap;
+    return y + wrapped.length * lineGap;
 }
 
 /* ===========================
@@ -232,679 +278,899 @@ function drawKeyValue(doc, pad, y, label, value) {
    =========================== */
 
 async function downloadPdfFromRow(row) {
-  const doc = new jsPDF({ unit: "pt", format: "a4" });
-  const pad = 36;
-  let y = pad;
+    const doc = new jsPDF({ unit: "pt", format: "a4" });
+    const pad = 36;
+    let y = pad;
 
-  /* HEADER */
-  const logoDataUrl = await loadImageAsDataURL("https://moveon-jr.alwaysdata.net/assets/logo-bulat.png");
-  const logoSize = 34;
+    // -----------------------------------------------------------
+    // HEADER
+    // -----------------------------------------------------------
+    const logoDataUrl = await loadImageAsDataURL("/assets/logo-bulat.png");
+    const logoSize = 34;
 
-  doc.addImage(logoDataUrl, "PNG", pad + 523 - logoSize, y, logoSize, logoSize);
-
-  setFontBold(doc, 13);
-  doc.text("LAPORAN CRM / DTD", pad, y + 14);
-
-  setFontNormal(doc, 12);
-  doc.text(
-    `ID: ${row.id}  •  Validasi: ${row.step4?.statusValidasi}`,
-    pad,
-    y + 28
-  );
-
-  doc.line(pad, y + 36, pad + 523, y + 36);
-  y += 50;
-
-  /* STEP 1 */
-  setFontBold(doc, 12);
-  doc.text("1. Data Kunjungan", pad, y);
-  y += 16;
-
-  setFontNormal(doc, 12);
-
-  const step1Fields = [
-    ["Tanggal & Waktu", row.step1?.tanggalWaktu],
-    ["Loket", row.step1?.loket],
-    [
-      "Nama Petugas",
-      `${row.step1?.petugasDepan} ${row.step1?.petugasBelakang}`,
-    ],
-    ["Perusahaan", row.step1?.perusahaan],
-    ["Jenis Angkutan", row.step1?.jenisAngkutan],
-    ["Nama Pemilik", row.step1?.namaPemilik],
-    ["Alamat", row.step1?.alamat],
-    ["No. Telepon", row.step1?.telepon],
-  ];
-
-  for (let [label, val] of step1Fields) {
-    y = checkPage(doc, y, pad, 20);
-    y = drawKeyValue(doc, pad, y, label, val);
-  }
-  y += 10;
-
-  /* STEP 2 - ARMADA */
-  setFontBold(doc, 12);
-  doc.text("2. Armada", pad, y);
-  y = checkPage(doc, y, pad);
-  y += 16;
-
-  const rincian = row.step2.rincianArmada || [];
-
-  const armadaBody = rincian.map((r, i) => [
-    i + 1,
-    r.nopol || "-",
-    r.status || "-",
-    `${r.tipeArmada || "-"}${r.tahun ? " (" + r.tahun + ")" : ""}`,
-    formatRupiah(Number(r.bayarOs || 0)),
-    r.rekomendasi || r.tindakLanjut || "-",
-    Array.isArray(r.bukti) && r.bukti.length ? "" : "-",
-  ]);
-
-  const buktiImages = {}; // { "row-file": dataURL }
-
-  for (let rIndex = 0; rIndex < rincian.length; rIndex++) {
-    const buktiList = rincian[rIndex]?.bukti || [];
-
-    for (let bIndex = 0; bIndex < buktiList.length; bIndex++) {
-      const f = buktiList[bIndex];
-
-      if (isImageFile(f.name)) {
-        try {
-const safeUrl = fixUrl(f.url);
-buktiImages[`${rIndex}-${bIndex}`] = await loadImageAsDataURL(safeUrl);        } catch {}
-      }
+    if (logoDataUrl) {
+        doc.addImage(
+            logoDataUrl,
+            "PNG",
+            pad + 523 - logoSize,
+            y,
+            logoSize,
+            logoSize,
+        );
     }
-  }
 
-  autoTable(doc, {
-    startY: y,
-    head: [
-      [
-        "No",
-        "Nopol",
-        "Status",
-        "Tipe/Tahun",
-        "OS Dibayar",
-        "Rekomendasi",
-        "Bukti",
-      ],
-    ],
-    body: armadaBody,
-    theme: "grid",
-    styles: {
-      font: "helvetica",
-      fontSize: 12,
-      cellPadding: 6,
-      overflow: "linebreak"
-    },
-    columnStyles: {
-      0: { cellWidth: 30 },
-      1: { cellWidth: 70 },
-      2: { cellWidth: 70 },
-      3: { cellWidth: 90 },
-      4: { cellWidth: 80 },
-      5: { cellWidth: 140 },
-      6: { cellWidth: 70 },
-    },
-    headStyles: { fillColor: [230, 230, 230] },
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+    doc.text("LAPORAN CRM / DTD", pad, y + 14);
 
-    willDrawCell: (data) => {
-      if (data.column.index === 6 && data.section === "body") {
-        const rIndex = data.row.index;
-        const buktiList = rincian[rIndex]?.bukti || [];
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.text(
+        `ID: ${row.id}  •  Validasi: ${row.step4.statusValidasi}`,
+        pad,
+        y + 28,
+    );
 
-        if (buktiList.length > 0) {
-          data.row.height = 48; // tinggi cell fix yang MUAT GAMBAR
-        }
-      }
-    },
+    doc.line(pad, y + 36, pad + 523, y + 36);
+    y += 50;
 
-    // 2) GAMBAR BUKTI DALAM CELL
-    didDrawCell: (data) => {
-      // Hanya kolom Bukti
-      if (data.column.index !== 6 || data.cell.section !== "body") return;
+    // -----------------------------------------------------------
+    // STEP 1
+    // -----------------------------------------------------------
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    y = checkPage(doc, y, pad);
+    doc.text("1. Data Kunjungan", pad, y);
+    y += 16;
 
-      const rIndex = data.row.index;
-      const buktiList = rincian[rIndex]?.bukti || [];
-      if (!buktiList.length) return;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
 
-      // ---- batas cell ----
-      const cellX = data.cell.x;
-      const cellY = data.cell.y;
-      const cellW = data.cell.width;
-      const cellH = data.cell.height;
+    const step1Fields = [
+        ["Tanggal & Waktu", row.step1.tanggalWaktu],
+        ["Loket", row.step1.loket],
+        ["Nama Petugas", `${row.step1.petugasDepan}`],
+        ["Perusahaan", row.step1.perusahaan],
+        ["Jenis Angkutan", row.step1.jenisAngkutan],
+        ["Nama Pemilik", row.step1.namaPemilik],
+        ["Alamat", row.step1.alamat],
+        ["No. Telepon", row.step1.telepon],
+    ];
 
-      let dx = cellX + 2; // padding kiri
-      const maxH = cellH - 4; // tinggi maksimum dalam cell
-      const maxW = cellW - 4; // lebar maksimum dalam cell
-
-      buktiList.forEach((f, i) => {
-        const key = `${rIndex}-${i}`;
-        const url = fixUrl(f.url);
-
-        // ---- jika PDF ----
-        if (/\.pdf$/i.test(f.name)) {
-          const size = Math.min(maxW, maxH);
-
-          doc.setFontSize(7);
-          doc.text("PDF", dx + size / 2, cellY + size / 2 + 2, {
-            align: "center",
-          });
-
-          doc.rect(dx, cellY + 2, size, size);
-          doc.link(dx, cellY + 2, size, size, { url });
-
-          dx += size + 3;
-          return;
-        }
-
-        // ---- jika Gambar ----
-        const img = buktiImages[key];
-        if (!img) return;
-
-        // hitung ratio gambar
-        const temp = new Image();
-        temp.src = img;
-
-        let iw = temp.naturalWidth || 100;
-        let ih = temp.naturalHeight || 100;
-
-        let ratio = iw / ih;
-        let w = maxH * ratio;
-        let h = maxH;
-
-        // Jika terlalu lebar → kecilkan lagi
-        if (w > maxW) {
-          w = maxW;
-          h = w / ratio;
-        }
-
-        // gambar di posisi aman dalam cell
-        const cx = dx;
-        const cy = cellY + (cellH - h) / 2;
-
-        doc.addImage(img, "JPEG", cx, cy, w, h);
-        doc.link(cx, cy, w, h, { url });
-
-        dx += w + 3;
-      });
-    },
-  });
-
-  y = doc.lastAutoTable.finalY + 12;
-
-  // Summary
-  setFontNormal(doc, 12);
-  y = checkPage(doc, y, pad);
-  y = drawKeyValue(doc, pad, y, "Total OS Harus Dibayar", formatRupiah(row.totalOS || 0));
-  y = drawKeyValue(doc, pad, y, "Hasil Kunjungan", row.step2.hasilKunjungan);
-  y = drawKeyValue(doc, pad, y, "Janji Bayar", row.step2.janjiBayar);
-  y += 10;
-
-  /* STEP 3 */
-  setFontBold(doc, 12);
-  doc.text("3. Upload & Penilaian", pad, y);
-  y += 18;
-
-  // ====== FILE TERLAMPIR ======
-  doc.text("File Terlampir:", pad, y);
-  y += 14;
-
-  const files = [
-    ...(row.step3.suratPernyataan || []),
-    ...(row.step3.evidence || []),
-  ];
-
-  if (!files.length) {
-    setFontNormal(doc, 12);
-    doc.text("- Tidak ada file", pad, y);
-    y += 14;
-  } else {
-    for (let f of files) {
-      y = checkPage(doc, y, pad, 16);
-
-      if (isImageFile(f.name)) {
-        // tampilkan gambar
-        const safeUrl = fixUrl(f.url);
-const dataURL = await loadImageAsDataURL(safeUrl);
-        const maxW = 140;
-        const maxH = 110;
-
-        const img2 = new Image();
-
-        await new Promise((resolve, reject) => {
-          img2.onload = resolve;
-          img2.onerror = reject;
-          img2.src = dataURL;
-        });
-
-        // ukuran asli
-        let iw = img2.naturalWidth;
-        let ih = img2.naturalHeight;
-        if (!iw || !ih) {
-          iw = 100;
-          ih = 100;
-        } // fallback
-
-        let ratio2 = iw / ih;
-        if (!isFinite(ratio2) || ratio2 <= 0) ratio2 = 1;
-
-        // scaling aman
-        let w2 = maxW;
-        let h2 = w2 / ratio2;
-
-        if (h2 > maxH) {
-          h2 = maxH;
-          w2 = h2 * ratio2;
-        }
-
-        doc.addImage(dataURL, "JPEG", pad, y, w2, h2);
-        y += h2 + 12;
-      } else {
-        setFontNormal(doc, 12);
-        doc.text(`• ${f.name}`, pad, y);
-        doc.link(pad, y - 10, 200, 20, { url: fixUrl(f.url) });
-        y += 18;
-      }
+    for (let [label, val] of step1Fields) {
+        y = checkPage(doc, y, pad, 20);
+        y = drawKeyValue(doc, pad, y, label, val);
     }
-  }
-
-  y += 10;
-
-  // ====== PENILAIAN ======
-  setFontBold(doc, 12);
-  doc.text("Penilaian:", pad, y);
-  y += 16;
-
-  setFontNormal(doc, 12);
-  const penilaian = [
-    `Respon Pemilik/Pengelola: ${row.step3.responPemilik || "-"}`,
-    `Ketaatan Perizinan      : ${row.step3.ketaatanPerizinan || "-"}/5`,
-    `Keramaian Penumpang     : ${row.step3.keramaianPenumpang || "-"}/5`,
-  ];
-
-  penilaian.forEach((t) => {
-    y = checkPage(doc, y, pad, 16);
-    doc.text(t, pad, y);
-    y += 14;
-  });
-
-  y += 10;
-
-  // -----------------------------------------------------------
-  // FOTO KUNJUNGAN
-  // -----------------------------------------------------------
-  const maxW = 180;
-  const maxH = 130;
-
-  if (row.step3.fotoKunjungan?.length) {
-    setFontBold(doc, 12);
-    y = checkPage(doc, y, pad, 20);
-    doc.text("Foto Kunjungan:", pad, y);
     y += 10;
 
-    let x = pad;
+    // -----------------------------------------------------------
+    // STEP 2 - ARMADA
+    // -----------------------------------------------------------
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    y = checkPage(doc, y, pad);
+    doc.text("2. Armada", pad, y);
+    y += 16;
 
-    for (let rawSrc of row.step3.fotoKunjungan) {
-      try {
-        const src = fixUrl(rawSrc);
-        const img = new Image();
-        img.crossOrigin = "anonymous";
+    let rincian = row.step2?.rincianArmada || [];
 
-        await new Promise((res, rej) => {
-          img.onload = res;
-          img.onerror = rej;
-          img.src = src;
-        });
+    if (typeof rincian === "string") {
+        try {
+            rincian = JSON.parse(rincian);
+        } catch {
+            rincian = [];
+        }
+    }
 
-        const ratio = img.naturalWidth / img.naturalHeight;
+    if (!Array.isArray(rincian)) {
+        rincian = [];
+    }
 
-        let w = maxW;
-        let h = w / ratio;
+    const totalOS = rincian.reduce(
+        (sum, a) => sum + (parseRupiah(a.bayarOs) || 0),
+        0,
+    );
 
-        if (h > maxH) {
-          h = maxH;
-          w = h * ratio;
+    // Build table text (basic)
+    const armadaBody =
+        rincian.length === 0
+            ? [["-", "-", "-", "-", "-", "-", "-"]]
+            : rincian.map((r, i) => [
+                  i + 1,
+                  r.nopol || "-",
+                  r.status || "-",
+                  `${r.tipeArmada || "-"}${r.tahun ? " (" + r.tahun + ")" : ""}`,
+                  formatRupiah(parseRupiah(r.bayarOs || 0)),
+                  r.rekomendasi || r.tindakLanjut || "-",
+                  Array.isArray(r.bukti) && r.bukti.length ? "" : "-",
+              ]);
+
+    // ==== PRELOAD BUKTI Gambar untuk ARMADA ====
+    const buktiImages = {}; // { "row-file": dataURL }
+
+    for (let rIndex = 0; rIndex < rincian.length; rIndex++) {
+        const buktiList = rincian[rIndex]?.bukti || [];
+
+        for (let bIndex = 0; bIndex < buktiList.length; bIndex++) {
+            const f = buktiList[bIndex];
+
+            if (isImageFile(f.name)) {
+                try {
+                    buktiImages[`${rIndex}-${bIndex}`] =
+                        await loadImageAsDataURL(f.url);
+                } catch {}
+            }
+        }
+    }
+
+    autoTable(doc, {
+        startY: y,
+        head: [
+            [
+                "No",
+                "Nopol",
+                "Status",
+                "Tipe/Tahun",
+                "OS Dibayar",
+                "Rekomendasi",
+                "Bukti",
+            ],
+        ],
+        body: armadaBody,
+        theme: "grid",
+        styles: { font: "times", fontSize: 9, cellPadding: 3 },
+        headStyles: { fillColor: [230, 230, 230] },
+
+        // 1) INI PENTING → BESARKAN ROW HEIGHT SEBELUM GAMBAR
+        willDrawCell: (data) => {
+            if (data.column.index === 6 && data.section === "body") {
+                const rIndex = data.row.index;
+                const buktiList = rincian[rIndex]?.bukti || [];
+
+                if (buktiList.length > 0) {
+                    data.row.height = 48; // tinggi cell fix yang MUAT GAMBAR
+                }
+            }
+        },
+
+        // 2) GAMBAR BUKTI DALAM CELL
+        didDrawCell: (data) => {
+            // Hanya kolom Bukti
+            if (data.column.index !== 6 || data.cell.section !== "body") return;
+
+            const rIndex = data.row.index;
+            const buktiList = rincian[rIndex]?.bukti || [];
+            if (!buktiList.length) return;
+
+            // ---- batas cell ----
+            const cellX = data.cell.x;
+            const cellY = data.cell.y;
+            const cellW = data.cell.width;
+            const cellH = data.cell.height;
+
+            let dx = cellX + 2; // padding kiri
+            const maxH = cellH - 4; // tinggi maksimum dalam cell
+            const maxW = cellW - 4; // lebar maksimum dalam cell
+
+            buktiList.forEach((f, i) => {
+                const key = `${rIndex}-${i}`;
+                const url = f.url;
+
+                // ---- jika PDF ----
+                if (/\.pdf$/i.test(f.name)) {
+                    const size = Math.min(maxW, maxH);
+
+                    doc.setFontSize(7);
+                    doc.text("PDF", dx + size / 2, cellY + size / 2 + 2, {
+                        align: "center",
+                    });
+
+                    doc.rect(dx, cellY + 2, size, size);
+                    doc.link(dx, cellY + 2, size, size, { url });
+
+                    dx += size + 3;
+                    return;
+                }
+
+                // ---- jika Gambar ----
+                const img = buktiImages[key];
+                if (!img) return;
+
+                // hitung ratio gambar
+                const temp = new Image();
+                temp.src = img;
+
+                let iw = temp.naturalWidth || 100;
+                let ih = temp.naturalHeight || 100;
+
+                let ratio = iw / ih;
+                let w = maxH * ratio;
+                let h = maxH;
+
+                // Jika terlalu lebar → kecilkan lagi
+                if (w > maxW) {
+                    w = maxW;
+                    h = w / ratio;
+                }
+
+                // gambar di posisi aman dalam cell
+                const cx = dx;
+                const cy = cellY + (cellH - h) / 2;
+
+                doc.addImage(img, "JPEG", cx, cy, w, h);
+                doc.link(cx, cy, w, h, { url });
+
+                dx += w + 3;
+            });
+        },
+    });
+
+    y = doc.lastAutoTable.finalY + 12;
+
+    // Summary
+    doc.setFont("helvetica", "normal");
+    y = checkPage(doc, y, pad);
+    doc.text(`Total OS Harus Dibayar: ${formatRupiah(totalOS || 0)}`, pad, y);
+    y += 14;
+    doc.setFont("helvetica", "normal"); // Arial equivalent
+    doc.setFontSize(12);
+
+    y = checkPage(doc, y, pad, 60);
+
+    doc.text("Hasil Kunjungan :", pad, y);
+    y += 16;
+
+    // WRAP TEXT
+    const hasilText = doc.splitTextToSize(
+        row.step2.hasilKunjungan || "-",
+        420, // lebar aman halaman A4
+    );
+
+    doc.text(hasilText, pad, y);
+
+    // hitung tinggi otomatis
+    y += hasilText.length * 16;
+    doc.text(`Janji Bayar     : ${row.step2.janjiBayar || "-"}`, pad, y);
+    y += 24;
+
+    // -----------------------------------------------------------
+    // STEP 3 – Upload & Penilaian
+    // -----------------------------------------------------------
+    doc.setFont("helvetica", "bold");
+    doc.text("3. Upload & Penilaian", pad, y);
+    y += 18;
+
+    // ====== FILE TERLAMPIR ======
+    doc.text("File Terlampir:", pad, y);
+    y += 14;
+
+    let files = Array.isArray(row.step3?.suratLainnya)
+        ? row.step3.suratLainnya
+        : [];
+
+    const filesUnique = Array.from(
+        new Map(files.map((f) => [f.url, f])).values(),
+    );
+
+    if (typeof files === "string") {
+        try {
+            files = JSON.parse(files);
+        } catch {
+            files = [];
+        }
+    }
+
+    if (!files.length) {
+        doc.setFont("helvetica", "normal");
+        doc.text("- Tidak ada file", pad, y);
+        y += 14;
+    } else {
+        for (let f of filesUnique) {
+            y = checkPage(doc, y, pad, 16);
+
+            if (isImageFile(f.name)) {
+                // tampilkan gambar
+                const dataURL = await loadImageAsDataURL(f.url);
+
+                if (!dataURL) continue;
+                const maxW = 140;
+                const maxH = 110;
+
+                const img2 = new Image();
+
+                await new Promise((resolve, reject) => {
+                    img2.onload = resolve;
+                    img2.onerror = reject;
+                    img2.src = dataURL;
+                });
+
+                // ukuran asli
+                let iw = img2.naturalWidth;
+                let ih = img2.naturalHeight;
+                if (!iw || !ih) {
+                    iw = 100;
+                    ih = 100;
+                } // fallback
+
+                let ratio2 = iw / ih;
+                if (!isFinite(ratio2) || ratio2 <= 0) ratio2 = 1;
+
+                // scaling aman
+                let w2 = maxW;
+                let h2 = w2 / ratio2;
+
+                if (h2 > maxH) {
+                    h2 = maxH;
+                    w2 = h2 * ratio2;
+                }
+
+                doc.addImage(dataURL, "JPEG", pad, y, w2, h2);
+                y += h2 + 12;
+            } else {
+                // tampilkan link PDF / file
+                doc.setFont("helvetica", "normal");
+                doc.text(`• ${f.name}`, pad, y);
+                doc.link(pad, y - 10, 200, 20, { url: f.url });
+                y += 18;
+            }
+        }
+    }
+
+    y += 10;
+
+    // ====== PENILAIAN ======
+    doc.setFont("helvetica", "bold");
+    doc.text("Penilaian:", pad, y);
+    y += 16;
+
+    doc.setFont("helvetica", "normal");
+    const penilaian = [
+        `Respon Pemilik/Pengelola: ${row.step3.responPemilik || "-"}`,
+        `Ketaatan Perizinan      : ${row.step3.ketaatanPerizinan || "-"}/5`,
+        `Keramaian Penumpang     : ${row.step3.keramaianPenumpang || "-"}/5`,
+    ];
+
+    penilaian.forEach((t) => {
+        y = checkPage(doc, y, pad, 16);
+        doc.text(t, pad, y);
+        y += 14;
+    });
+
+    y += 10;
+
+    const fotoList = Array.isArray(row.step3?.fotoKunjungan)
+        ? row.step3.fotoKunjungan
+        : [];
+
+    // -----------------------------------------------------------
+    // FOTO KUNJUNGAN
+    // -----------------------------------------------------------
+    const maxW = 180;
+    const maxH = 130;
+
+    if (fotoList.length) {
+        doc.setFont("helvetica", "bold");
+        y = checkPage(doc, y, pad, 20);
+        doc.text("Foto Kunjungan:", pad, y);
+        y += 10;
+
+        let x = pad;
+
+        for (let src of fotoList) {
+            try {
+                const img = new Image();
+                img.crossOrigin = "anonymous";
+
+                await new Promise((res, rej) => {
+                    img.onload = res;
+                    img.onerror = rej;
+                    img.src = src;
+                });
+
+                const ratio = img.naturalWidth / img.naturalHeight;
+
+                let w = maxW;
+                let h = w / ratio;
+
+                if (h > maxH) {
+                    h = maxH;
+                    w = h * ratio;
+                }
+
+                const dataURL = await loadImageAsDataURL(src);
+
+                // cek halaman
+                y = checkPage(doc, y, pad, h + 20);
+
+                // cek horizontal overflow
+                if (x + w > pad + 523) {
+                    x = pad;
+                    y += maxH + 20;
+                }
+
+                doc.addImage(dataURL, "JPEG", x, y, w, h);
+                x += w + 15;
+            } catch (e) {
+                console.warn("Gagal load foto:", src, e);
+            }
         }
 
-        const dataURL = await loadImageAsDataURL(src);
+        y += maxH + 20;
+    }
 
-        // cek halaman
-        y = checkPage(doc, y, pad, h + 20);
+    // -----------------------------------------------------------
+    // TANDA TANGAN (PETUGAS & PEMILIK)
+    // -----------------------------------------------------------
+    const ttdPetugas = row.step3?.tandaTanganPetugas;
+    const ttdPemilik = row.step3?.tandaTanganPemilik;
 
-        // cek horizontal overflow
-        if (x + w > pad + 523) {
-          x = pad;
-          y += maxH + 20;
+    if (ttdPetugas || ttdPemilik) {
+        const maxW = 140;
+        const maxH = 90;
+        const sectionHeightNeeded = maxH + 60; // ruang aman
+
+        // ✅ CEK SPACE SEBELUM MASUK SECTION
+        if (y + sectionHeightNeeded > doc.internal.pageSize.height - pad) {
+            doc.addPage();
+            y = pad;
         }
 
-        doc.addImage(dataURL, "JPEG", x, y, w, h);
-        x += w + 15;
-      } catch (e) {
-        console.warn("Gagal load foto:", rawSrc, e);
-      }
+        doc.setFont("helvetica", "bold");
+        doc.text("Tanda Tangan", pad, y);
+        y += 20;
+
+        let x = pad;
+
+        // === TTD PETUGAS ===
+        if (ttdPetugas) {
+            try {
+                const imgPetugas = await loadImageAsDataURL(ttdPetugas);
+
+                // cek lagi kalau gambar sendiri tidak muat
+                if (y + maxH > doc.internal.pageSize.height - pad) {
+                    doc.addPage();
+                    y = pad;
+                }
+
+                doc.setFont("helvetica", "normal");
+                doc.text("Petugas", x, y);
+
+                doc.addImage(
+                    imgPetugas,
+                    "PNG",
+                    x,
+                    y + 8,
+                    maxW,
+                    maxH,
+                    undefined,
+                    "FAST",
+                );
+
+                x += maxW + 60;
+            } catch (e) {
+                console.warn("Gagal load TTD Petugas", e);
+            }
+        }
+
+        // === TTD PEMILIK ===
+        if (ttdPemilik) {
+            try {
+                const imgPemilik = await loadImageAsDataURL(ttdPemilik);
+
+                if (y + maxH > doc.internal.pageSize.height - pad) {
+                    doc.addPage();
+                    y = pad;
+                }
+
+                doc.setFont("helvetica", "normal");
+                doc.text("Pemilik / Pengelola", x, y);
+
+                doc.addImage(
+                    imgPemilik,
+                    "PNG",
+                    x,
+                    y + 8,
+                    maxW,
+                    maxH,
+                    undefined,
+                    "FAST",
+                );
+            } catch (e) {
+                console.warn("Gagal load TTD Pemilik", e);
+            }
+        }
+
+        y += maxH + 40;
+    }
+    // -----------------------------------------------------------
+    // STEP 4 – Validasi
+    // -----------------------------------------------------------
+    doc.setFont("helvetica", "bold");
+    doc.text("4. Validasi", pad, y);
+    y += 16;
+
+    doc.setFont("helvetica", "normal");
+
+    const valSimple = [
+        `Validasi oleh : ${row.step4.validasiOleh || "-"}`,
+        `Status        : ${row.step4.statusValidasi || "-"}`,
+        `Waktu         : ${row.step4.waktuValidasi || "-"}`,
+        `Wilayah       : ${row.step4.wilayah || "-"}`,
+    ];
+
+    valSimple.forEach((t) => {
+        if (y + 14 > doc.internal.pageSize.height - pad) {
+            doc.addPage();
+            y = pad;
+        }
+        doc.text(t, pad, y);
+        y += 14;
+    });
+
+    // ===== CATATAN =====
+    if (y + 40 > doc.internal.pageSize.height - pad) {
+        doc.addPage();
+        y = pad;
     }
 
-    y += maxH + 20;
-  }
+    doc.setFont("helvetica", "bold");
+    doc.text("Catatan :", pad, y);
+    y += 14;
 
-  // -----------------------------------------------------------
-  // TANDA TANGAN (PETUGAS & PEMILIK)
-  // -----------------------------------------------------------
-  const ttdPetugas = row.step3?.tandaTanganPetugas;
-  const ttdPemilik  = row.step3?.tandaTanganPemilik;
+    doc.setFont("helvetica", "normal");
 
-  if (ttdPetugas || ttdPemilik) {
-    setFontBold(doc, 12);
-    y = checkPage(doc, y, pad, 40);
-    doc.text("Tanda Tangan", pad, y);
-    y += 12;
+    const catatanLines = doc.splitTextToSize(
+        row.step4.catatanValidasi || "-",
+        420,
+    );
 
-    const maxW = 140;
-    const maxH = 90;
-    let x = pad;
+    const lineHeight = 14;
 
-    // === TTD PETUGAS ===
-    if (ttdPetugas) {
-      const imgPetugas = await loadImageAsDataURL(fixUrl(ttdPetugas));
-      setFontNormal(doc, 12);
-      doc.text("Petugas", x, y + 12);
-      doc.addImage(imgPetugas, "PNG", x, y + 18, maxW, maxH);
-      x += maxW + 40;
-    }
+    catatanLines.forEach((line) => {
+        if (y + lineHeight > doc.internal.pageSize.height - pad) {
+            doc.addPage();
+            y = pad;
+        }
+        doc.text(line, pad, y);
+        y += lineHeight;
+    });
 
-    // === TTD PEMILIK ===
-    if (ttdPemilik) {
-      const imgPemilik = await loadImageAsDataURL(fixUrl(ttdPemilik));
-      doc.text("Pemilik / Pengelola", x, y + 12);
-      doc.addImage(imgPemilik, "PNG", x, y + 18, maxW, maxH);
-    }
+    // -----------------------------------------------------------
+    // SAVE
+    // -----------------------------------------------------------
+    const rawPerusahaan =
+        row.step1.perusahaan ||
+        row.step1.namaPerusahaan ||
+        row.step1.namaPemilik ||
+        "Perusahaan";
 
-    y += maxH + 30;
-  }
+    const perusahaanSafe = rawPerusahaan
+        .toString()
+        .trim()
+        .replace(/[^a-z0-9 ]/gi, "")
+        .replace(/\s+/g, "_");
 
-  /* STEP 4 */
-  setFontBold(doc, 12);
-  doc.text("4. Validasi", pad, y);
-  y += 16;
-
-  setFontNormal(doc, 12);
-
-  y = drawKeyValue(doc, pad, y, "Validasi oleh", row.step4.validasiOleh);
-  y = drawKeyValue(doc, pad, y, "Status", row.step4.statusValidasi);
-  y = drawKeyValue(doc, pad, y, "Waktu", row.step4.waktuValidasi);
-  y = drawKeyValue(doc, pad, y, "Wilayah", row.step4.wilayah);
-  y = drawKeyValue(doc, pad, y, "Catatan", row.step4.catatanValidasi);
-
-  y += 20;
-
-  // -----------------------------------------------------------
-  // SAVE
-  // -----------------------------------------------------------
-  const perusahaanSafe = (row.step1.perusahaan || "Perusahaan")
-    .replace(/[^a-z0-9 ]/gi, "")
-    .replace(/\s+/g, "_");
-
-  doc.save(`Laporan_CRM_${perusahaanSafe}.pdf`);
+    doc.save(`Laporan_CRM_${perusahaanSafe}.pdf`);
 }
 
 function mapStatusLabel(status) {
-  if (!status) return "Menunggu";
+    if (!status) return "Menunggu";
 
-  const s = String(status).toLowerCase().trim();
+    const s = String(status).toLowerCase().trim();
 
-  if (s.includes("valid")) return "Tervalidasi";
-  if (s.includes("menunggu") || s.includes("pending")) return "Menunggu";
+    if (s.includes("valid")) return "Tervalidasi";
+    if (s.includes("menunggu") || s.includes("pending")) return "Menunggu";
 
-  return "Menunggu";
+    return "Menunggu";
 }
 
 function getPetugasName(it) {
-  return it?.petugas || "-";
+    return it?.petugas || "-";
 }
 
 export default function NotifikasiBerkas() {
-  const navigate = useNavigate();
-  const [items, setItems] = useState([]);
-  const [q, setQ] = useState("");
-  const [sortKey, setSortKey] = useState("ts");
-  const [sortDir, setSortDir] = useState("desc");
+    const navigate = useNavigate();
+    const [items, setItems] = useState([]);
+    const [q, setQ] = useState("");
+    const [sortKey, setSortKey] = useState("ts");
+    const [sortDir, setSortDir] = useState("desc");
 
-const fetchNotif = async () => {
-  try {
-    const res = await fetch("https://moveon-jr.alwaysdata.net/api/crm-notifikasi");
+    const fetchNotif = async () => {
+        try {
+            const res = await fetch(
+                "https://moveon-jr.alwaysdata.net/api/crm-notifikasi",
+            );
 
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status}`);
+            if (!res.ok) {
+                throw new Error(`HTTP ${res.status}`);
+            }
+
+            const rows = await res.json();
+
+            setItems(Array.isArray(rows) ? rows : []);
+        } catch (err) {
+            console.error("fetchNotif error:", err);
+        }
+    };
+
+    // === LOAD AWAL + REALTIME ===
+    useEffect(() => {
+        fetchNotif();
+        const interval = setInterval(fetchNotif, 5000);
+        return () => clearInterval(interval);
+    }, []);
+
+    /* ====== FILTERING ====== */
+    const filtered = useMemo(() => {
+        let data = Array.isArray(items) ? [...items] : [];
+
+        if (q.trim()) {
+            const s = q.toLowerCase();
+
+            data = data.filter((it) => {
+                const petugasName = getPetugasName(it);
+
+                const msg = [
+                    petugasName || "",
+                    it?.perusahaan || "",
+                    it?.status || "",
+                    it?.note || "",
+                    it?.report_id || "",
+                    it?.report_uuid || "",
+                    it?.ts || "",
+                ]
+                    .join(" ")
+                    .toLowerCase();
+
+                return msg.includes(s);
+            });
+        }
+
+        const dir = sortDir === "asc" ? 1 : -1;
+
+        data.sort((a, b) => {
+            if (sortKey === "petugas") {
+                const pa = getPetugasName(a).toLowerCase();
+                const pb = getPetugasName(b).toLowerCase();
+                return pa > pb ? dir : pa < pb ? -dir : 0;
+            }
+
+            const va = a?.[sortKey] ?? "";
+            const vb = b?.[sortKey] ?? "";
+
+            if (sortKey === "ts") {
+                const ta = Date.parse(va) || 0;
+                const tb = Date.parse(vb) || 0;
+                return (ta - tb) * dir;
+            }
+
+            return String(va).localeCompare(String(vb)) * dir;
+        });
+
+        return data;
+    }, [items, q, sortKey, sortDir]);
+
+    function toggleSort(key) {
+        if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+        else {
+            setSortKey(key);
+            setSortDir("asc");
+        }
     }
 
-    const rows = await res.json();
+    async function handleDelete(id) {
+        if (!confirm("Hapus notifikasi ini?")) return;
 
-    setItems(Array.isArray(rows) ? rows : []);
-  } catch (err) {
-    console.error("fetchNotif error:", err);
-  }
-};
+        try {
+            const res = await fetch(
+                `https://moveon-jr.alwaysdata.net/api/crm-notifikasi/${id}`,
+                { method: "DELETE" },
+            );
 
-  // === LOAD AWAL + REALTIME ===
-  useEffect(() => {
-    fetchNotif();
-    const interval = setInterval(fetchNotif, 5000);
-    return () => clearInterval(interval);
-  }, []);
+            if (!res.ok) {
+                alert("Gagal menghapus notifikasi.");
+                return;
+            }
 
-  /* ====== FILTERING ====== */
- const filtered = useMemo(() => {
-  let data = Array.isArray(items) ? [...items] : [];
-
-  if (q.trim()) {
-    const s = q.toLowerCase();
-
-    data = data.filter((it) => {
-      const petugasName = getPetugasName(it);
-
-      const msg = [
-        petugasName || "",
-        it?.perusahaan || "",
-        it?.status || "",
-        it?.note || "",
-        it?.report_id || "",
-        it?.report_uuid || "",
-        it?.ts || "",
-      ]
-        .join(" ")
-        .toLowerCase();
-
-      return msg.includes(s);
-    });
-  }
-
-  const dir = sortDir === "asc" ? 1 : -1;
-
-  data.sort((a, b) => {
-    if (sortKey === "petugas") {
-      const pa = getPetugasName(a).toLowerCase();
-      const pb = getPetugasName(b).toLowerCase();
-      return pa > pb ? dir : pa < pb ? -dir : 0;
+            fetchNotif();
+        } catch (err) {
+            console.error(err);
+            alert("Gagal menghapus notifikasi.");
+        }
     }
 
-    const va = a?.[sortKey] ?? "";
-    const vb = b?.[sortKey] ?? "";
+    return (
+        <div className="notif-page">
+            <header className="notif-header">
+                <div className="brand">
+                    <span className="icon">📋</span>
+                    <h1>Notifikasi Berkas</h1>
+                </div>
 
-    if (sortKey === "ts") {
-      const ta = Date.parse(va) || 0;
-      const tb = Date.parse(vb) || 0;
-      return (ta - tb) * dir;
-    }
+                <div className="actions">
+                    <button className="btn home" onClick={() => navigate("/")}>
+                        🏠 Home
+                    </button>
+                </div>
+            </header>
 
-    return String(va).localeCompare(String(vb)) * dir;
-  });
+            <main className="notif-container">
+                <section className="card">
+                    <h2>Cari Notifikasi</h2>
+                    <input
+                        className="search"
+                        value={q}
+                        onChange={(e) => setQ(e.target.value)}
+                        placeholder="Cari laporan / catatan..."
+                    />
+                </section>
 
-  return data;
-}, [items, q, sortKey, sortDir]);
+                <section className="card">
+                    <h2>Daftar Notifikasi</h2>
+                    <div className="table-wrap">
+                        <table className="notif-table">
+                            <thead>
+                                <tr>
+                                    <Th
+                                        label="Petugas"
+                                        k="petugas"
+                                        sortKey={sortKey}
+                                        sortDir={sortDir}
+                                        onToggle={toggleSort}
+                                    />
+                                    <Th
+                                        label="Perusahaan"
+                                        k="perusahaan"
+                                        sortKey={sortKey}
+                                        sortDir={sortDir}
+                                        onToggle={toggleSort}
+                                    />
+                                    <Th
+                                        label="Status"
+                                        k="status"
+                                        sortKey={sortKey}
+                                        sortDir={sortDir}
+                                        onToggle={toggleSort}
+                                    />
+                                    <Th
+                                        label="Catatan"
+                                        k="note"
+                                        sortKey={sortKey}
+                                        sortDir={sortDir}
+                                        onToggle={toggleSort}
+                                    />
+                                    <Th
+                                        label="Waktu"
+                                        k="ts"
+                                        sortKey={sortKey}
+                                        sortDir={sortDir}
+                                        onToggle={toggleSort}
+                                    />
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
 
-  function toggleSort(key) {
-    if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    else {
-      setSortKey(key);
-      setSortDir("asc");
-    }
-  }
+                            <tbody>
+                                {filtered.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={6} className="empty">
+                                            Belum ada notifikasi.
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    filtered.map((it) => {
+                                        const statusLabel = mapStatusLabel(
+                                            it?.status,
+                                        );
 
-  async function handleDelete(id) {
-  if (!confirm("Hapus notifikasi ini?")) return;
+                                        return (
+                                            <tr key={it.id}>
+                                                <td>{getPetugasName(it)}</td>
+                                                <td>{it?.perusahaan || "-"}</td>
+                                                <td>
+                                                    <span
+                                                        className={`badge ${
+                                                            statusLabel ===
+                                                            "Tervalidasi"
+                                                                ? "badge-success"
+                                                                : "badge-pending"
+                                                        }`}
+                                                    >
+                                                        {statusLabel}
+                                                    </span>
+                                                </td>
+                                                <td>{it?.note || "-"}</td>
+                                                <td>
+                                                    {Number.isNaN(
+                                                        new Date(
+                                                            it?.ts,
+                                                        ).getTime(),
+                                                    )
+                                                        ? it?.ts || "-"
+                                                        : new Date(
+                                                              it.ts,
+                                                          ).toLocaleString()}
+                                                </td>
 
-  try {
-    const res = await fetch(
-      `https://moveon-jr.alwaysdata.net/api/crm-notifikasi/${id}`,
-      { method: "DELETE" }
+                                                <td className="aksi">
+                                                    <button
+                                                        className="icon-btn"
+                                                        title="Hapus"
+                                                        onClick={() =>
+                                                            handleDelete(it.id)
+                                                        }
+                                                    >
+                                                        🗑️
+                                                    </button>
+
+                                                    <button
+                                                        className="icon-btn"
+                                                        title="Unduh Laporan PDF"
+                                                        onClick={async () => {
+                                                            try {
+                                                                const reportId =
+                                                                    it?.report_id_int ||
+                                                                    it?.report_id;
+
+                                                                if (!reportId) {
+                                                                    alert(
+                                                                        "Report ID tidak ada.",
+                                                                    );
+                                                                    return;
+                                                                }
+
+                                                                const row =
+                                                                    await fetchReportFull(
+                                                                        reportId,
+                                                                    );
+                                                                await downloadPdfFromRow(
+                                                                    row,
+                                                                );
+                                                            } catch (e) {
+                                                                console.error(
+                                                                    e,
+                                                                );
+                                                                alert(
+                                                                    `Gagal unduh laporan untuk ${it?.report_id || "-"}.`,
+                                                                );
+                                                            }
+                                                        }}
+                                                    >
+                                                        📄
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <footer className="notif-footer">
+                    <p>
+                        ✨ Semua pemberitahuan verifikasi berkas muncul di sini
+                        ✨
+                    </p>
+                </footer>
+            </main>
+
+            <style>{css}</style>
+        </div>
     );
-
-    if (!res.ok) {
-      alert("Gagal menghapus notifikasi.");
-      return;
-    }
-
-    fetchNotif();
-  } catch (err) {
-    console.error(err);
-    alert("Gagal menghapus notifikasi.");
-  }
 }
-
-  return (
-    <div className="notif-page">
-      <header className="notif-header">
-        <div className="brand">
-          <span className="icon">📋</span>
-          <h1>Notifikasi Berkas</h1>
-        </div>
-
-        <div className="actions">
-          <button className="btn home" onClick={() => navigate("/")}>
-            🏠 Home
-          </button>
-        </div>
-      </header>
-
-      <main className="notif-container">
-        <section className="card">
-          <h2>Cari Notifikasi</h2>
-          <input
-            className="search"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Cari laporan / catatan..."
-          />
-        </section>
-
-        <section className="card">
-  <h2>Daftar Notifikasi</h2>
-  <div className="table-wrap">
-            <table className="notif-table">
-              <thead>
-                <tr>
-                  <Th label="Petugas" k="petugas" sortKey={sortKey} sortDir={sortDir} onToggle={toggleSort} />
-                  <Th label="Perusahaan" k="perusahaan" sortKey={sortKey} sortDir={sortDir} onToggle={toggleSort} />
-                  <Th label="Status" k="status" sortKey={sortKey} sortDir={sortDir} onToggle={toggleSort} />
-                  <Th label="Catatan" k="note" sortKey={sortKey} sortDir={sortDir} onToggle={toggleSort} />
-                  <Th label="Waktu" k="ts" sortKey={sortKey} sortDir={sortDir} onToggle={toggleSort} />
-                  <th>Aksi</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {filtered.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="empty">Belum ada notifikasi.</td>
-                  </tr>
-                ) : (
-                  filtered.map((it) => {
-  const statusLabel = mapStatusLabel(it?.status);
-
-  return (
-    <tr key={it.id}>
-      <td>{getPetugasName(it)}</td>
-      <td>{it?.perusahaan || "-"}</td>
-      <td>
-        <span
-          className={`badge ${
-            statusLabel === "Tervalidasi"
-              ? "badge-success"
-              : "badge-pending"
-          }`}
-        >
-          {statusLabel}
-        </span>
-      </td>
-      <td>{it?.note || "-"}</td>
-      <td>
-  {Number.isNaN(new Date(it?.ts).getTime())
-    ? (it?.ts || "-")
-    : new Date(it.ts).toLocaleString()}
-</td>
-
-      <td className="aksi">
-        <button
-          className="icon-btn"
-          title="Hapus"
-          onClick={() => handleDelete(it.id)}
-        >
-          🗑️
-        </button>
-
-        <button
-          className="icon-btn"
-          title="Unduh Laporan PDF"
-          onClick={async () => {
-  try {
-    const reportId = it?.report_id;
-    if (!reportId) {
-      alert("Report ID tidak ada.");
-      return;
-    }
-
-    const row = await fetchReportFull(reportId);
-    await downloadPdfFromRow(row);
-  } catch (e) {
-    console.error(e);
-    alert(`Gagal unduh laporan untuk ${it?.report_id || "-"}.`);
-  }
-}}
-        >
-          📄
-        </button>
-      </td>
-    </tr>
-  );
-})
-                )}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <footer className="notif-footer">
-          <p>✨ Semua pemberitahuan verifikasi berkas muncul di sini ✨</p>
-        </footer>
-      </main>
-
-      <style>{css}</style>
-    </div>
-  );
-}
-
 
 /* ===========================
     TH SORT COMPONENT
    =========================== */
 function Th({ label, k, sortKey, sortDir, onToggle }) {
-  const active = sortKey === k;
-  return (
-    <th className="th" onClick={() => onToggle(k)}>
-      {label} {active ? (sortDir === "asc" ? "▲" : "▼") : ""}
-    </th>
-  );
+    const active = sortKey === k;
+    return (
+        <th className="th" onClick={() => onToggle(k)}>
+            {label} {active ? (sortDir === "asc" ? "▲" : "▼") : ""}
+        </th>
+    );
 }
 const css = `
 :root {
