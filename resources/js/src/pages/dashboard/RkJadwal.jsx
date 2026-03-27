@@ -1,6 +1,5 @@
 import React, { useMemo, useState, useEffect, useRef } from "react";
 
-/* ===== Tema Cinnamoroll + warna status ===== */
 const THEME = {
     sky: "#C4DEF7",
     skySoft: "#F4F9FF",
@@ -163,12 +162,6 @@ export default function RKJadwal() {
         [samsats, editSamsatId],
     );
 
-    useEffect(() => {
-        if (selectedEditSamsat?.loket) {
-            setEditLoket(selectedEditSamsat.loket);
-        }
-    }, [selectedEditSamsat]);
-
     // modal confirm hapus pegawai
     const [deleteOpen, setDeleteOpen] = useState(false);
     const [deleteTarget, setDeleteTarget] = useState(null); // {id, name}
@@ -185,6 +178,14 @@ export default function RKJadwal() {
             .toLowerCase();
         if (loket === "dumai" || loket.includes("dumai")) return "dumai";
         if (loket === "kanwil" || loket.includes("kanwil")) return "kanwil";
+
+        const samsatLoket = String(person?.samsat?.loket || "")
+            .trim()
+            .toLowerCase();
+        if (samsatLoket === "dumai" || samsatLoket.includes("dumai"))
+            return "dumai";
+        if (samsatLoket === "kanwil" || samsatLoket.includes("kanwil"))
+            return "kanwil";
 
         const samsatName = String(
             person?.samsat_name || person?.samsat?.name || "",
@@ -256,6 +257,17 @@ export default function RKJadwal() {
             "https://moveon-jr.alwaysdata.net/api/employees",
         );
         const data = await res.json();
+
+        console.log(
+            "ALL PEOPLE AFTER RELOAD:",
+            (data || []).map((p) => ({
+                id: p.id,
+                name: p.name,
+                loket: p.loket,
+                samsat_name: p.samsat_name,
+                samsat: p.samsat,
+            })),
+        );
 
         setPeople(normalizePeople(data));
     };
@@ -454,7 +466,7 @@ export default function RKJadwal() {
         setEditName(p.name || "");
         setEditLoket(p.loket || "");
         setEditSamsatId(p.samsat_id || "");
-        setEditSamsatText(p.samsat_name || "");
+        setEditSamsatText("");
         setEditOpen(true);
     };
 
@@ -466,19 +478,22 @@ export default function RKJadwal() {
             return;
         }
 
-        let samsatIdFinal = editSamsatId;
+        let samsatIdFinal = editSamsatId || null;
 
-        // 👉 kalau manual diketik
-        if (!samsatIdFinal && editSamsatText.trim()) {
+        // hanya kalau user memang mengetik samsat baru
+        if (editSamsatText.trim()) {
             samsatIdFinal = await ensureSamsat(editSamsatText, editLoket);
-            await loadSamsat(); // refresh opsi
+            await loadSamsat();
         }
 
         const payload = {
             name: editName.trim(),
             loket: editLoket,
-            samsat_id: samsatIdFinal || null,
         };
+
+        if (samsatIdFinal) {
+            payload.samsat_id = samsatIdFinal;
+        }
 
         const res = await fetch(
             `https://moveon-jr.alwaysdata.net/api/employees/${editId}`,
@@ -1178,8 +1193,11 @@ export default function RKJadwal() {
                                     <option value="">
                                         -- Pilih Samsat (opsional) --
                                     </option>
-                                    {samsats.map((s) => (
-                                        <option key={s.id} value={s.id}>
+                                    {samsats.map((s, i) => (
+                                        <option
+                                            key={s.id ?? `samsat-${i}`}
+                                            value={s.id ?? ""}
+                                        >
                                             {s.name}
                                         </option>
                                     ))}
