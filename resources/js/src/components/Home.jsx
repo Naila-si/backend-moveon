@@ -68,7 +68,7 @@ export default function Home() {
                                     </div>
                                     <div className="info">
                                         <h3 className="card-title">
-                                            Formulir CRM{" "}
+                                            Formulir {" "}
                                         </h3>
                                         <p className="card-desc">
                                             Input & kelola data kendaraan
