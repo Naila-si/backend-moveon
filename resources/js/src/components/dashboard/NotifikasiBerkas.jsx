@@ -418,7 +418,22 @@ async function downloadPdfFromRow(row) {
         ],
         body: armadaBody,
         theme: "grid",
-        styles: { font: "times", fontSize: 9, cellPadding: 3 },
+        styles: {
+            font: "helvetica",
+            fontSize: 9,
+            cellPadding: 6,
+            valign: "middle",
+            minCellHeight: 50,
+        },
+        columnStyles: {
+            0: { cellWidth: 25 },
+            1: { cellWidth: 65 },
+            2: { cellWidth: 70 },
+            3: { cellWidth: 85 },
+            4: { cellWidth: 70 },
+            5: { cellWidth: 100 },
+            6: { cellWidth: 80 },
+        },
         headStyles: { fillColor: [230, 230, 230] },
 
         // 1) INI PENTING → BESARKAN ROW HEIGHT SEBELUM GAMBAR
@@ -428,15 +443,17 @@ async function downloadPdfFromRow(row) {
                 const buktiList = rincian[rIndex]?.bukti || [];
 
                 if (buktiList.length > 0) {
-                    data.row.height = 48; // tinggi cell fix yang MUAT GAMBAR
                 }
             }
         },
 
+        rowPageBreak: "avoid",
+
         // 2) GAMBAR BUKTI DALAM CELL
         didDrawCell: (data) => {
             // Hanya kolom Bukti
-            if (data.column.index !== 6 || data.cell.section !== "body") return;
+            if (data.column.index !== 6 || data.cell.section !== "body")
+                return;
 
             const rIndex = data.row.index;
             const buktiList = rincian[rIndex]?.bukti || [];
@@ -496,8 +513,9 @@ async function downloadPdfFromRow(row) {
                 // gambar di posisi aman dalam cell
                 const cx = dx;
                 const cy = cellY + (cellH - h) / 2;
+                const thumbSize = 20;
 
-                doc.addImage(img, "JPEG", cx, cy, w, h);
+                doc.addImage(img, "JPEG", cx, cy, thumbSize, thumbSize);
                 doc.link(cx, cy, w, h, { url });
 
                 dx += w + 3;
