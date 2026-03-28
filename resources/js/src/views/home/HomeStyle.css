@@ -320,7 +320,7 @@ body{ background: transparent; }
 .wheel{
   animation: spin 3s linear infinite;
   transform-box: fill-box;
-  transform-origin: center; 
+  transform-origin: center;
 }
 
 @keyframes spin {
