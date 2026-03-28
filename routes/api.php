@@ -204,6 +204,37 @@ Route::delete('/iwkl/{id}', function ($id) {
     return response()->json(['success' => true]);
 });
 
+Route::get('/iwkl-years', function () {
+
+    return DB::table('iwkl_bulanan_rows')
+        ->select('tahun')
+        ->distinct()
+        ->get();
+});
+
+Route::get('/iwkl-filters', function () {
+
+    return DB::table('iwkl_rows')
+        ->select('loket','kelas','status_pks','status_kapal','trayek')
+        ->get();
+});
+
+Route::post('/iwkl-bulanan', function (Request $req) {
+
+    DB::table('iwkl_bulanan_rows')->updateOrInsert(
+        [
+            'iwkl_id'=>$req->iwkl_id,
+            'tahun'=>$req->tahun,
+            'bulan'=>$req->bulan
+        ],
+        [
+            'nilai'=>$req->nilai
+        ]
+    );
+
+    return response()->json(['success'=>true]);
+});
+
 /*
 |--------------------------------------------------------------------------
 | EMPLOYEES (FIXED - SINGLE VERSION)
