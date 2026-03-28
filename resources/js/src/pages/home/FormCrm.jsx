@@ -222,11 +222,6 @@ async function saveCrmToServer(rowPayload) {
     const raw = await res.text();
     const contentType = res.headers.get("content-type") || "";
 
-    console.log("SAVE STATUS:", res.status);
-    console.log("SAVE CONTENT-TYPE:", contentType);
-    console.log("SAVE RESPONSE RAW:", raw);
-    console.log("SAVE PAYLOAD:", rowPayload);
-
     let data = null;
     try {
         data = JSON.parse(raw);
@@ -512,9 +507,7 @@ export default function FormCrm() {
 
                     setCompanyMaster(arr2);
                 }
-            } catch (e) {
-                console.error("Error load master data IWKBU:", e);
-            }
+            } catch (e) {}
         })();
     }, []);
 
@@ -532,7 +525,6 @@ export default function FormCrm() {
                 const data = await res.json();
                 setEmployeeMaster(data || []);
             } catch (e) {
-                console.error("Gagal load employees+samsat:", e);
                 setEmployeeMaster([]);
             }
         })();
@@ -724,7 +716,6 @@ export default function FormCrm() {
                 finalStep3,
             });
 
-            console.log("FINAL PAYLOAD:", JSON.stringify(rowPayload, null, 2));
 
             const { reportId, reportCode } = await saveCrmToServer(rowPayload);
 
@@ -736,7 +727,6 @@ export default function FormCrm() {
                 window.location.replace("/");
             }, 2500);
         } catch (e) {
-            console.error("Gagal menyimpan data CRM:", e);
             alert(e.message || "Terjadi kesalahan saat menyimpan ke server.");
         }
     };
@@ -1325,13 +1315,9 @@ function Step2Armada({
                       ? data.data
                       : [];
 
-                console.log("IWKBU RAW:", data);
-                console.log("IWKBU ROWS:", rows);
-
                 setIwkbuRows(rows);
             } catch (e) {
                 if (!alive) return;
-                console.error("Load iwkbu for Step2Armada error:", e);
                 setErrorIwkbu(e.message || String(e));
                 setIwkbuRows([]);
             } finally {

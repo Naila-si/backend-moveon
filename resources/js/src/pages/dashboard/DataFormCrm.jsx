@@ -182,7 +182,10 @@ export default function DataFormCrm() {
                         "Foto Kunjungan",
                     ).map((f) => f.url);
 
-                    step3.suratLainnya = normalizeUploadedFiles(step3.suratLainnya, "Surat Lainnya");
+                    step3.suratLainnya = normalizeUploadedFiles(
+                        step3.suratLainnya,
+                        "Surat Lainnya",
+                    );
 
                     if (Array.isArray(step2.rincianArmada)) {
                         step2.rincianArmada = step2.rincianArmada.map((a) => ({
@@ -405,56 +408,6 @@ export default function DataFormCrm() {
         return "Menunggu";
     }
 
-    //   const filtered = useMemo(() => {
-    //   const q = query.toLowerCase().trim();
-
-    //   const filteredData = rows.filter((d) => {
-    //     const s1 = d.step1 || {};
-    //     const s2 = d.step2 || {};
-    //     const s4 = d.step4 || {};
-
-    //     // 🔥 gabung nama petugas
-    //     const namaPetugas = `${s1.petugasDepan || ""} ${s1.petugasBelakang || ""}`.toLowerCase();
-    //     const semuaNopol = Array.isArray(s2.rincianArmada)
-    //       ? s2.rincianArmada.map((r) => r.nopol).filter(Boolean)
-    //       : [];
-    //     const nopolText = semuaNopol.join(" ");
-
-    //     const searchableText = [
-    //       d.id,
-    //       s1.namaPemilik,
-    //       s1.perusahaan,
-    //       s1.loket,
-    //       s1.jenisAngkutan,
-    //       namaPetugas,
-    //       nopolText,
-    //       s2.janjiBayar,
-    //       s4.statusValidasi,
-    //     ]
-    //       .filter(Boolean)
-    //       .join(" ")
-    //       .toLowerCase();
-
-    //     const matchText = searchableText.includes(q);
-
-    //     const matchJenis =
-    //       filterJenis === "Semua" || s1.jenisAngkutan === filterJenis;
-
-    //     const matchValidasi =
-    //       filterValidasi === "Semua" ||
-    //       normalizeStatusValidasi(s4.statusValidasi) === filterValidasi;
-
-    //     return matchText && matchJenis && matchValidasi;
-    //   });
-
-    //   // 🔥 sort terbaru → terlama
-    //   return filteredData.sort((a, b) => {
-    //     const ta = new Date(a.step1?.tanggalWaktu || 0).getTime();
-    //     const tb = new Date(b.step1?.tanggalWaktu || 0).getTime();
-    //     return tb - ta;
-    //   });
-    // }, [rows, query, filterJenis, filterValidasi]);
-
     // reset ke halaman 1 kalau filter / search berubah
     useEffect(() => {
         setPage(1);
@@ -539,7 +492,7 @@ export default function DataFormCrm() {
                 pad + 523 - logoSize,
                 y,
                 logoSize,
-                logoSize
+                logoSize,
             );
         }
 
@@ -662,7 +615,22 @@ export default function DataFormCrm() {
             ],
             body: armadaBody,
             theme: "grid",
-            styles: { font: "times", fontSize: 9, cellPadding: 3 },
+            styles: {
+                font: "helvetica",
+                fontSize: 9,
+                cellPadding: 6,
+                valign: "middle",
+                minCellHeight: 50,
+            },
+            columnStyles: {
+                0: { cellWidth: 25 },
+                1: { cellWidth: 65 },
+                2: { cellWidth: 70 },
+                3: { cellWidth: 85 },
+                4: { cellWidth: 70 },
+                5: { cellWidth: 100 },
+                6: { cellWidth: 80 },
+            },
             headStyles: { fillColor: [230, 230, 230] },
 
             // 1) INI PENTING → BESARKAN ROW HEIGHT SEBELUM GAMBAR
@@ -672,10 +640,11 @@ export default function DataFormCrm() {
                     const buktiList = rincian[rIndex]?.bukti || [];
 
                     if (buktiList.length > 0) {
-                        data.row.height = 48; // tinggi cell fix yang MUAT GAMBAR
                     }
                 }
             },
+
+            rowPageBreak: "avoid",
 
             // 2) GAMBAR BUKTI DALAM CELL
             didDrawCell: (data) => {
@@ -684,7 +653,7 @@ export default function DataFormCrm() {
                     return;
 
                 const rIndex = data.row.index;
-                const buktiList = rincian[rIndex]?.bukti || [];
+                const buktiList = (rincian[rIndex]?.bukti || []).slice(0, 2);
                 if (!buktiList.length) return;
 
                 // ---- batas cell ----
@@ -741,8 +710,9 @@ export default function DataFormCrm() {
                     // gambar di posisi aman dalam cell
                     const cx = dx;
                     const cy = cellY + (cellH - h) / 2;
+                    const thumbSize = 20;
 
-                    doc.addImage(img, "JPEG", cx, cy, w, h);
+                    doc.addImage(img, "JPEG", cx, cy, thumbSize, thumbSize);
                     doc.link(cx, cy, w, h, { url });
 
                     dx += w + 3;
@@ -1702,7 +1672,9 @@ export default function DataFormCrm() {
                                         ? selected.step3.fotoKunjungan
                                         : [];
 
-                                    const suratLainnyaList = Array.isArray(selected.step3?.suratLainnya)
+                                    const suratLainnyaList = Array.isArray(
+                                        selected.step3?.suratLainnya,
+                                    )
                                         ? selected.step3.suratLainnya
                                         : [];
 
@@ -1764,7 +1736,6 @@ export default function DataFormCrm() {
                                         );
                                     };
 
-
                                     fotoKunjungan.forEach((f, i) => {});
 
                                     return (
@@ -1822,36 +1793,69 @@ export default function DataFormCrm() {
                                             </div>
 
                                             <div style={{ marginBottom: 12 }}>
-  <div style={{ fontWeight: 700, marginBottom: 6 }}>
-    Surat Lainnya
-  </div>
+                                                <div
+                                                    style={{
+                                                        fontWeight: 700,
+                                                        marginBottom: 6,
+                                                    }}
+                                                >
+                                                    Surat Lainnya
+                                                </div>
 
-  <div className="gallery">
-    {suratLainnyaList.length > 0 ? (
-      suratLainnyaList.map((f, i) => {
-        const url = typeof f === "string" ? f : f?.url || "";
-        const name =
-          typeof f === "string" ? `File ${i + 1}` : f?.name || `File ${i + 1}`;
+                                                <div className="gallery">
+                                                    {suratLainnyaList.length >
+                                                    0 ? (
+                                                        suratLainnyaList.map(
+                                                            (f, i) => {
+                                                                const url =
+                                                                    typeof f ===
+                                                                    "string"
+                                                                        ? f
+                                                                        : f?.url ||
+                                                                          "";
+                                                                const name =
+                                                                    typeof f ===
+                                                                    "string"
+                                                                        ? `File ${i + 1}`
+                                                                        : f?.name ||
+                                                                          `File ${i + 1}`;
 
-        return (
-          <div className="thumb" key={`surat-lainnya-${i}`}>
-            <img
-              src={url}
-              alt={name}
-              onError={(e) => {
-                e.currentTarget.style.display = "none";
-              }}
-            />
-          </div>
-        );
-      })
-    ) : (
-      <span style={{ fontSize: 12, color: "#64748b" }}>
-        Tidak ada surat lainnya
-      </span>
-    )}
-  </div>
-</div>
+                                                                return (
+                                                                    <div
+                                                                        className="thumb"
+                                                                        key={`surat-lainnya-${i}`}
+                                                                    >
+                                                                        <img
+                                                                            src={
+                                                                                url
+                                                                            }
+                                                                            alt={
+                                                                                name
+                                                                            }
+                                                                            onError={(
+                                                                                e,
+                                                                            ) => {
+                                                                                e.currentTarget.style.display =
+                                                                                    "none";
+                                                                            }}
+                                                                        />
+                                                                    </div>
+                                                                );
+                                                            },
+                                                        )
+                                                    ) : (
+                                                        <span
+                                                            style={{
+                                                                fontSize: 12,
+                                                                color: "#64748b",
+                                                            }}
+                                                        >
+                                                            Tidak ada surat
+                                                            lainnya
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
                                         </>
                                     );
                                 })()}
