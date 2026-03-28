@@ -219,6 +219,14 @@ Route::get('/iwkl-filters', function () {
         ->get();
 });
 
+Route::get('/iwkl-bulanan', function (Request $req) {
+    $tahun = $req->tahun;
+
+    return DB::table('iwkl_bulanan_rows')
+        ->when($tahun, fn($q) => $q->where('tahun', $tahun))
+        ->get();
+});
+
 Route::post('/iwkl-bulanan', function (Request $req) {
 
     DB::table('iwkl_bulanan_rows')->updateOrInsert(
