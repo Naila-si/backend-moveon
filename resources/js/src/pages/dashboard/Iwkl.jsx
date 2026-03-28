@@ -3,589 +3,576 @@ import "../../views/dashboard/Iwkl.css";
 import * as XLSX from "xlsx";
 
 function usePersistentState(key, initialValue) {
-  const [state, setState] = useState(() => {
-    try {
-      const s = localStorage.getItem(key);
-      return s != null ? JSON.parse(s) : initialValue;
-    } catch {
-      return initialValue;
-    }
-  });
+    const [state, setState] = useState(() => {
+        try {
+            const s = localStorage.getItem(key);
+            return s != null ? JSON.parse(s) : initialValue;
+        } catch {
+            return initialValue;
+        }
+    });
 
-  useEffect(() => {
-    try {
-      localStorage.setItem(key, JSON.stringify(state));
-    } catch {}
-  }, [key, state]);
+    useEffect(() => {
+        try {
+            localStorage.setItem(key, JSON.stringify(state));
+        } catch {}
+    }, [key, state]);
 
-  return [state, setState];
+    return [state, setState];
 }
 
 const monthIndex = {
-  jan: 1,
-  feb: 2,
-  mar: 3,
-  apr: 4,
-  mei: 5,
-  jun: 6,
-  jul: 7,
-  agust: 8,
-  sept: 9,
-  okt: 10,
-  nov: 11,
-  des: 12,
+    jan: 1,
+    feb: 2,
+    mar: 3,
+    apr: 4,
+    mei: 5,
+    jun: 6,
+    jul: 7,
+    agust: 8,
+    sept: 9,
+    okt: 10,
+    nov: 11,
+    des: 12,
 };
 
 const monthFromIndex = {
-  1: "jan",
-  2: "feb",
-  3: "mar",
-  4: "apr",
-  5: "mei",
-  6: "jun",
-  7: "jul",
-  8: "agust",
-  9: "sept",
-  10: "okt",
-  11: "nov",
-  12: "des",
+    1: "jan",
+    2: "feb",
+    3: "mar",
+    4: "apr",
+    5: "mei",
+    6: "jun",
+    7: "jul",
+    8: "agust",
+    9: "sept",
+    10: "okt",
+    11: "nov",
+    12: "des",
 };
 
 const monthKeys = [
-  "jan",
-  "feb",
-  "mar",
-  "apr",
-  "mei",
-  "jun",
-  "jul",
-  "agust",
-  "sept",
-  "okt",
-  "nov",
-  "des",
+    "jan",
+    "feb",
+    "mar",
+    "apr",
+    "mei",
+    "jun",
+    "jul",
+    "agust",
+    "sept",
+    "okt",
+    "nov",
+    "des",
 ];
 
 const monthLabels = {
-  jan: "Januari",
-  feb: "Februari",
-  mar: "Maret",
-  apr: "April",
-  mei: "Mei",
-  jun: "Juni",
-  jul: "Juli",
-  agust: "Agustus",
-  sept: "September",
-  okt: "Oktober",
-  nov: "November",
-  des: "Desember",
+    jan: "Januari",
+    feb: "Februari",
+    mar: "Maret",
+    apr: "April",
+    mei: "Mei",
+    jun: "Juni",
+    jul: "Juli",
+    agust: "Agustus",
+    sept: "September",
+    okt: "Oktober",
+    nov: "November",
+    des: "Desember",
 };
 
 const idr = (n) =>
-  (Number(n) || 0).toLocaleString("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    maximumFractionDigits: 0,
-  });
+    (Number(n) || 0).toLocaleString("id-ID", {
+        style: "currency",
+        currency: "IDR",
+        maximumFractionDigits: 0,
+    });
 
 // DB -> React
 const mapDbToRow = (dbRow) => ({
-  id: dbRow.id,
-  loket: dbRow.loket,
-  kelas: dbRow.kelas,
-  namaPerusahaan: dbRow.nama_perusahaan,
-  namaKapal: dbRow.nama_kapal,
-  namaPemilik: dbRow.nama_pemilik,
-  statusPKS: dbRow.status_pks,
-  statusPembayaran: dbRow.status_pembayaran,
-  statusKapal: dbRow.status_kapal,
-  potensiPerBulan: dbRow.potensi_per_bulan || 0,
-  ruteAwal: dbRow.rute_awal,
-  ruteAkhir: dbRow.rute_akhir,
-  trayek: dbRow.trayek,
-  persenAkt2423: dbRow.persen_akt_24_23,
-  alamat: dbRow.alamat,
-  noKontak: dbRow.no_kontak,
-  tglLahir: dbRow.tgl_lahir || "",
-  kapasitasPenumpang: dbRow.kapasitas_penumpang || 0,
-  tglPKS: dbRow.tgl_pks || "",
-  tglBerakhirPKS: dbRow.tgl_berakhir_pks || "",
-  tglAddendum: dbRow.tgl_addendum || "",
-  pasBesarKecil: dbRow.pas_besar_kecil,
-  sertifikatKeselamatan: dbRow.sertifikat_keselamatan,
-  izinTrayek: dbRow.izin_trayek,
-  tglJatuhTempoSertifikatKeselamatan:
-    dbRow.tgl_jatuh_tempo_sertifikat_keselamatan || "",
-  sistemPengutipanIWKL: dbRow.sistem_pengutipan_iwkl,
-  perhitunganTarif: dbRow.perhitungan_tarif,
-  seat: dbRow.seat || 0,
-  rit: dbRow.rit || 0,
-  tarifDasarIwkl: dbRow.tarif_dasar_iwkl || 0,
-  hari: dbRow.hari || 0,
-  loadFactor: dbRow.load_factor || 0,
-  totalPerhitungan: dbRow.total_perhitungan || 0,
-  tarifBoronganDisepakati: dbRow.tarif_borongan_disepakati || 0,
-  keterangan: dbRow.keterangan,
-  // bulan
-  jan: dbRow.jan || 0,
-  feb: dbRow.feb || 0,
-  mar: dbRow.mar || 0,
-  apr: dbRow.apr || 0,
-  mei: dbRow.mei || 0,
-  jun: dbRow.jun || 0,
-  jul: dbRow.jul || 0,
-  agust: dbRow.agust || 0,
-  sept: dbRow.sept || 0,
-  okt: dbRow.okt || 0,
-  nov: dbRow.nov || 0,
-  des: dbRow.des || 0,
+    id: dbRow.id,
+    loket: dbRow.loket,
+    kelas: dbRow.kelas,
+    namaPerusahaan: dbRow.nama_perusahaan,
+    namaKapal: dbRow.nama_kapal,
+    namaPemilik: dbRow.nama_pemilik,
+    statusPKS: dbRow.status_pks,
+    statusPembayaran: dbRow.status_pembayaran,
+    statusKapal: dbRow.status_kapal,
+    potensiPerBulan: dbRow.potensi_per_bulan || 0,
+    ruteAwal: dbRow.rute_awal,
+    ruteAkhir: dbRow.rute_akhir,
+    trayek: dbRow.trayek,
+    persenAkt2423: dbRow.persen_akt_24_23,
+    alamat: dbRow.alamat,
+    noKontak: dbRow.no_kontak,
+    tglLahir: dbRow.tgl_lahir || "",
+    kapasitasPenumpang: dbRow.kapasitas_penumpang || 0,
+    tglPKS: dbRow.tgl_pks || "",
+    tglBerakhirPKS: dbRow.tgl_berakhir_pks || "",
+    tglAddendum: dbRow.tgl_addendum || "",
+    pasBesarKecil: dbRow.pas_besar_kecil,
+    sertifikatKeselamatan: dbRow.sertifikat_keselamatan,
+    izinTrayek: dbRow.izin_trayek,
+    tglJatuhTempoSertifikatKeselamatan:
+        dbRow.tgl_jatuh_tempo_sertifikat_keselamatan || "",
+    sistemPengutipanIWKL: dbRow.sistem_pengutipan_iwkl,
+    perhitunganTarif: dbRow.perhitungan_tarif,
+    seat: dbRow.seat || 0,
+    rit: dbRow.rit || 0,
+    tarifDasarIwkl: dbRow.tarif_dasar_iwkl || 0,
+    hari: dbRow.hari || 0,
+    loadFactor: dbRow.load_factor || 0,
+    totalPerhitungan: dbRow.total_perhitungan || 0,
+    tarifBoronganDisepakati: dbRow.tarif_borongan_disepakati || 0,
+    keterangan: dbRow.keterangan,
+    // bulan
+    jan: dbRow.jan || 0,
+    feb: dbRow.feb || 0,
+    mar: dbRow.mar || 0,
+    apr: dbRow.apr || 0,
+    mei: dbRow.mei || 0,
+    jun: dbRow.jun || 0,
+    jul: dbRow.jul || 0,
+    agust: dbRow.agust || 0,
+    sept: dbRow.sept || 0,
+    okt: dbRow.okt || 0,
+    nov: dbRow.nov || 0,
+    des: dbRow.des || 0,
 });
 
 // React -> DB
 const mapRowToDbPayload = (r) => ({
-  loket: r.loket,
-  kelas: r.kelas,
-  nama_perusahaan: r.namaPerusahaan,
-  nama_kapal: r.namaKapal,
-  nama_pemilik: r.namaPemilik,
-  status_pks: r.statusPKS,
-  status_pembayaran: r.statusPembayaran,
-  status_kapal: r.statusKapal,
-  potensi_per_bulan: r.potensiPerBulan,
-  rute_awal: r.ruteAwal,
-  rute_akhir: r.ruteAkhir,
-  trayek: r.trayek,
-  persen_akt_24_23: r.persenAkt2423,
-  alamat: r.alamat,
-  no_kontak: r.noKontak,
-  tgl_lahir: r.tglLahir || null,
-  kapasitas_penumpang: r.kapasitasPenumpang,
-  tgl_pks: r.tglPKS || null,
-  tgl_berakhir_pks: r.tglBerakhirPKS || null,
-  tgl_addendum: r.tglAddendum || null,
-  pas_besar_kecil: r.pasBesarKecil,
-  sertifikat_keselamatan: r.sertifikatKeselamatan,
-  izin_trayek: r.izinTrayek,
-  tgl_jatuh_tempo_sertifikat_keselamatan:
-    r.tglJatuhTempoSertifikatKeselamatan || null,
-  sistem_pengutipan_iwkl: r.sistemPengutipanIWKL,
-  perhitungan_tarif: r.perhitunganTarif,
-  seat: r.seat,
-  rit: r.rit,
-  tarif_dasar_iwkl: r.tarifDasarIwkl,
-  hari: r.hari,
-  load_factor: r.loadFactor,
-  total_perhitungan: r.totalPerhitungan,
-  tarif_borongan_disepakati: r.tarifBoronganDisepakati,
-  keterangan: r.keterangan,
-  jan: r.jan || 0,
-  feb: r.feb || 0,
-  mar: r.mar || 0,
-  apr: r.apr || 0,
-  mei: r.mei || 0,
-  jun: r.jun || 0,
-  jul: r.jul || 0,
-  agust: r.agust || 0,
-  sept: r.sept || 0,
-  okt: r.okt || 0,
-  nov: r.nov || 0,
-  des: r.des || 0,
+    loket: r.loket,
+    kelas: r.kelas,
+    nama_perusahaan: r.namaPerusahaan,
+    nama_kapal: r.namaKapal,
+    nama_pemilik: r.namaPemilik,
+    status_pks: r.statusPKS,
+    status_pembayaran: r.statusPembayaran,
+    status_kapal: r.statusKapal,
+    potensi_per_bulan: r.potensiPerBulan,
+    rute_awal: r.ruteAwal,
+    rute_akhir: r.ruteAkhir,
+    trayek: r.trayek,
+    persen_akt_24_23: r.persenAkt2423,
+    alamat: r.alamat,
+    no_kontak: r.noKontak,
+    tgl_lahir: r.tglLahir || null,
+    kapasitas_penumpang: r.kapasitasPenumpang,
+    tgl_pks: r.tglPKS || null,
+    tgl_berakhir_pks: r.tglBerakhirPKS || null,
+    tgl_addendum: r.tglAddendum || null,
+    pas_besar_kecil: r.pasBesarKecil,
+    sertifikat_keselamatan: r.sertifikatKeselamatan,
+    izin_trayek: r.izinTrayek,
+    tgl_jatuh_tempo_sertifikat_keselamatan:
+        r.tglJatuhTempoSertifikatKeselamatan || null,
+    sistem_pengutipan_iwkl: r.sistemPengutipanIWKL,
+    perhitungan_tarif: r.perhitunganTarif,
+    seat: r.seat,
+    rit: r.rit,
+    tarif_dasar_iwkl: r.tarifDasarIwkl,
+    hari: r.hari,
+    load_factor: r.loadFactor,
+    total_perhitungan: r.totalPerhitungan,
+    tarif_borongan_disepakati: r.tarifBoronganDisepakati,
+    keterangan: r.keterangan,
+    jan: r.jan || 0,
+    feb: r.feb || 0,
+    mar: r.mar || 0,
+    apr: r.apr || 0,
+    mei: r.mei || 0,
+    jun: r.jun || 0,
+    jul: r.jul || 0,
+    agust: r.agust || 0,
+    sept: r.sept || 0,
+    okt: r.okt || 0,
+    nov: r.nov || 0,
+    des: r.des || 0,
 });
 
 const makeEmptyRow = (
-  loketOpts = [],
-  kelasOpts = [],
-  statusPksOpts = [],
-  statusKapalOpts = [],
-  statusPembOpts = [],
-  pasOpts = [],
-  sertifKslOpts = [],
-  izinTrayekOpts = [],
-  sistemIwklOpts = [],
-  perhitTarifOpts = [],
+    loketOpts = [],
+    kelasOpts = [],
+    statusPksOpts = [],
+    statusKapalOpts = [],
+    statusPembOpts = [],
+    pasOpts = [],
+    sertifKslOpts = [],
+    izinTrayekOpts = [],
+    sistemIwklOpts = [],
+    perhitTarifOpts = [],
 ) => ({
-  id: null,
-  loket: loketOpts?.[0] || "",
-  kelas: kelasOpts[0] || "",
-  namaPerusahaan: "",
-  namaKapal: "",
-  namaPemilik: "",
-  statusPKS: statusPksOpts[0] || "",
-  statusPembayaran: statusPembOpts[0] || "",
-  statusKapal: statusKapalOpts[0] || "",
-  potensiPerBulan: 0,
-  ruteAwal: "",
-  ruteAkhir: "",
-  trayek: "",
-  persenAkt2423: "",
-  alamat: "",
-  noKontak: "",
-  tglLahir: "",
-  kapasitasPenumpang: 0,
-  tglPKS: "",
-  tglBerakhirPKS: "",
-  tglAddendum: "",
-  pasBesarKecil: pasOpts[0] || "",
-  sertifikatKeselamatan: sertifKslOpts[0] || "",
-  izinTrayek: izinTrayekOpts[0] || "",
-  tglJatuhTempoSertifikatKeselamatan: "",
-  sistemPengutipanIWKL: sistemIwklOpts[0] || "",
-  perhitunganTarif: perhitTarifOpts[0] || "",
-  seat: 0,
-  rit: 0,
-  tarifDasarIwkl: 0,
-  hari: 0,
-  loadFactor: 0,
-  totalPerhitungan: 0,
-  tarifBoronganDisepakati: 0,
-  keterangan: "",
-  ...monthKeys.reduce((acc, k) => ({ ...acc, [k]: 0 }), {}),
+    id: null,
+    loket: loketOpts?.[0] || "",
+    kelas: kelasOpts[0] || "",
+    namaPerusahaan: "",
+    namaKapal: "",
+    namaPemilik: "",
+    statusPKS: statusPksOpts[0] || "",
+    statusPembayaran: statusPembOpts[0] || "",
+    statusKapal: statusKapalOpts[0] || "",
+    potensiPerBulan: 0,
+    ruteAwal: "",
+    ruteAkhir: "",
+    trayek: "",
+    persenAkt2423: "",
+    alamat: "",
+    noKontak: "",
+    tglLahir: "",
+    kapasitasPenumpang: 0,
+    tglPKS: "",
+    tglBerakhirPKS: "",
+    tglAddendum: "",
+    pasBesarKecil: pasOpts[0] || "",
+    sertifikatKeselamatan: sertifKslOpts[0] || "",
+    izinTrayek: izinTrayekOpts[0] || "",
+    tglJatuhTempoSertifikatKeselamatan: "",
+    sistemPengutipanIWKL: sistemIwklOpts[0] || "",
+    perhitunganTarif: perhitTarifOpts[0] || "",
+    seat: 0,
+    rit: 0,
+    tarifDasarIwkl: 0,
+    hari: 0,
+    loadFactor: 0,
+    totalPerhitungan: 0,
+    tarifBoronganDisepakati: 0,
+    keterangan: "",
+    ...monthKeys.reduce((acc, k) => ({ ...acc, [k]: 0 }), {}),
 });
 
 const Pagination = ({ page, totalPage, setPage }) => (
-  <div className="pager">
-    {/* ⏮ First */}
-    <button
-      className="btn ghost"
-      onClick={() => setPage(1)}
-      disabled={page === 1}
-    >
-      ⏮ First
-    </button>
+    <div className="pager">
+        {/* ⏮ First */}
+        <button
+            className="btn ghost"
+            onClick={() => setPage(1)}
+            disabled={page === 1}
+        >
+            ⏮ First
+        </button>
 
-    {/* ‹ Prev */}
-    <button
-      className="btn ghost"
-      onClick={() => setPage((p) => Math.max(1, p - 1))}
-      disabled={page <= 1}
-    >
-      ‹ Prev
-    </button>
+        {/* ‹ Prev */}
+        <button
+            className="btn ghost"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page <= 1}
+        >
+            ‹ Prev
+        </button>
 
-    <span className="page-info">
-      Halaman {page} / {totalPage}
-    </span>
+        <span className="page-info">
+            Halaman {page} / {totalPage}
+        </span>
 
-    {/* Next › */}
-    <button
-      className="btn ghost"
-      onClick={() => setPage((p) => Math.min(totalPage, p + 1))}
-      disabled={page >= totalPage}
-    >
-      Next ›
-    </button>
+        {/* Next › */}
+        <button
+            className="btn ghost"
+            onClick={() => setPage((p) => Math.min(totalPage, p + 1))}
+            disabled={page >= totalPage}
+        >
+            Next ›
+        </button>
 
-    {/* ⏭ Last */}
-    <button
-      className="btn ghost"
-      onClick={() => setPage(totalPage)}
-      disabled={page === totalPage}
-    >
-      Last ⏭
-    </button>
-  </div>
+        {/* ⏭ Last */}
+        <button
+            className="btn ghost"
+            onClick={() => setPage(totalPage)}
+            disabled={page === totalPage}
+        >
+            Last ⏭
+        </button>
+    </div>
 );
 
 function addOptionIfMissing(
-  options,
-  setOptions,
-  value,
-  { forceUpper = false } = {},
+    options,
+    setOptions,
+    value,
+    { forceUpper = false } = {},
 ) {
-  if (value == null) return value;
-  let v = String(value).trim();
-  if (!v) return v;
+    if (value == null) return value;
+    let v = String(value).trim();
+    if (!v) return v;
 
-  const exists = options.some(
-    (o) => String(o).toLowerCase() === v.toLowerCase(),
-  );
+    const exists = options.some(
+        (o) => String(o).toLowerCase() === v.toLowerCase(),
+    );
 
-  const finalVal = forceUpper ? v.toUpperCase() : v;
+    const finalVal = forceUpper ? v.toUpperCase() : v;
 
-  if (!exists) {
-    setOptions((prev) => [...prev, finalVal]);
-  }
+    if (!exists) {
+        setOptions((prev) => [...prev, finalVal]);
+    }
 
-  return finalVal;
+    return finalVal;
 }
 
 const cleanLoketOpts = (arr) => arr.filter((v) => v.length > 2);
 
 const normalizeLoket = (v) =>
-  String(v || "")
-    .trim()
-    .replace(/\s+/g, " ")
-    .toUpperCase();
+    String(v || "")
+        .trim()
+        .replace(/\s+/g, " ")
+        .toUpperCase();
 
 function LoketInput({
-  value,
-  onChange,
-  options = [],
-  onCommitNew,
-  placeholder = "Loket",
+    value,
+    onChange,
+    options = [],
+    onCommitNew,
+    placeholder = "Loket",
 }) {
-  const [open, setOpen] = useState(false);
+    const [open, setOpen] = useState(false);
 
-  return (
-    <div className="loket-input-wrap">
-      <input
-        type="text"
-        value={value}
-        placeholder={placeholder}
-        onFocus={() => setOpen(true)}   // 👈 klik → buka dropdown
-        onChange={(e) => {
-          onChange(e.target.value);    // 👈 bebas ngetik (NO FILTER)
-        }}
-        onBlur={() => {
-          setTimeout(() => setOpen(false), 150);
-          if (value && !options.includes(value)) {
-            onCommitNew?.(value);      // 👈 loket baru
-          }
-        }}
-      />
+    return (
+        <div className="loket-input-wrap">
+            <input
+                type="text"
+                value={value}
+                placeholder={placeholder}
+                onFocus={() => setOpen(true)} // 👈 klik → buka dropdown
+                onChange={(e) => {
+                    onChange(e.target.value); // 👈 bebas ngetik (NO FILTER)
+                }}
+                onBlur={() => {
+                    setTimeout(() => setOpen(false), 150);
+                    if (value && !options.includes(value)) {
+                        onCommitNew?.(value); // 👈 loket baru
+                    }
+                }}
+            />
 
-      {open && options.length > 0 && (
-        <div className="loket-dropdown">
-          {options.map((opt) => (
-            <div
-              key={opt}
-              className="loket-item"
-              onMouseDown={() => {
-                onChange(opt);
-                setOpen(false);
-              }}
-            >
-              {opt}
-            </div>
-          ))}
+            {open && options.length > 0 && (
+                <div className="loket-dropdown">
+                    {options.map((opt) => (
+                        <div
+                            key={opt}
+                            className="loket-item"
+                            onMouseDown={() => {
+                                onChange(opt);
+                                setOpen(false);
+                            }}
+                        >
+                            {opt}
+                        </div>
+                    ))}
+                </div>
+            )}
         </div>
-      )}
-    </div>
-  );
+    );
 }
 
 export default function IwklSimple() {
-  const [rows, setRows] = useState([]);
-  const [q, setQ] = useState("");
-  const [page, setPage] = useState(1);
-  const [openDetailId, setOpenDetailId] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [tahunAktif, setTahunAktif] = useState(2024);
+    const [rows, setRows] = useState([]);
+    const [q, setQ] = useState("");
+    const [page, setPage] = useState(1);
+    const [openDetailId, setOpenDetailId] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [tahunAktif, setTahunAktif] = useState(2024);
 
-  const [LOKET_OPTS, setLoketOpts] = usePersistentState("iwkl:opts:loket", [
-    "Kantor Wilayah",
-    "Pelalawan",
-    "Siak",
-    "Kota Baru",
-    "Tembilahan",
-    "Sungai Guntung",
-  ]);
+    const [LOKET_OPTS, setLoketOpts] = usePersistentState("iwkl:opts:loket", [
+        "Kantor Wilayah",
+        "Pelalawan",
+        "Siak",
+        "Kota Baru",
+        "Tembilahan",
+        "Sungai Guntung",
+    ]);
 
-  const KELAS_OPTS = ["Gold", "Platinum", "Silver", "-"];
+    const KELAS_OPTS = ["Gold", "Platinum", "Silver", "-"];
 
-  const STATUS_PKS_OPTS = ["Aktif", "Non Aktif", "-"];
+    const STATUS_PKS_OPTS = ["Aktif", "Non Aktif", "-"];
 
-  const STATUS_KAPAL_OPTS = ["Beroperasi", "Docking", "Cadangan", "-"];
+    const STATUS_KAPAL_OPTS = ["Beroperasi", "Docking", "Cadangan", "-"];
 
-  const STATUS_PEMB_OPTS = ["Lancar", "Dispensasi", "Outstanding", "-"];
+    const STATUS_PEMB_OPTS = ["Lancar", "Dispensasi", "Outstanding", "-"];
 
-  const PAS_OPTS = ["Ada", "Tidak", "-"];
+    const PAS_OPTS = ["Ada", "Tidak", "-"];
 
-  const SERTIF_KSL_OPTS = ["Ada", "Tidak", "-"];
+    const SERTIF_KSL_OPTS = ["Ada", "Tidak", "-"];
 
-  const IZIN_TRAYEK_OPTS = ["Ada", "Tidak", "-"];
+    const IZIN_TRAYEK_OPTS = ["Ada", "Tidak", "-"];
 
-  const SISTEM_IWKL_OPTS = ["Manifest", "Borongan", "-"];
+    const SISTEM_IWKL_OPTS = ["Manifest", "Borongan", "-"];
 
-  const PERHIT_TARIF_OPTS = [
-    "Dalam Provinsi",
-    "Antar Provinsi",
-    "Angkutan Karyawan",
-    "-",
-  ];
+    const PERHIT_TARIF_OPTS = [
+        "Dalam Provinsi",
+        "Antar Provinsi",
+        "Angkutan Karyawan",
+        "-",
+    ];
 
-  const exportIwklToExcel = async () => {
-  try {
-    setLoading(true);
+    const exportIwklToExcel = async () => {
+        try {
+            setLoading(true);
 
-    // ===============================
-    // 1. AMBIL DATA IWKL
-    // ===============================
-    const resIwkl = await fetch(
-      "https://moveon-jr.alwaysdata.net/api/iwkl?tahun=" + tahunAktif
+            const resIwkl = await fetch(
+                `https://moveon-jr.alwaysdata.net/api/iwkl?tahun=${tahunAktif}`,
+            );
+            if (!resIwkl.ok) throw new Error("Gagal load IWKL");
+            const iwklData = await resIwkl.json();
+
+            const resBulan = await fetch(
+                `https://moveon-jr.alwaysdata.net/api/iwkl-bulanan?tahun=${tahunAktif}`,
+            );
+            if (!resBulan.ok) throw new Error("Gagal load iwkl_bulanan");
+            const bulanData = await resBulan.json();
+
+            const bulanMap = {};
+            (bulanData || []).forEach((b) => {
+                if (!bulanMap[b.iwkl_id]) bulanMap[b.iwkl_id] = {};
+                const k = monthFromIndex[b.bulan];
+                if (k) bulanMap[b.iwkl_id][k] = Number(b.nilai) || 0;
+            });
+
+            const excelData = (iwklData || []).map((dbRow, i) => {
+                const base = mapDbToRow(dbRow);
+                const bulan = bulanMap[dbRow.id] || {};
+                const fullRow = { ...base, ...bulan };
+
+                const totalJanDes = monthKeys.reduce(
+                    (sum, k) => sum + Number(fullRow[k] || 0),
+                    0,
+                );
+
+                const totalPerhitunganCalc =
+                    (Number(fullRow.seat) || 0) *
+                    (Number(fullRow.rit) || 0) *
+                    (Number(fullRow.tarifDasarIwkl) || 0) *
+                    (Number(fullRow.hari) || 0) *
+                    ((Number(fullRow.loadFactor) || 0) / 100);
+
+                return {
+                    No: i + 1,
+                    ID: fullRow.id ?? "",
+                    Loket: fullRow.loket || "",
+                    Kelas: fullRow.kelas || "",
+                    "Nama Perusahaan": fullRow.namaPerusahaan || "",
+                    "Nama Kapal": fullRow.namaKapal || "",
+                    "Nama Pemilik / Pengelola": fullRow.namaPemilik || "",
+                    "Status PKS": fullRow.statusPKS || "",
+                    "Status Pembayaran": fullRow.statusPembayaran || "",
+                    "Status Kapal": fullRow.statusKapal || "",
+                    "Potensi Per Bulan": fullRow.potensiPerBulan || 0,
+                    "Rute Awal": fullRow.ruteAwal || "",
+                    "Rute Akhir": fullRow.ruteAkhir || "",
+                    Trayek: fullRow.trayek || "",
+                    "% Akt 24-23": fullRow.persenAkt2423 || "",
+                    Alamat: fullRow.alamat || "",
+                    "No Kontak": fullRow.noKontak || "",
+                    "Tanggal Lahir": fullRow.tglLahir || "",
+                    "Kapasitas Penumpang": fullRow.kapasitasPenumpang || 0,
+                    "Tanggal PKS": fullRow.tglPKS || "",
+                    "Tanggal Berakhir PKS": fullRow.tglBerakhirPKS || "",
+                    "Tanggal Addendum": fullRow.tglAddendum || "",
+                    "Pas Besar / Kecil": fullRow.pasBesarKecil || "",
+                    "Sertifikat Keselamatan":
+                        fullRow.sertifikatKeselamatan || "",
+                    "Izin Trayek": fullRow.izinTrayek || "",
+                    "Tgl Jatuh Tempo Sertifikat Keselamatan":
+                        fullRow.tglJatuhTempoSertifikatKeselamatan || "",
+                    "Sistem Pengutipan IWKL":
+                        fullRow.sistemPengutipanIWKL || "",
+                    "Perhitungan Tarif": fullRow.perhitunganTarif || "",
+                    Seat: fullRow.seat || 0,
+                    Rit: fullRow.rit || 0,
+                    "Tarif Dasar IWKL": fullRow.tarifDasarIwkl || 0,
+                    Hari: fullRow.hari || 0,
+                    "Load Factor (%)": fullRow.loadFactor || 0,
+                    "Total Perhitungan":
+                        fullRow.totalPerhitungan || totalPerhitunganCalc,
+                    "Tarif Borongan Disepakati":
+                        fullRow.tarifBoronganDisepakati || 0,
+
+                    Januari: fullRow.jan || 0,
+                    Februari: fullRow.feb || 0,
+                    Maret: fullRow.mar || 0,
+                    April: fullRow.apr || 0,
+                    Mei: fullRow.mei || 0,
+                    Juni: fullRow.jun || 0,
+                    Juli: fullRow.jul || 0,
+                    Agustus: fullRow.agust || 0,
+                    September: fullRow.sept || 0,
+                    Oktober: fullRow.okt || 0,
+                    November: fullRow.nov || 0,
+                    Desember: fullRow.des || 0,
+
+                    "Total Jan-Des": totalJanDes,
+                    Keterangan: fullRow.keterangan || "",
+                };
+            });
+
+            if (!excelData.length) {
+                alert("Tidak ada data untuk diexport");
+                setLoading(false);
+                return;
+            }
+
+            const ws = XLSX.utils.json_to_sheet(excelData);
+
+            ws["!cols"] = Object.keys(excelData[0]).map((key) => ({
+                wch: Math.min(
+                    40,
+                    Math.max(
+                        key.length,
+                        ...excelData.map(
+                            (row) => String(row[key] ?? "").length,
+                        ),
+                    ) + 2,
+                ),
+            }));
+
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, `IWKL_${tahunAktif}`);
+
+            XLSX.writeFile(
+                wb,
+                `IWKL_SEMUA_KOLOM_${tahunAktif}_${new Date().toISOString().slice(0, 10)}.xlsx`,
+            );
+        } catch (err) {
+            console.error("Export IWKL error:", err);
+            alert(`Gagal export Excel IWKL: ${err.message}`);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // ================= FILTERS (persistent) =================
+    const [filterLoket, setFilterLoket] = usePersistentState(
+        "iwkl:filter:loket",
+        "",
+    );
+    const [filterKelas, setFilterKelas] = usePersistentState(
+        "iwkl:filter:kelas",
+        "",
+    );
+    const [filterStatusPKS, setFilterStatusPKS] = usePersistentState(
+        "iwkl:filter:statusPKS",
+        "",
+    );
+    const [filterStatusKapal, setFilterStatusKapal] = usePersistentState(
+        "iwkl:filter:statusKapal",
+        "",
+    );
+    const [filterTrayek, setFilterTrayek] = usePersistentState(
+        "iwkl:filter:trayek",
+        "",
     );
 
-    if (!resIwkl.ok) throw new Error("Gagal load IWKL");
+    const [LOKET_FILTER_OPTS, setLoketFilterOpts] = useState([]);
+    const [KELAS_FILTER_OPTS, setKelasFilterOpts] = useState([]);
+    const [STATUS_PKS_FILTER_OPTS, setStatusPksFilterOpts] = useState([]);
+    const [STATUS_KAPAL_FILTER_OPTS, setStatusKapalFilterOpts] = useState([]);
+    const [TRAYEK_FILTER_OPTS, setTrayekFilterOpts] = useState([]);
+    const [YEAR_OPTS, setYearOpts] = useState([]);
 
-    const iwklData = await resIwkl.json();
-
-    // ===============================
-    // 2. AMBIL DATA BULANAN
-    // ===============================
-    const resBulan = await fetch(
-      "https://moveon-jr.alwaysdata.net/api/iwkl-bulanan?tahun=" + tahunAktif
-    );
-
-    if (!resBulan.ok) throw new Error("Gagal load iwkl_bulanan");
-
-    const bulanData = await resBulan.json();
-
-    // ===============================
-    // 3. MAP DATA BULANAN
-    // ===============================
-    const bulanMap = {};
-
-    (bulanData || []).forEach((b) => {
-      if (!bulanMap[b.iwkl_id]) bulanMap[b.iwkl_id] = {};
-      const k = monthFromIndex[b.bulan];
-      if (k) bulanMap[b.iwkl_id][k] = Number(b.nilai) || 0;
-    });
-
-    // ===============================
-    // 4. BENTUK DATA EXCEL
-    // ===============================
-    const excelData = (iwklData || []).map((r, i) => {
-      const bulan = bulanMap[r.id] || {};
-
-      const totalJanDes = monthKeys.reduce(
-        (sum, k) => sum + Number(bulan[k] || 0),
-        0
-      );
-
-      return {
-        No: i + 1,
-        Loket: r.loket,
-        Kelas: r.kelas,
-        "Nama Kapal": r.nama_kapal,
-        "Nama Perusahaan": r.nama_perusahaan,
-        "Nama Pemilik / Pengelola": r.nama_pemilik,
-        Alamat: r.alamat,
-        "No Kontak": r.no_kontak,
-        "Tanggal Lahir": r.tgl_lahir,
-        "Status PKS": r.status_pks,
-        "Status Pembayaran": r.status_pembayaran,
-        "Status Kapal": r.status_kapal,
-        "Pas Besar / Kecil": r.pas_besar_kecil,
-        "Sertifikat Keselamatan": r.sertifikat_keselamatan,
-        "Izin Trayek": r.izin_trayek,
-        Trayek: r.trayek,
-        "Rute Awal": r.rute_awal,
-        "Rute Akhir": r.rute_akhir,
-        "Tanggal PKS": r.tgl_pks,
-        "Tanggal Berakhir PKS": r.tgl_berakhir_pks,
-        "Tanggal Addendum": r.tgl_addendum,
-        "Tgl Jatuh Tempo Sertifikat":
-          r.tgl_jatuh_tempo_sertifikat_keselamatan,
-        "Sistem Pengutipan IWKL": r.sistem_pengutipan_iwkl,
-        "Perhitungan Tarif": r.perhitungan_tarif,
-        Seat: r.seat,
-        Rit: r.rit,
-        "Tarif Dasar IWKL": r.tarif_dasar_iwkl,
-        Hari: r.hari,
-        "Load Factor (%)": r.load_factor,
-        "Tarif Borongan Disepakati": r.tarif_borongan_disepakati,
-        "Potensi / Bulan": r.potensi_per_bulan,
-        "Total Jan–Des": totalJanDes,
-        "% Akt 24–23": r.persen_akt_24_23,
-
-        Jan: bulan.jan || 0,
-        Feb: bulan.feb || 0,
-        Mar: bulan.mar || 0,
-        Apr: bulan.apr || 0,
-        Mei: bulan.mei || 0,
-        Jun: bulan.jun || 0,
-        Jul: bulan.jul || 0,
-        Agust: bulan.agust || 0,
-        Sept: bulan.sept || 0,
-        Okt: bulan.okt || 0,
-        Nov: bulan.nov || 0,
-        Des: bulan.des || 0,
-
-        Keterangan: r.keterangan,
-      };
-    });
-
-    // ===============================
-    // 5. EXPORT EXCEL
-    // ===============================
-    const ws = XLSX.utils.json_to_sheet(excelData);
-
-    ws["!cols"] = Object.keys(excelData[0] || {}).map((k) => ({
-      wch:
-        Math.max(
-          k.length,
-          ...excelData.map((r) => String(r[k] ?? "").length)
-        ) + 2,
-    }));
-
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, `IWKL_${tahunAktif}`);
-
-    XLSX.writeFile(
-      wb,
-      `IWKL_FULL_${tahunAktif}_${new Date().toISOString().slice(0, 10)}.xlsx`
-    );
-
-    setLoading(false);
-  } catch (err) {
-    console.error(err);
-    setLoading(false);
-    alert("Gagal export Excel IWKL");
-  }
-};
-
-  // ================= FILTERS (persistent) =================
-  const [filterLoket, setFilterLoket] = usePersistentState(
-    "iwkl:filter:loket",
-    "",
-  );
-  const [filterKelas, setFilterKelas] = usePersistentState(
-    "iwkl:filter:kelas",
-    "",
-  );
-  const [filterStatusPKS, setFilterStatusPKS] = usePersistentState(
-    "iwkl:filter:statusPKS",
-    "",
-  );
-  const [filterStatusKapal, setFilterStatusKapal] = usePersistentState(
-    "iwkl:filter:statusKapal",
-    "",
-  );
-  const [filterTrayek, setFilterTrayek] = usePersistentState(
-    "iwkl:filter:trayek",
-    "",
-  );
-
-  const [LOKET_FILTER_OPTS, setLoketFilterOpts] = useState([]);
-  const [KELAS_FILTER_OPTS, setKelasFilterOpts] = useState([]);
-  const [STATUS_PKS_FILTER_OPTS, setStatusPksFilterOpts] = useState([]);
-  const [STATUS_KAPAL_FILTER_OPTS, setStatusKapalFilterOpts] = useState([]);
-  const [TRAYEK_FILTER_OPTS, setTrayekFilterOpts] = useState([]);
-  const [YEAR_OPTS, setYearOpts] = useState([]);
-
-  // modal tambah
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [newForm, setNewForm] = useState(
-    makeEmptyRow(
-      LOKET_OPTS,
-      KELAS_OPTS,
-      STATUS_PKS_OPTS,
-      STATUS_KAPAL_OPTS,
-      STATUS_PEMB_OPTS,
-      PAS_OPTS,
-      SERTIF_KSL_OPTS,
-      IZIN_TRAYEK_OPTS,
-      SISTEM_IWKL_OPTS,
-      PERHIT_TARIF_OPTS,
-    ),
-  );
-
-  useEffect(() => {
-    setNewForm((prev) =>
-      prev.loket
-        ? prev
-        : makeEmptyRow(
+    // modal tambah
+    const [showAddModal, setShowAddModal] = useState(false);
+    const [newForm, setNewForm] = useState(
+        makeEmptyRow(
             LOKET_OPTS,
             KELAS_OPTS,
             STATUS_PKS_OPTS,
@@ -596,1629 +583,2207 @@ export default function IwklSimple() {
             IZIN_TRAYEK_OPTS,
             SISTEM_IWKL_OPTS,
             PERHIT_TARIF_OPTS,
-          ),
-    );
-  }, [
-    LOKET_OPTS,
-    KELAS_OPTS,
-    STATUS_PKS_OPTS,
-    STATUS_KAPAL_OPTS,
-    STATUS_PEMB_OPTS,
-    PAS_OPTS,
-    SERTIF_KSL_OPTS,
-    IZIN_TRAYEK_OPTS,
-    SISTEM_IWKL_OPTS,
-    PERHIT_TARIF_OPTS,
-  ]);
-
-  const pageSize = 50;
-
-  const computeTotal = (r) =>
-    monthKeys.reduce((sum, k) => sum + (Number(r[k] || 0) || 0), 0);
-
-  const fetchYearOptions = async () => {
-    try {
-      const res = await fetch("https://moveon-jr.alwaysdata.net/api/iwkl-years");
-const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error("Gagal load tahun")
-      }
-
-      const years = Array.from(
-        new Set((data || []).map((d) => Number(d.tahun)).filter(Boolean)),
-      ).sort((a, b) => b - a);
-
-      // fallback kalau tabel kosong, tetap kasih tahun sekarang
-      const thisYear = new Date().getFullYear();
-      const merged = years.includes(thisYear) ? years : [thisYear, ...years];
-
-      setYearOpts(merged);
-    } catch (e) {
-      console.error("fetchYearOptions error:", e);
-      // fallback minimal
-      const thisYear = new Date().getFullYear();
-      setYearOpts([thisYear]);
-    }
-  };
-
-  useEffect(() => {
-    fetchYearOptions();
-  }, []);
-
-  const fetchFilterOptions = async () => {
-    try {
-      const res = await fetch("https://moveon-jr.alwaysdata.net/api/iwkl-filters");
-const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error("Gagal load filter")
-      }
-
-      const uniqLoket = (arr) =>
-        Array.from(
-          new Map(
-            (arr || [])
-              .filter(Boolean)
-              .map((v) => [normalizeLoket(v), v.trim()])
-          ).values()
-        ).sort((a, b) => a.localeCompare(b));
-
-        const safeUniq = (arr) =>
-  Array.from(new Set((arr || []).filter(Boolean)));
-
-      setLoketFilterOpts((prev) =>
-        cleanLoketOpts(
-          uniqLoket([
-            ...LOKET_OPTS,
-            ...data.map((d) => d.loket),
-          ])
-        )
-      );
-
-      setKelasFilterOpts(
-        safeUniq([
-          ...KELAS_OPTS.filter((o) => o && o !== "-"),
-          ...data.map((d) => d.kelas),
-        ]),
-      );
-
-      setStatusPksFilterOpts(
-        safeUniq([
-          ...STATUS_PKS_OPTS.filter((o) => o && o !== "-"),
-          ...data.map((d) => d.status_pks),
-        ]),
-      );
-
-      setStatusKapalFilterOpts(
-        safeUniq([
-          ...STATUS_KAPAL_OPTS.filter((o) => o && o !== "-"),
-          ...data.map((d) => d.status_kapal),
-        ]),
-      );
-
-      setTrayekFilterOpts(safeUniq(data.map((d) => d.trayek)));
-    } catch (e) {
-      console.error("fetchFilterOptions IWKL error:", e);
-      setLoketFilterOpts(LOKET_OPTS.filter((o) => o && o !== "-"));
-      setKelasFilterOpts(KELAS_OPTS.filter((o) => o && o !== "-"));
-      setStatusPksFilterOpts(STATUS_PKS_OPTS.filter((o) => o && o !== "-"));
-      setStatusKapalFilterOpts(STATUS_KAPAL_OPTS.filter((o) => o && o !== "-"));
-      setTrayekFilterOpts([]);
-    }
-  };
-
-  // load data
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-
-      const res = await fetch("https://moveon-jr.alwaysdata.net/api/iwkl?tahun=" + tahunAktif);
-const iwklData = await res.json();
-
-      if (!res.ok) {
-  console.error("Error load IWKL");
-  setLoading(false);
-  return;
-}
-
-      const resBulan = await fetch(
-  "https://moveon-jr.alwaysdata.net/api/iwkl-bulanan?tahun=" + tahunAktif
-);
-const bulanData = await resBulan.json();
-
-
-      const grouped = {};
-      (bulanData || []).forEach((row) => {
-        const iwklId = row.iwkl_id;
-        const k = monthFromIndex[row.bulan];
-        if (!k) return;
-        if (!grouped[iwklId]) grouped[iwklId] = {};
-        grouped[iwklId][k] = Number(row.nilai) || 0;
-      });
-
-      const rowsMapped = (iwklData || []).map((r) => {
-        const base = mapDbToRow(r);
-        const bulan = grouped[r.id] || {};
-        return { ...base, ...bulan };
-      });
-
-      setRows(rowsMapped);
-      setLoading(false);
-
-      // ✅ refresh opsi filter setelah data kebaca
-      fetchFilterOptions();
-    };
-
-    fetchData();
-  }, [tahunAktif]);
-
-  const filtered = useMemo(() => {
-    const s = q.trim().toLowerCase();
-
-    return rows.filter((r) => {
-      // search text
-      const haystack = [
-        r.loket,
-        r.kelas,
-        r.namaPerusahaan,
-        r.namaKapal,
-        r.namaPemilik,
-        r.ruteAwal,
-        r.ruteAkhir,
-        r.trayek,
-      ]
-        .join(" ")
-        .toLowerCase();
-
-      if (s && !haystack.includes(s)) return false;
-
-      // dropdown filters
-      if (filterLoket && r.loket !== filterLoket) return false;
-      if (filterKelas && r.kelas !== filterKelas) return false;
-      if (filterStatusPKS && r.statusPKS !== filterStatusPKS) return false;
-      if (filterStatusKapal && r.statusKapal !== filterStatusKapal)
-        return false;
-
-      // trayek kadang beda casing / spasi → pakai compare clean
-      if (filterTrayek) {
-        const t1 = String(r.trayek || "")
-          .trim()
-          .toLowerCase();
-        const t2 = String(filterTrayek).trim().toLowerCase();
-        if (t1 !== t2) return false;
-      }
-
-      return true;
-    });
-  }, [
-    rows,
-    q,
-    filterLoket,
-    filterKelas,
-    filterStatusPKS,
-    filterStatusKapal,
-    filterTrayek,
-  ]);
-
-  useEffect(() => {
-    setPage(1);
-  }, [
-    filterLoket,
-    filterKelas,
-    filterStatusPKS,
-    filterStatusKapal,
-    filterTrayek,
-  ]);
-
-  const totalPage = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const pageData = useMemo(
-    () => filtered.slice((page - 1) * pageSize, page * pageSize),
-    [filtered, page, pageSize],
-  );
-
-  const deleteRow = async (id) => {
-    if (!window.confirm("Hapus baris ini?")) return;
-    setSaving(true);
-    const res = await fetch(`https://moveon-jr.alwaysdata.net/api/iwkl/${id}`, {
-  method: "DELETE",
-});
-    setSaving(false);
-
-    if (!res.ok) {
-  console.error("Error delete");
-  return;
-}
-    setRows((prev) => prev.filter((r) => r.id !== id));
-    if (openDetailId === id) setOpenDetailId(null);
-  };
-
-  const updateCell = async (id, key, value) => {
-    if (key === "loket") {
-      setLoketFilterOpts((prev) =>
-        prev.includes(value) ? prev : [...prev, value],
-      );
-    }
-    // update state dulu biar UI responsif
-    setRows((prev) =>
-      prev.map((r) =>
-        r.id === id
-          ? { ...r, [key]: value ?? "" } // ⬅️ INI PENTING
-          : r
-      )
+        ),
     );
 
-    // kalau yang diubah adalah bulan, arahkan ke iwkl_bulanan
-    if (monthKeys.includes(key)) {
-      await updateBulan(id, key, value);
-      return;
-    }
-
-    const keyMap = {
-      namaPerusahaan: "nama_perusahaan",
-      namaKapal: "nama_kapal",
-      namaPemilik: "nama_pemilik",
-      statusPKS: "status_pks",
-      statusPembayaran: "status_pembayaran",
-      statusKapal: "status_kapal",
-      potensiPerBulan: "potensi_per_bulan",
-      persenAkt2423: "persen_akt_24_23",
-      noKontak: "no_kontak",
-      tglLahir: "tgl_lahir",
-      kapasitasPenumpang: "kapasitas_penumpang",
-      tglPKS: "tgl_pks",
-      tglBerakhirPKS: "tgl_berakhir_pks",
-      tglAddendum: "tgl_addendum",
-      pasBesarKecil: "pas_besar_kecil",
-      sertifikatKeselamatan: "sertifikat_keselamatan",
-      izinTrayek: "izin_trayek",
-      tglJatuhTempoSertifikatKeselamatan:
-        "tgl_jatuh_tempo_sertifikat_keselamatan",
-      sistemPengutipanIWKL: "sistem_pengutipan_iwkl",
-      perhitunganTarif: "perhitungan_tarif",
-      seat: "seat",
-      rit: "rit",
-      tarifDasarIwkl: "tarif_dasar_iwkl",
-      hari: "hari",
-      loadFactor: "load_factor",
-      totalPerhitungan: "total_perhitungan",
-      tarifBoronganDisepakati: "tarif_borongan_disepakati",
-      keterangan: "keterangan",
-      loket: "loket",
-      kelas: "kelas",
-      trayek: "trayek",
-      ruteAwal: "rute_awal",
-      ruteAkhir: "rute_akhir",
-    };
-
-    const colName = keyMap[key];
-    if (!colName) {
-      console.warn("Kolom belum dimapping ke DB:", key);
-      return;
-    }
-
-    setSaving(true);
-    const res = await fetch(`https://moveon-jr.alwaysdata.net/api/iwkl/${id}`, {
-  method: "PUT",
-  headers: {
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify({
-    [colName]: value,
-  }),
-});
-    setSaving(false);
-
-    if (!res.ok) {
-  console.error("Error update");
-}
-  };
-
-  const updateRowOnly = (id, patch) =>
-    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
-
-  const updateBulan = async (iwklId, key, value) => {
-  const bulan = monthIndex[key];
-
-  await fetch("https://moveon-jr.alwaysdata.net/api/iwkl-bulanan", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      iwkl_id: iwklId,
-      tahun: tahunAktif,
-      bulan: bulan,
-      nilai: value,
-    }),
-  });
-};
-
-  const toggleDetail = (id) => {
-    setOpenDetailId((cur) => (cur === id ? null : id));
-  };
-
-  // helper form tambah
-  const setF = (field, value) =>
-    setNewForm((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-
-  const addIwkl = async (e) => {
-    e.preventDefault();
-    const draft = {
-      ...makeEmptyRow(
-        LOKET_OPTS,
-        KELAS_OPTS,
-        STATUS_PKS_OPTS,
-        STATUS_KAPAL_OPTS,
-        STATUS_PEMB_OPTS,
-        PAS_OPTS,
-        SERTIF_KSL_OPTS,
-        IZIN_TRAYEK_OPTS,
-        SISTEM_IWKL_OPTS,
-        PERHIT_TARIF_OPTS,
-      ),
-      ...newForm,
-    };
-
-    setSaving(true);
-    const res = await fetch("https://moveon-jr.alwaysdata.net/api/iwkl", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify(mapRowToDbPayload(draft)),
-});
-
-const data = await res.json();
-    setSaving(false);
-
-    if (!res.ok) {
-  console.error("Error insert");
-  return;
-}
-
-    const newRow = mapDbToRow(data);
-    setRows((prev) => [newRow, ...prev]);
-    setShowAddModal(false);
-    setNewForm(
-      makeEmptyRow(
-        LOKET_OPTS,
-        KELAS_OPTS,
-        STATUS_PKS_OPTS,
-        STATUS_KAPAL_OPTS,
-        STATUS_PEMB_OPTS,
-        PAS_OPTS,
-        SERTIF_KSL_OPTS,
-        IZIN_TRAYEK_OPTS,
-        SISTEM_IWKL_OPTS,
-        PERHIT_TARIF_OPTS,
-      ),
-    );
-    setPage(1);
-  };
-
-  return (
-    <div className="iwkl-wrap">
-      <div className="iwkl-bg" aria-hidden />
-
-      <header className="iwkl-header">
-        <div className="title">
-          <span className="emoji" aria-hidden>
-            🛳️
-          </span>
-          <h1>Data IWKL</h1>
-          {loading && (
-            <span style={{ marginLeft: 8, fontSize: 12 }}>Loading…</span>
-          )}
-          {saving && !loading && (
-            <span style={{ marginLeft: 8, fontSize: 12 }}>Menyimpan…</span>
-          )}
-        </div>
-
-        <div className="actions actions-col">
-          {/* ROW ATAS: search + tambah sejajar */}
-          <div className="actions-row top">
-            <input
-              className="search"
-              placeholder="Cari kapal / perusahaan / trayek…"
-              value={q}
-              onChange={(e) => {
-                setQ(e.target.value);
-                setPage(1);
-              }}
-            />
-
-            <button
-              className="btn primary"
-              type="button"
-              onClick={() => {
-                setNewForm(
-                  makeEmptyRow(
-                    LOKET_OPTS,
-                    KELAS_OPTS,
-                    STATUS_PKS_OPTS,
-                    STATUS_KAPAL_OPTS,
-                    STATUS_PEMB_OPTS,
-                    PAS_OPTS,
-                    SERTIF_KSL_OPTS,
-                    IZIN_TRAYEK_OPTS,
-                    SISTEM_IWKL_OPTS,
-                    PERHIT_TARIF_OPTS,
+    useEffect(() => {
+        setNewForm((prev) =>
+            prev.loket
+                ? prev
+                : makeEmptyRow(
+                      LOKET_OPTS,
+                      KELAS_OPTS,
+                      STATUS_PKS_OPTS,
+                      STATUS_KAPAL_OPTS,
+                      STATUS_PEMB_OPTS,
+                      PAS_OPTS,
+                      SERTIF_KSL_OPTS,
+                      IZIN_TRAYEK_OPTS,
+                      SISTEM_IWKL_OPTS,
+                      PERHIT_TARIF_OPTS,
                   ),
-                );
-                setShowAddModal(true);
-              }}
-            >
-              + Tambah Data IWKL
-            </button>
-            <button className="btn ghost" onClick={exportIwklToExcel}>
-              📥 Export Excel
-            </button>
-          </div>
+        );
+    }, [
+        LOKET_OPTS,
+        KELAS_OPTS,
+        STATUS_PKS_OPTS,
+        STATUS_KAPAL_OPTS,
+        STATUS_PEMB_OPTS,
+        PAS_OPTS,
+        SERTIF_KSL_OPTS,
+        IZIN_TRAYEK_OPTS,
+        SISTEM_IWKL_OPTS,
+        PERHIT_TARIF_OPTS,
+    ]);
 
-          {/* ROW BAWAH: dropdown tahun */}
-          <div className="actions-row bottom">
-            <button
-              className="btn ghost"
-              type="button"
-              onClick={() => {
-                setFilterLoket("");
-                setFilterKelas("");
-                setFilterStatusPKS("");
-                setFilterStatusKapal("");
-                setFilterTrayek("");
-                setQ("");
-                setPage(1);
-              }}
-            >
-              Reset Filter
-            </button>
+    const pageSize = 50;
 
-            <select
-              value={tahunAktif}
-              onChange={(e) => setTahunAktif(Number(e.target.value))}
-              className="year-select"
-            >
-              {YEAR_OPTS.map((y) => (
-                <option key={y} value={y}>
-                  {y}
-                </option>
-              ))}
-            </select>
+    const computeTotal = (r) =>
+        monthKeys.reduce((sum, k) => sum + (Number(r[k] || 0) || 0), 0);
 
-            <select
-              className="select-filter"
-              value={filterLoket}
-              onChange={(e) => setFilterLoket(e.target.value)}
-            >
-              <option value="">Semua Loket</option>
-              {LOKET_FILTER_OPTS.map((o) => (
-                <option key={o} value={o}>
-                  {o}
-                </option>
-              ))}
-            </select>
+    const fetchYearOptions = async () => {
+        try {
+            const res = await fetch(
+                "https://moveon-jr.alwaysdata.net/api/iwkl-years",
+            );
+            const data = await res.json();
 
-            <select
-              className="select-filter"
-              value={filterKelas}
-              onChange={(e) => setFilterKelas(e.target.value)}
-            >
-              <option value="">Semua Kelas</option>
-              {KELAS_OPTS.map((o) => (
-                <option key={o} value={o}>
-                  {o}
-                </option>
-              ))}
-            </select>
+            if (!res.ok) {
+                throw new Error("Gagal load tahun");
+            }
 
-            <select
-              className="select-filter"
-              value={filterStatusPKS}
-              onChange={(e) => setFilterStatusPKS(e.target.value)}
-            >
-              <option value="">Semua Status PKS</option>
-              {STATUS_PKS_OPTS.map((o) => (
-                <option key={o} value={o}>
-                  {o}
-                </option>
-              ))}
-            </select>
+            const years = Array.from(
+                new Set(
+                    (data || []).map((d) => Number(d.tahun)).filter(Boolean),
+                ),
+            ).sort((a, b) => b - a);
 
-            <select
-              className="select-filter"
-              value={filterStatusKapal}
-              onChange={(e) => setFilterStatusKapal(e.target.value)}
-            >
-              <option value="">Semua Status Kapal</option>
-              {STATUS_KAPAL_OPTS.map((o) => (
-                <option key={o} value={o}>
-                  {o}
-                </option>
-              ))}
-            </select>
+            // fallback kalau tabel kosong, tetap kasih tahun sekarang
+            const thisYear = new Date().getFullYear();
+            const merged = years.includes(thisYear)
+                ? years
+                : [thisYear, ...years];
 
-            <select
-              className="select-filter"
-              value={filterTrayek}
-              onChange={(e) => setFilterTrayek(e.target.value)}
-            >
-              <option value="">Semua Trayek</option>
-              {TRAYEK_FILTER_OPTS.map((o) => (
-                <option key={o} value={o}>
-                  {o}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </header>
+            setYearOpts(merged);
+        } catch (e) {
+            console.error("fetchYearOptions error:", e);
+            // fallback minimal
+            const thisYear = new Date().getFullYear();
+            setYearOpts([thisYear]);
+        }
+    };
 
-      <div className="card">
-        <div className="table-scroll">
-          <div className="scroll-inner">
-            <table className="kawaii-table">
-              <thead>
-                <tr>
-                  <th>No</th>
-                  <th>Aksi</th>
-                  <th>Loket</th>
-                  <th>Kelas</th>
-                  <th>Nama Kapal</th>
-                  <th>Nama Perusahaan</th>
-                  <th>Nama Pemilik / Pengelola</th>
-                  <th>Status PKS</th>
-                  <th>Status Kapal</th>
-                  <th>Rute</th>
-                  <th>Trayek</th>
-                  <th>Potensi / Bulan (Rp)</th>
-                  <th>Total Jan–Des</th>
-                  <th>% Akt 24 - 23</th>
-                  <th>Detail</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pageData.map((r, idx) => {
-                  const total = computeTotal(r);
-                  const isOpen = openDetailId === r.id;
-                  return (
-                    <React.Fragment key={r.id}>
-                      <tr>
-                        <td>{(page - 1) * pageSize + idx + 1}</td>
-                        <td>
-                          <button
-                            className="btn danger ghost xs"
-                            onClick={() => deleteRow(r.id)}
-                          >
-                            Hapus
-                          </button>
-                        </td>
+    useEffect(() => {
+        fetchYearOptions();
+    }, []);
 
-                        {/* Loket */}
-                        <td>
-                          <input
-                            list="loket-list"
-                            type="text"
-                            value={r.loket || ""}
-                            onChange={(e) =>
-                              updateRowOnly(r.id, { loket: e.target.value })
-                            }
-                            onBlur={(e) => {
-                              const val = e.target.value.trim();
+    const fetchFilterOptions = async () => {
+        try {
+            const res = await fetch(
+                "https://moveon-jr.alwaysdata.net/api/iwkl-filters",
+            );
+            const data = await res.json();
 
-                              if (val === "") {
-                                setF("loket", val)
-                                return;
-                              }
+            if (!res.ok) {
+                throw new Error("Gagal load filter");
+            }
 
-                              updateCell(r.id, "loket", val);
+            const uniqLoket = (arr) =>
+                Array.from(
+                    new Map(
+                        (arr || [])
+                            .filter(Boolean)
+                            .map((v) => [normalizeLoket(v), v.trim()]),
+                    ).values(),
+                ).sort((a, b) => a.localeCompare(b));
 
-                              setLoketOpts((prev) =>
-                                prev.some((o) => o.toLowerCase() === val.toLowerCase())
-                                  ? prev
-                                  : [...prev, val]
-                              );
+            const safeUniq = (arr) =>
+                Array.from(new Set((arr || []).filter(Boolean)));
 
-                              setLoketFilterOpts((prev) =>
-                                prev.includes(val) ? prev : [...prev, val]
-                              );
+            setLoketFilterOpts((prev) =>
+                cleanLoketOpts(
+                    uniqLoket([...LOKET_OPTS, ...data.map((d) => d.loket)]),
+                ),
+            );
+
+            setKelasFilterOpts(
+                safeUniq([
+                    ...KELAS_OPTS.filter((o) => o && o !== "-"),
+                    ...data.map((d) => d.kelas),
+                ]),
+            );
+
+            setStatusPksFilterOpts(
+                safeUniq([
+                    ...STATUS_PKS_OPTS.filter((o) => o && o !== "-"),
+                    ...data.map((d) => d.status_pks),
+                ]),
+            );
+
+            setStatusKapalFilterOpts(
+                safeUniq([
+                    ...STATUS_KAPAL_OPTS.filter((o) => o && o !== "-"),
+                    ...data.map((d) => d.status_kapal),
+                ]),
+            );
+
+            setTrayekFilterOpts(safeUniq(data.map((d) => d.trayek)));
+        } catch (e) {
+            console.error("fetchFilterOptions IWKL error:", e);
+            setLoketFilterOpts(LOKET_OPTS.filter((o) => o && o !== "-"));
+            setKelasFilterOpts(KELAS_OPTS.filter((o) => o && o !== "-"));
+            setStatusPksFilterOpts(
+                STATUS_PKS_OPTS.filter((o) => o && o !== "-"),
+            );
+            setStatusKapalFilterOpts(
+                STATUS_KAPAL_OPTS.filter((o) => o && o !== "-"),
+            );
+            setTrayekFilterOpts([]);
+        }
+    };
+
+    // load data
+    useEffect(() => {
+        const fetchData = async () => {
+            setLoading(true);
+
+            const res = await fetch(
+                "https://moveon-jr.alwaysdata.net/api/iwkl?tahun=" + tahunAktif,
+            );
+            const iwklData = await res.json();
+
+            if (!res.ok) {
+                console.error("Error load IWKL");
+                setLoading(false);
+                return;
+            }
+
+            const resBulan = await fetch(
+                "https://moveon-jr.alwaysdata.net/api/iwkl-bulanan?tahun=" +
+                    tahunAktif,
+            );
+            const bulanData = await resBulan.json();
+
+            const grouped = {};
+            (bulanData || []).forEach((row) => {
+                const iwklId = row.iwkl_id;
+                const k = monthFromIndex[row.bulan];
+                if (!k) return;
+                if (!grouped[iwklId]) grouped[iwklId] = {};
+                grouped[iwklId][k] = Number(row.nilai) || 0;
+            });
+
+            const rowsMapped = (iwklData || []).map((r) => {
+                const base = mapDbToRow(r);
+                const bulan = grouped[r.id] || {};
+                return { ...base, ...bulan };
+            });
+
+            setRows(rowsMapped);
+            setLoading(false);
+
+            // ✅ refresh opsi filter setelah data kebaca
+            fetchFilterOptions();
+        };
+
+        fetchData();
+    }, [tahunAktif]);
+
+    const filtered = useMemo(() => {
+        const s = q.trim().toLowerCase();
+
+        return rows.filter((r) => {
+            // search text
+            const haystack = [
+                r.loket,
+                r.kelas,
+                r.namaPerusahaan,
+                r.namaKapal,
+                r.namaPemilik,
+                r.ruteAwal,
+                r.ruteAkhir,
+                r.trayek,
+            ]
+                .join(" ")
+                .toLowerCase();
+
+            if (s && !haystack.includes(s)) return false;
+
+            // dropdown filters
+            if (filterLoket && r.loket !== filterLoket) return false;
+            if (filterKelas && r.kelas !== filterKelas) return false;
+            if (filterStatusPKS && r.statusPKS !== filterStatusPKS)
+                return false;
+            if (filterStatusKapal && r.statusKapal !== filterStatusKapal)
+                return false;
+
+            // trayek kadang beda casing / spasi → pakai compare clean
+            if (filterTrayek) {
+                const t1 = String(r.trayek || "")
+                    .trim()
+                    .toLowerCase();
+                const t2 = String(filterTrayek).trim().toLowerCase();
+                if (t1 !== t2) return false;
+            }
+
+            return true;
+        });
+    }, [
+        rows,
+        q,
+        filterLoket,
+        filterKelas,
+        filterStatusPKS,
+        filterStatusKapal,
+        filterTrayek,
+    ]);
+
+    useEffect(() => {
+        setPage(1);
+    }, [
+        filterLoket,
+        filterKelas,
+        filterStatusPKS,
+        filterStatusKapal,
+        filterTrayek,
+    ]);
+
+    const totalPage = Math.max(1, Math.ceil(filtered.length / pageSize));
+    const pageData = useMemo(
+        () => filtered.slice((page - 1) * pageSize, page * pageSize),
+        [filtered, page, pageSize],
+    );
+
+    const deleteRow = async (id) => {
+        if (!window.confirm("Hapus baris ini?")) return;
+        setSaving(true);
+        const res = await fetch(
+            `https://moveon-jr.alwaysdata.net/api/iwkl/${id}`,
+            {
+                method: "DELETE",
+            },
+        );
+        setSaving(false);
+
+        if (!res.ok) {
+            console.error("Error delete");
+            return;
+        }
+        setRows((prev) => prev.filter((r) => r.id !== id));
+        if (openDetailId === id) setOpenDetailId(null);
+    };
+
+    const updateCell = async (id, key, value) => {
+        if (key === "loket") {
+            setLoketFilterOpts((prev) =>
+                prev.includes(value) ? prev : [...prev, value],
+            );
+        }
+        // update state dulu biar UI responsif
+        setRows((prev) =>
+            prev.map((r) =>
+                r.id === id
+                    ? { ...r, [key]: value ?? "" } // ⬅️ INI PENTING
+                    : r,
+            ),
+        );
+
+        // kalau yang diubah adalah bulan, arahkan ke iwkl_bulanan
+        if (monthKeys.includes(key)) {
+            await updateBulan(id, key, value);
+            return;
+        }
+
+        const keyMap = {
+            namaPerusahaan: "nama_perusahaan",
+            namaKapal: "nama_kapal",
+            namaPemilik: "nama_pemilik",
+            statusPKS: "status_pks",
+            statusPembayaran: "status_pembayaran",
+            statusKapal: "status_kapal",
+            potensiPerBulan: "potensi_per_bulan",
+            persenAkt2423: "persen_akt_24_23",
+            noKontak: "no_kontak",
+            tglLahir: "tgl_lahir",
+            kapasitasPenumpang: "kapasitas_penumpang",
+            tglPKS: "tgl_pks",
+            tglBerakhirPKS: "tgl_berakhir_pks",
+            tglAddendum: "tgl_addendum",
+            pasBesarKecil: "pas_besar_kecil",
+            sertifikatKeselamatan: "sertifikat_keselamatan",
+            izinTrayek: "izin_trayek",
+            tglJatuhTempoSertifikatKeselamatan:
+                "tgl_jatuh_tempo_sertifikat_keselamatan",
+            sistemPengutipanIWKL: "sistem_pengutipan_iwkl",
+            perhitunganTarif: "perhitungan_tarif",
+            seat: "seat",
+            rit: "rit",
+            tarifDasarIwkl: "tarif_dasar_iwkl",
+            hari: "hari",
+            loadFactor: "load_factor",
+            totalPerhitungan: "total_perhitungan",
+            tarifBoronganDisepakati: "tarif_borongan_disepakati",
+            keterangan: "keterangan",
+            loket: "loket",
+            kelas: "kelas",
+            trayek: "trayek",
+            ruteAwal: "rute_awal",
+            ruteAkhir: "rute_akhir",
+        };
+
+        const colName = keyMap[key];
+        if (!colName) {
+            console.warn("Kolom belum dimapping ke DB:", key);
+            return;
+        }
+
+        setSaving(true);
+        const res = await fetch(
+            `https://moveon-jr.alwaysdata.net/api/iwkl/${id}`,
+            {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    [colName]: value,
+                }),
+            },
+        );
+        setSaving(false);
+
+        if (!res.ok) {
+            console.error("Error update");
+        }
+    };
+
+    const updateRowOnly = (id, patch) =>
+        setRows((prev) =>
+            prev.map((r) => (r.id === id ? { ...r, ...patch } : r)),
+        );
+
+    const updateBulan = async (iwklId, key, value) => {
+        const bulan = monthIndex[key];
+
+        await fetch("https://moveon-jr.alwaysdata.net/api/iwkl-bulanan", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                iwkl_id: iwklId,
+                tahun: tahunAktif,
+                bulan: bulan,
+                nilai: value,
+            }),
+        });
+    };
+
+    const toggleDetail = (id) => {
+        setOpenDetailId((cur) => (cur === id ? null : id));
+    };
+
+    // helper form tambah
+    const setF = (field, value) =>
+        setNewForm((prev) => ({
+            ...prev,
+            [field]: value,
+        }));
+
+    const addIwkl = async (e) => {
+        e.preventDefault();
+        const draft = {
+            ...makeEmptyRow(
+                LOKET_OPTS,
+                KELAS_OPTS,
+                STATUS_PKS_OPTS,
+                STATUS_KAPAL_OPTS,
+                STATUS_PEMB_OPTS,
+                PAS_OPTS,
+                SERTIF_KSL_OPTS,
+                IZIN_TRAYEK_OPTS,
+                SISTEM_IWKL_OPTS,
+                PERHIT_TARIF_OPTS,
+            ),
+            ...newForm,
+        };
+
+        setSaving(true);
+        const res = await fetch("https://moveon-jr.alwaysdata.net/api/iwkl", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(mapRowToDbPayload(draft)),
+        });
+
+        const data = await res.json();
+        setSaving(false);
+
+        if (!res.ok) {
+            console.error("Error insert");
+            return;
+        }
+
+        const newRow = mapDbToRow(data);
+        setRows((prev) => [newRow, ...prev]);
+        setShowAddModal(false);
+        setNewForm(
+            makeEmptyRow(
+                LOKET_OPTS,
+                KELAS_OPTS,
+                STATUS_PKS_OPTS,
+                STATUS_KAPAL_OPTS,
+                STATUS_PEMB_OPTS,
+                PAS_OPTS,
+                SERTIF_KSL_OPTS,
+                IZIN_TRAYEK_OPTS,
+                SISTEM_IWKL_OPTS,
+                PERHIT_TARIF_OPTS,
+            ),
+        );
+        setPage(1);
+    };
+
+    return (
+        <div className="iwkl-wrap">
+            <div className="iwkl-bg" aria-hidden />
+
+            <header className="iwkl-header">
+                <div className="title">
+                    <span className="emoji" aria-hidden>
+                        🛳️
+                    </span>
+                    <h1>Data IWKL</h1>
+                    {loading && (
+                        <span style={{ marginLeft: 8, fontSize: 12 }}>
+                            Loading…
+                        </span>
+                    )}
+                    {saving && !loading && (
+                        <span style={{ marginLeft: 8, fontSize: 12 }}>
+                            Menyimpan…
+                        </span>
+                    )}
+                </div>
+
+                <div className="actions actions-col">
+                    {/* ROW ATAS: search + tambah sejajar */}
+                    <div className="actions-row top">
+                        <input
+                            className="search"
+                            placeholder="Cari kapal / perusahaan / trayek…"
+                            value={q}
+                            onChange={(e) => {
+                                setQ(e.target.value);
+                                setPage(1);
                             }}
-                            placeholder="Pilih / ketik loket"
-                          />
-                        </td>
+                        />
 
-                        {/* Kelas */}
-                        <td>
-                          <select
-                            value={r.kelas || ""}
-                            onChange={(e) =>
-                              updateCell(r.id, "kelas", e.target.value)
-                            }
-                          >
-                            {KELAS_OPTS.map((o) => (
-                              <option key={o} value={o}>
-                                {o}
-                              </option>
-                            ))}
-                          </select>
-                        </td>
-
-                        {/* Nama Kapal */}
-                        <td>
-                          <input
-                            type="text"
-                            value={r.namaKapal || ""}
-                            onChange={(e) =>
-                              updateCell(r.id, "namaKapal", e.target.value)
-                            }
-                            placeholder="Nama Kapal"
-                          />
-                        </td>
-
-                        {/* Nama Perusahaan */}
-                        <td>
-                          <input
-                            type="text"
-                            value={r.namaPerusahaan || ""}
-                            onChange={(e) =>
-                              updateCell(r.id, "namaPerusahaan", e.target.value)
-                            }
-                            placeholder="Nama Perusahaan"
-                          />
-                        </td>
-
-                        {/* Nama Pemilik */}
-                        <td>
-                          <input
-                            type="text"
-                            value={r.namaPemilik || ""}
-                            onChange={(e) =>
-                              updateCell(r.id, "namaPemilik", e.target.value)
-                            }
-                            placeholder="Nama Pemilik"
-                          />
-                        </td>
-
-                        {/* Status PKS */}
-                        <td>
-                          <select
-                            value={r.statusPKS || ""}
-                            onChange={(e) =>
-                              updateCell(r.id, "statusPKS", e.target.value)
-                            }
-                          >
-                            {STATUS_PKS_OPTS.map((o) => (
-                              <option key={o} value={o}>
-                                {o}
-                              </option>
-                            ))}
-                          </select>
-                        </td>
-
-                        {/* Status Kapal */}
-                        <td>
-                          <select
-                            value={r.statusKapal || ""}
-                            onChange={(e) =>
-                              updateCell(r.id, "statusKapal", e.target.value)
-                            }
-                          >
-                            {STATUS_KAPAL_OPTS.map((o) => (
-                              <option key={o} value={o}>
-                                {o}
-                              </option>
-                            ))}
-                          </select>
-                        </td>
-
-                        {/* Rute (gabungan awal-akhir) */}
-                        <td>
-                          {(r.ruteAwal || "-") + " → " + (r.ruteAkhir || "-")}
-                        </td>
-
-                        {/* Trayek */}
-                        <td>
-                          <input
-                            type="text"
-                            value={r.trayek || ""}
-                            onChange={(e) =>
-                              updateCell(r.id, "trayek", e.target.value)
-                            }
-                            placeholder="Trayek"
-                          />
-                        </td>
-
-                        {/* Potensi per bulan */}
-                        <td>
-                          <input
-                            type="number"
-                            min={0}
-                            value={r.potensiPerBulan || 0}
-                            onChange={(e) =>
-                              updateCell(
-                                r.id,
-                                "potensiPerBulan",
-                                Number(e.target.value),
-                              )
-                            }
-                          />
-                          <div className="hint">
-                            {idr(r.potensiPerBulan || 0)}
-                          </div>
-                        </td>
-
-                        {/* Total Jan–Des */}
-                        <td className="num strong">{idr(total)}</td>
-
-                        {/* Persen Akt 24-23 */}
-                        <td>
-                          <input
-                            type="text"
-                            value={r.persenAkt2423 || ""}
-                            onChange={(e) =>
-                              updateCell(r.id, "persenAkt2423", e.target.value)
-                            }
-                            placeholder="contoh: 40.7%"
-                          />
-                        </td>
-
-                        {/* tombol detail */}
-                        <td>
-                          <button
-                            className="btn ghost xs"
+                        <button
+                            className="btn primary"
                             type="button"
-                            onClick={() => toggleDetail(r.id)}
-                          >
-                            {isOpen ? "Tutup" : "Detail"}
-                          </button>
-                        </td>
-                      </tr>
+                            onClick={() => {
+                                setNewForm(
+                                    makeEmptyRow(
+                                        LOKET_OPTS,
+                                        KELAS_OPTS,
+                                        STATUS_PKS_OPTS,
+                                        STATUS_KAPAL_OPTS,
+                                        STATUS_PEMB_OPTS,
+                                        PAS_OPTS,
+                                        SERTIF_KSL_OPTS,
+                                        IZIN_TRAYEK_OPTS,
+                                        SISTEM_IWKL_OPTS,
+                                        PERHIT_TARIF_OPTS,
+                                    ),
+                                );
+                                setShowAddModal(true);
+                            }}
+                        >
+                            + Tambah Data IWKL
+                        </button>
+                        <button
+                            className="btn ghost"
+                            onClick={exportIwklToExcel}
+                        >
+                            📥 Export Excel
+                        </button>
+                    </div>
 
-                      {isOpen && (
-                        <tr className="row-detail">
-                          <td colSpan={15}>
-                            <div className="detail-grid">
-                              <section>
-                                <h4>Info Lengkap</h4>
-                                <div className="detail-fields">
-                                  <label>
-                                    Rute Awal
-                                    <input
-                                      type="text"
-                                      value={r.ruteAwal || ""}
-                                      onChange={(e) =>
-                                        updateCell(
-                                          r.id,
-                                          "ruteAwal",
-                                          e.target.value,
-                                        )
-                                      }
-                                    />
-                                  </label>
+                    {/* ROW BAWAH: dropdown tahun */}
+                    <div className="actions-row bottom">
+                        <button
+                            className="btn ghost"
+                            type="button"
+                            onClick={() => {
+                                setFilterLoket("");
+                                setFilterKelas("");
+                                setFilterStatusPKS("");
+                                setFilterStatusKapal("");
+                                setFilterTrayek("");
+                                setQ("");
+                                setPage(1);
+                            }}
+                        >
+                            Reset Filter
+                        </button>
 
-                                  <label>
-                                    Rute Akhir
-                                    <input
-                                      type="text"
-                                      value={r.ruteAkhir || ""}
-                                      onChange={(e) =>
-                                        updateCell(
-                                          r.id,
-                                          "ruteAkhir",
-                                          e.target.value,
-                                        )
-                                      }
-                                    />
-                                  </label>
+                        <select
+                            value={tahunAktif}
+                            onChange={(e) =>
+                                setTahunAktif(Number(e.target.value))
+                            }
+                            className="year-select"
+                        >
+                            {YEAR_OPTS.map((y) => (
+                                <option key={y} value={y}>
+                                    {y}
+                                </option>
+                            ))}
+                        </select>
 
-                                  <label>
-                                    Alamat
-                                    <input
-                                      type="text"
-                                      value={r.alamat || ""}
-                                      onChange={(e) =>
-                                        updateCell(
-                                          r.id,
-                                          "alamat",
-                                          e.target.value,
-                                        )
-                                      }
-                                    />
-                                  </label>
+                        <select
+                            className="select-filter"
+                            value={filterLoket}
+                            onChange={(e) => setFilterLoket(e.target.value)}
+                        >
+                            <option value="">Semua Loket</option>
+                            {LOKET_FILTER_OPTS.map((o) => (
+                                <option key={o} value={o}>
+                                    {o}
+                                </option>
+                            ))}
+                        </select>
 
-                                  <label>
-                                    No. Kontak
-                                    <input
-                                      type="tel"
-                                      value={r.noKontak || ""}
-                                      onChange={(e) =>
-                                        updateCell(
-                                          r.id,
-                                          "noKontak",
-                                          e.target.value,
-                                        )
-                                      }
-                                      placeholder="08xx…"
-                                    />
-                                  </label>
+                        <select
+                            className="select-filter"
+                            value={filterKelas}
+                            onChange={(e) => setFilterKelas(e.target.value)}
+                        >
+                            <option value="">Semua Kelas</option>
+                            {KELAS_OPTS.map((o) => (
+                                <option key={o} value={o}>
+                                    {o}
+                                </option>
+                            ))}
+                        </select>
 
-                                  <label>
-                                    Tanggal Lahir
-                                    <input
-                                      type="date"
-                                      value={r.tglLahir || ""}
-                                      onChange={(e) =>
-                                        updateCell(
-                                          r.id,
-                                          "tglLahir",
-                                          e.target.value,
-                                        )
-                                      }
-                                    />
-                                  </label>
+                        <select
+                            className="select-filter"
+                            value={filterStatusPKS}
+                            onChange={(e) => setFilterStatusPKS(e.target.value)}
+                        >
+                            <option value="">Semua Status PKS</option>
+                            {STATUS_PKS_OPTS.map((o) => (
+                                <option key={o} value={o}>
+                                    {o}
+                                </option>
+                            ))}
+                        </select>
 
-                                  <label>
-                                    Kapasitas Penumpang
-                                    <input
-                                      type="number"
-                                      min={0}
-                                      value={r.kapasitasPenumpang || 0}
-                                      onChange={(e) =>
-                                        updateCell(
-                                          r.id,
-                                          "kapasitasPenumpang",
-                                          Number(e.target.value),
-                                        )
-                                      }
-                                    />
-                                  </label>
+                        <select
+                            className="select-filter"
+                            value={filterStatusKapal}
+                            onChange={(e) =>
+                                setFilterStatusKapal(e.target.value)
+                            }
+                        >
+                            <option value="">Semua Status Kapal</option>
+                            {STATUS_KAPAL_OPTS.map((o) => (
+                                <option key={o} value={o}>
+                                    {o}
+                                </option>
+                            ))}
+                        </select>
 
-                                  <label>
-                                    Tanggal PKS
-                                    <input
-                                      type="date"
-                                      value={r.tglPKS || ""}
-                                      onChange={(e) =>
-                                        updateCell(
-                                          r.id,
-                                          "tglPKS",
-                                          e.target.value,
-                                        )
-                                      }
-                                    />
-                                  </label>
+                        <select
+                            className="select-filter"
+                            value={filterTrayek}
+                            onChange={(e) => setFilterTrayek(e.target.value)}
+                        >
+                            <option value="">Semua Trayek</option>
+                            {TRAYEK_FILTER_OPTS.map((o) => (
+                                <option key={o} value={o}>
+                                    {o}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
+            </header>
 
-                                  <label>
-                                    Tanggal Berakhir PKS
-                                    <input
-                                      type="date"
-                                      value={r.tglBerakhirPKS || ""}
-                                      onChange={(e) =>
-                                        updateCell(
-                                          r.id,
-                                          "tglBerakhirPKS",
-                                          e.target.value,
-                                        )
-                                      }
-                                    />
-                                  </label>
+            <div className="card">
+                <div className="table-scroll">
+                    <div className="scroll-inner">
+                        <table className="kawaii-table">
+                            <thead>
+                                <tr>
+                                    <th>No</th>
+                                    <th>Aksi</th>
+                                    <th>Loket</th>
+                                    <th>Kelas</th>
+                                    <th>Nama Kapal</th>
+                                    <th>Nama Perusahaan</th>
+                                    <th>Nama Pemilik / Pengelola</th>
+                                    <th>Status PKS</th>
+                                    <th>Status Kapal</th>
+                                    <th>Rute</th>
+                                    <th>Trayek</th>
+                                    <th>Potensi / Bulan (Rp)</th>
+                                    <th>Total Jan–Des</th>
+                                    <th>% Akt 24 - 23</th>
+                                    <th>Detail</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {pageData.map((r, idx) => {
+                                    const total = computeTotal(r);
+                                    const isOpen = openDetailId === r.id;
+                                    return (
+                                        <React.Fragment key={r.id}>
+                                            <tr>
+                                                <td>
+                                                    {(page - 1) * pageSize +
+                                                        idx +
+                                                        1}
+                                                </td>
+                                                <td>
+                                                    <button
+                                                        className="btn danger ghost xs"
+                                                        onClick={() =>
+                                                            deleteRow(r.id)
+                                                        }
+                                                    >
+                                                        Hapus
+                                                    </button>
+                                                </td>
 
-                                  <label>
-                                    Tanggal Addendum
-                                    <input
-                                      type="date"
-                                      value={r.tglAddendum || ""}
-                                      onChange={(e) =>
-                                        updateCell(
-                                          r.id,
-                                          "tglAddendum",
-                                          e.target.value,
-                                        )
-                                      }
-                                    />
-                                  </label>
+                                                {/* Loket */}
+                                                <td>
+                                                    <input
+                                                        list="loket-list"
+                                                        type="text"
+                                                        value={r.loket || ""}
+                                                        onChange={(e) =>
+                                                            updateRowOnly(
+                                                                r.id,
+                                                                {
+                                                                    loket: e
+                                                                        .target
+                                                                        .value,
+                                                                },
+                                                            )
+                                                        }
+                                                        onBlur={(e) => {
+                                                            const val =
+                                                                e.target.value.trim();
 
-                                  <label>
-                                    Status Pembayaran
-                                    <select
-                                      className="input-like"
-                                      value={r.statusPembayaran || ""}
-                                      onChange={(e) =>
-                                        updateCell(
-                                          r.id,
-                                          "statusPembayaran",
-                                          e.target.value,
-                                        )
-                                      }
-                                    >
-                                      {STATUS_PEMB_OPTS.map((o) => (
-                                        <option key={o} value={o}>
-                                          {o}
-                                        </option>
-                                      ))}
-                                    </select>
-                                  </label>
+                                                            if (val === "") {
+                                                                setF(
+                                                                    "loket",
+                                                                    val,
+                                                                );
+                                                                return;
+                                                            }
 
-                                  <label>
-                                    Pas Besar/Kecil
-                                    <select
-                                      className="input-like"
-                                      value={r.pasBesarKecil || ""}
-                                      onChange={(e) =>
-                                        updateCell(
-                                          r.id,
-                                          "pasBesarKecil",
-                                          e.target.value,
-                                        )
-                                      }
-                                    >
-                                      {PAS_OPTS.map((o) => (
-                                        <option key={o} value={o}>
-                                          {o}
-                                        </option>
-                                      ))}
-                                    </select>
-                                  </label>
+                                                            updateCell(
+                                                                r.id,
+                                                                "loket",
+                                                                val,
+                                                            );
 
-                                  <label>
-                                    Sertifikat Keselamatan
-                                    <select
-                                      className="input-like"
-                                      value={r.sertifikatKeselamatan || ""}
-                                      onChange={(e) =>
-                                        updateCell(
-                                          r.id,
-                                          "sertifikatKeselamatan",
-                                          e.target.value,
-                                        )
-                                      }
-                                    >
-                                      {SERTIF_KSL_OPTS.map((o) => (
-                                        <option key={o} value={o}>
-                                          {o}
-                                        </option>
-                                      ))}
-                                    </select>
-                                  </label>
+                                                            setLoketOpts(
+                                                                (prev) =>
+                                                                    prev.some(
+                                                                        (o) =>
+                                                                            o.toLowerCase() ===
+                                                                            val.toLowerCase(),
+                                                                    )
+                                                                        ? prev
+                                                                        : [
+                                                                              ...prev,
+                                                                              val,
+                                                                          ],
+                                                            );
 
-                                  <label>
-                                    Izin Trayek
-                                    <select
-                                      className="input-like"
-                                      value={r.izinTrayek || ""}
-                                      onChange={(e) =>
-                                        updateCell(
-                                          r.id,
-                                          "izinTrayek",
-                                          e.target.value,
-                                        )
-                                      }
-                                    >
-                                      {IZIN_TRAYEK_OPTS.map((o) => (
-                                        <option key={o} value={o}>
-                                          {o}
-                                        </option>
-                                      ))}
-                                    </select>
-                                  </label>
+                                                            setLoketFilterOpts(
+                                                                (prev) =>
+                                                                    prev.includes(
+                                                                        val,
+                                                                    )
+                                                                        ? prev
+                                                                        : [
+                                                                              ...prev,
+                                                                              val,
+                                                                          ],
+                                                            );
+                                                        }}
+                                                        placeholder="Pilih / ketik loket"
+                                                    />
+                                                </td>
 
-                                  <label>
-                                    Tgl Jatuh Tempo Sertifikat Kapal
-                                    <input
-                                      type="date"
-                                      value={
-                                        r.tglJatuhTempoSertifikatKeselamatan ||
-                                        ""
-                                      }
-                                      onChange={(e) =>
-                                        updateCell(
-                                          r.id,
-                                          "tglJatuhTempoSertifikatKeselamatan",
-                                          e.target.value,
-                                        )
-                                      }
-                                    />
-                                  </label>
+                                                {/* Kelas */}
+                                                <td>
+                                                    <select
+                                                        value={r.kelas || ""}
+                                                        onChange={(e) =>
+                                                            updateCell(
+                                                                r.id,
+                                                                "kelas",
+                                                                e.target.value,
+                                                            )
+                                                        }
+                                                    >
+                                                        {KELAS_OPTS.map((o) => (
+                                                            <option
+                                                                key={o}
+                                                                value={o}
+                                                            >
+                                                                {o}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </td>
 
-                                  <label>
-                                    Sistem Pengutipan IWKL
-                                    <select
-                                      className="input-like"
-                                      value={r.sistemPengutipanIWKL || ""}
-                                      onChange={(e) =>
-                                        updateCell(
-                                          r.id,
-                                          "sistemPengutipanIWKL",
-                                          e.target.value,
-                                        )
-                                      }
-                                    >
-                                      {SISTEM_IWKL_OPTS.map((o) => (
-                                        <option key={o} value={o}>
-                                          {o}
-                                        </option>
-                                      ))}
-                                    </select>
-                                  </label>
+                                                {/* Nama Kapal */}
+                                                <td>
+                                                    <input
+                                                        type="text"
+                                                        value={
+                                                            r.namaKapal || ""
+                                                        }
+                                                        onChange={(e) =>
+                                                            updateCell(
+                                                                r.id,
+                                                                "namaKapal",
+                                                                e.target.value,
+                                                            )
+                                                        }
+                                                        placeholder="Nama Kapal"
+                                                    />
+                                                </td>
 
-                                  <section>
-                                    <h4>Perhitungan Tarif</h4>
-                                    <div className="detail-fields">
-                                      <label>
-                                        Seat
-                                        <input
-                                          type="number"
-                                          min={0}
-                                          value={r.seat || 0}
-                                          onChange={(e) =>
-                                            updateCell(
-                                              r.id,
-                                              "seat",
-                                              Number(e.target.value),
-                                            )
-                                          }
-                                        />
-                                      </label>
+                                                {/* Nama Perusahaan */}
+                                                <td>
+                                                    <input
+                                                        type="text"
+                                                        value={
+                                                            r.namaPerusahaan ||
+                                                            ""
+                                                        }
+                                                        onChange={(e) =>
+                                                            updateCell(
+                                                                r.id,
+                                                                "namaPerusahaan",
+                                                                e.target.value,
+                                                            )
+                                                        }
+                                                        placeholder="Nama Perusahaan"
+                                                    />
+                                                </td>
 
-                                      <label>
-                                        Rit
-                                        <input
-                                          type="number"
-                                          min={0}
-                                          value={r.rit || 0}
-                                          onChange={(e) =>
-                                            updateCell(
-                                              r.id,
-                                              "rit",
-                                              Number(e.target.value),
-                                            )
-                                          }
-                                        />
-                                      </label>
+                                                {/* Nama Pemilik */}
+                                                <td>
+                                                    <input
+                                                        type="text"
+                                                        value={
+                                                            r.namaPemilik || ""
+                                                        }
+                                                        onChange={(e) =>
+                                                            updateCell(
+                                                                r.id,
+                                                                "namaPemilik",
+                                                                e.target.value,
+                                                            )
+                                                        }
+                                                        placeholder="Nama Pemilik"
+                                                    />
+                                                </td>
 
-                                      <label>
-                                        Tarif Dasar IWKL
-                                        <input
-                                          type="number"
-                                          min={0}
-                                          value={r.tarifDasarIwkl || 0}
-                                          onChange={(e) =>
-                                            updateCell(
-                                              r.id,
-                                              "tarifDasarIwkl",
-                                              Number(e.target.value),
-                                            )
-                                          }
-                                        />
-                                      </label>
+                                                {/* Status PKS */}
+                                                <td>
+                                                    <select
+                                                        value={
+                                                            r.statusPKS || ""
+                                                        }
+                                                        onChange={(e) =>
+                                                            updateCell(
+                                                                r.id,
+                                                                "statusPKS",
+                                                                e.target.value,
+                                                            )
+                                                        }
+                                                    >
+                                                        {STATUS_PKS_OPTS.map(
+                                                            (o) => (
+                                                                <option
+                                                                    key={o}
+                                                                    value={o}
+                                                                >
+                                                                    {o}
+                                                                </option>
+                                                            ),
+                                                        )}
+                                                    </select>
+                                                </td>
 
-                                      <label>
-                                        Hari
-                                        <input
-                                          type="number"
-                                          min={0}
-                                          value={r.hari || 0}
-                                          onChange={(e) =>
-                                            updateCell(
-                                              r.id,
-                                              "hari",
-                                              Number(e.target.value),
-                                            )
-                                          }
-                                        />
-                                      </label>
+                                                {/* Status Kapal */}
+                                                <td>
+                                                    <select
+                                                        value={
+                                                            r.statusKapal || ""
+                                                        }
+                                                        onChange={(e) =>
+                                                            updateCell(
+                                                                r.id,
+                                                                "statusKapal",
+                                                                e.target.value,
+                                                            )
+                                                        }
+                                                    >
+                                                        {STATUS_KAPAL_OPTS.map(
+                                                            (o) => (
+                                                                <option
+                                                                    key={o}
+                                                                    value={o}
+                                                                >
+                                                                    {o}
+                                                                </option>
+                                                            ),
+                                                        )}
+                                                    </select>
+                                                </td>
 
-                                      <label>
-                                        Load Factor (%)
-                                        <input
-                                          type="number"
-                                          min={0}
-                                          max={100}
-                                          value={r.loadFactor || 0}
-                                          onChange={(e) =>
-                                            updateCell(
-                                              r.id,
-                                              "loadFactor",
-                                              Number(e.target.value),
-                                            )
-                                          }
-                                        />
-                                      </label>
+                                                {/* Rute (gabungan awal-akhir) */}
+                                                <td>
+                                                    {(r.ruteAwal || "-") +
+                                                        " → " +
+                                                        (r.ruteAkhir || "-")}
+                                                </td>
 
-                                      <div
-                                        style={{
-                                          gridColumn: "1 / -1",
-                                          marginTop: 8,
-                                        }}
-                                      >
-                                        Total:
-                                        <strong>
-                                          {" "}
-                                          {idr(
-                                            (r.seat || 0) *
-                                              (r.rit || 0) *
-                                              (r.tarifDasarIwkl || 0) *
-                                              (r.hari || 0) *
-                                              ((r.loadFactor || 0) / 100),
-                                          )}
-                                        </strong>
-                                      </div>
-                                    </div>
-                                  </section>
+                                                {/* Trayek */}
+                                                <td>
+                                                    <input
+                                                        type="text"
+                                                        value={r.trayek || ""}
+                                                        onChange={(e) =>
+                                                            updateCell(
+                                                                r.id,
+                                                                "trayek",
+                                                                e.target.value,
+                                                            )
+                                                        }
+                                                        placeholder="Trayek"
+                                                    />
+                                                </td>
 
-                                  <label>
-                                    Tarif Borongan Disepakati (Rp)
-                                    <input
-                                      type="number"
-                                      min={0}
-                                      value={r.tarifBoronganDisepakati || 0}
-                                      onChange={(e) =>
-                                        updateCell(
-                                          r.id,
-                                          "tarifBoronganDisepakati",
-                                          Number(e.target.value),
-                                        )
-                                      }
-                                    />
-                                    <small className="hint">
-                                      {idr(r.tarifBoronganDisepakati || 0)}
-                                    </small>
-                                  </label>
+                                                {/* Potensi per bulan */}
+                                                <td>
+                                                    <input
+                                                        type="number"
+                                                        min={0}
+                                                        value={
+                                                            r.potensiPerBulan ||
+                                                            0
+                                                        }
+                                                        onChange={(e) =>
+                                                            updateCell(
+                                                                r.id,
+                                                                "potensiPerBulan",
+                                                                Number(
+                                                                    e.target
+                                                                        .value,
+                                                                ),
+                                                            )
+                                                        }
+                                                    />
+                                                    <div className="hint">
+                                                        {idr(
+                                                            r.potensiPerBulan ||
+                                                                0,
+                                                        )}
+                                                    </div>
+                                                </td>
 
-                                  <label style={{ gridColumn: "1 / -1" }}>
-                                    Keterangan
-                                    <input
-                                      type="text"
-                                      value={r.keterangan || ""}
-                                      onChange={(e) =>
-                                        updateCell(
-                                          r.id,
-                                          "keterangan",
-                                          e.target.value,
-                                        )
-                                      }
-                                    />
-                                  </label>
-                                </div>
-                              </section>
+                                                {/* Total Jan–Des */}
+                                                <td className="num strong">
+                                                    {idr(total)}
+                                                </td>
 
-                              <section>
-                                <h4>Realisasi per Bulan</h4>
-                                <div className="month-grid">
-                                  {monthKeys.map((k) => (
-                                    <label key={k}>
-                                      {monthLabels[k]}
-                                      <input
-                                        type="number"
-                                        min={0}
-                                        value={r[k] || 0}
-                                        onChange={(e) =>
-                                          updateCell(
-                                            r.id,
-                                            k,
-                                            Number(e.target.value),
-                                          )
-                                        }
-                                      />
-                                    </label>
-                                  ))}
-                                </div>
+                                                {/* Persen Akt 24-23 */}
+                                                <td>
+                                                    <input
+                                                        type="text"
+                                                        value={
+                                                            r.persenAkt2423 ||
+                                                            ""
+                                                        }
+                                                        onChange={(e) =>
+                                                            updateCell(
+                                                                r.id,
+                                                                "persenAkt2423",
+                                                                e.target.value,
+                                                            )
+                                                        }
+                                                        placeholder="contoh: 40.7%"
+                                                    />
+                                                </td>
 
-                                <div className="hint" style={{ marginTop: 8 }}>
-                                  Total Jan–Des: <strong>{idr(total)}</strong>
-                                </div>
-                              </section>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </React.Fragment>
-                  );
-                })}
+                                                {/* tombol detail */}
+                                                <td>
+                                                    <button
+                                                        className="btn ghost xs"
+                                                        type="button"
+                                                        onClick={() =>
+                                                            toggleDetail(r.id)
+                                                        }
+                                                    >
+                                                        {isOpen
+                                                            ? "Tutup"
+                                                            : "Detail"}
+                                                    </button>
+                                                </td>
+                                            </tr>
 
-                {filtered.length === 0 && (
-                  <tr>
-                    <td className="empty" colSpan={15}>
-                      Tidak ada data
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+                                            {isOpen && (
+                                                <tr className="row-detail">
+                                                    <td colSpan={15}>
+                                                        <div className="detail-grid">
+                                                            <section>
+                                                                <h4>
+                                                                    Info Lengkap
+                                                                </h4>
+                                                                <div className="detail-fields">
+                                                                    <label>
+                                                                        Rute
+                                                                        Awal
+                                                                        <input
+                                                                            type="text"
+                                                                            value={
+                                                                                r.ruteAwal ||
+                                                                                ""
+                                                                            }
+                                                                            onChange={(
+                                                                                e,
+                                                                            ) =>
+                                                                                updateCell(
+                                                                                    r.id,
+                                                                                    "ruteAwal",
+                                                                                    e
+                                                                                        .target
+                                                                                        .value,
+                                                                                )
+                                                                            }
+                                                                        />
+                                                                    </label>
 
-        <datalist id="loket-list">
-          {LOKET_FILTER_OPTS.map((o) => (
-            <option key={o} value={o}>
-              {o}
-            </option>
-          ))}
-        </datalist>
+                                                                    <label>
+                                                                        Rute
+                                                                        Akhir
+                                                                        <input
+                                                                            type="text"
+                                                                            value={
+                                                                                r.ruteAkhir ||
+                                                                                ""
+                                                                            }
+                                                                            onChange={(
+                                                                                e,
+                                                                            ) =>
+                                                                                updateCell(
+                                                                                    r.id,
+                                                                                    "ruteAkhir",
+                                                                                    e
+                                                                                        .target
+                                                                                        .value,
+                                                                                )
+                                                                            }
+                                                                        />
+                                                                    </label>
 
-        <Pagination page={page} totalPage={totalPage} setPage={setPage} />
-      </div>
+                                                                    <label>
+                                                                        Alamat
+                                                                        <input
+                                                                            type="text"
+                                                                            value={
+                                                                                r.alamat ||
+                                                                                ""
+                                                                            }
+                                                                            onChange={(
+                                                                                e,
+                                                                            ) =>
+                                                                                updateCell(
+                                                                                    r.id,
+                                                                                    "alamat",
+                                                                                    e
+                                                                                        .target
+                                                                                        .value,
+                                                                                )
+                                                                            }
+                                                                        />
+                                                                    </label>
 
-      {/* MODAL TAMBAH DATA */}
-      {showAddModal && (
-        <div className="modal-backdrop" onClick={() => setShowAddModal(false)}>
-          <div
-            className="modal-card"
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              maxHeight: "80vh",
-              display: "flex",
-              flexDirection: "column",
-            }}
-          >
-            <h3>Tambah Data IWKL</h3>
+                                                                    <label>
+                                                                        No.
+                                                                        Kontak
+                                                                        <input
+                                                                            type="tel"
+                                                                            value={
+                                                                                r.noKontak ||
+                                                                                ""
+                                                                            }
+                                                                            onChange={(
+                                                                                e,
+                                                                            ) =>
+                                                                                updateCell(
+                                                                                    r.id,
+                                                                                    "noKontak",
+                                                                                    e
+                                                                                        .target
+                                                                                        .value,
+                                                                                )
+                                                                            }
+                                                                            placeholder="08xx…"
+                                                                        />
+                                                                    </label>
 
-            <form
-              onSubmit={addIwkl}
-              className="grid"
-              style={{ overflow: "auto", paddingRight: 4 }}
-            >
-              <label>
-                Loket
-                <input
-                  list="loket-list-modal"
-                  type="text"
-                  value={newForm.loket}
-                  onChange={(e) => setF("loket", e.target.value)}
-                  onBlur={(e) => {
-                    const val = normalizeLoket(e.target.value);
-                    if (!val) return;
+                                                                    <label>
+                                                                        Tanggal
+                                                                        Lahir
+                                                                        <input
+                                                                            type="date"
+                                                                            value={
+                                                                                r.tglLahir ||
+                                                                                ""
+                                                                            }
+                                                                            onChange={(
+                                                                                e,
+                                                                            ) =>
+                                                                                updateCell(
+                                                                                    r.id,
+                                                                                    "tglLahir",
+                                                                                    e
+                                                                                        .target
+                                                                                        .value,
+                                                                                )
+                                                                            }
+                                                                        />
+                                                                    </label>
 
-                    updateCell(r.id, "loket", val);
+                                                                    <label>
+                                                                        Kapasitas
+                                                                        Penumpang
+                                                                        <input
+                                                                            type="number"
+                                                                            min={
+                                                                                0
+                                                                            }
+                                                                            value={
+                                                                                r.kapasitasPenumpang ||
+                                                                                0
+                                                                            }
+                                                                            onChange={(
+                                                                                e,
+                                                                            ) =>
+                                                                                updateCell(
+                                                                                    r.id,
+                                                                                    "kapasitasPenumpang",
+                                                                                    Number(
+                                                                                        e
+                                                                                            .target
+                                                                                            .value,
+                                                                                    ),
+                                                                                )
+                                                                            }
+                                                                        />
+                                                                    </label>
 
-                    setLoketOpts((prev) =>
-                      prev.some((o) => normalizeLoket(o) === val)
-                        ? prev
-                        : [...prev, val]
-                    );
+                                                                    <label>
+                                                                        Tanggal
+                                                                        PKS
+                                                                        <input
+                                                                            type="date"
+                                                                            value={
+                                                                                r.tglPKS ||
+                                                                                ""
+                                                                            }
+                                                                            onChange={(
+                                                                                e,
+                                                                            ) =>
+                                                                                updateCell(
+                                                                                    r.id,
+                                                                                    "tglPKS",
+                                                                                    e
+                                                                                        .target
+                                                                                        .value,
+                                                                                )
+                                                                            }
+                                                                        />
+                                                                    </label>
 
-                    setLoketFilterOpts((prev) =>
-                      prev.some((o) => normalizeLoket(o) === val)
-                        ? prev
-                        : [...prev, val]
-                    );
-                  }}
-                  placeholder="Pilih atau ketik loket"
+                                                                    <label>
+                                                                        Tanggal
+                                                                        Berakhir
+                                                                        PKS
+                                                                        <input
+                                                                            type="date"
+                                                                            value={
+                                                                                r.tglBerakhirPKS ||
+                                                                                ""
+                                                                            }
+                                                                            onChange={(
+                                                                                e,
+                                                                            ) =>
+                                                                                updateCell(
+                                                                                    r.id,
+                                                                                    "tglBerakhirPKS",
+                                                                                    e
+                                                                                        .target
+                                                                                        .value,
+                                                                                )
+                                                                            }
+                                                                        />
+                                                                    </label>
+
+                                                                    <label>
+                                                                        Tanggal
+                                                                        Addendum
+                                                                        <input
+                                                                            type="date"
+                                                                            value={
+                                                                                r.tglAddendum ||
+                                                                                ""
+                                                                            }
+                                                                            onChange={(
+                                                                                e,
+                                                                            ) =>
+                                                                                updateCell(
+                                                                                    r.id,
+                                                                                    "tglAddendum",
+                                                                                    e
+                                                                                        .target
+                                                                                        .value,
+                                                                                )
+                                                                            }
+                                                                        />
+                                                                    </label>
+
+                                                                    <label>
+                                                                        Status
+                                                                        Pembayaran
+                                                                        <select
+                                                                            className="input-like"
+                                                                            value={
+                                                                                r.statusPembayaran ||
+                                                                                ""
+                                                                            }
+                                                                            onChange={(
+                                                                                e,
+                                                                            ) =>
+                                                                                updateCell(
+                                                                                    r.id,
+                                                                                    "statusPembayaran",
+                                                                                    e
+                                                                                        .target
+                                                                                        .value,
+                                                                                )
+                                                                            }
+                                                                        >
+                                                                            {STATUS_PEMB_OPTS.map(
+                                                                                (
+                                                                                    o,
+                                                                                ) => (
+                                                                                    <option
+                                                                                        key={
+                                                                                            o
+                                                                                        }
+                                                                                        value={
+                                                                                            o
+                                                                                        }
+                                                                                    >
+                                                                                        {
+                                                                                            o
+                                                                                        }
+                                                                                    </option>
+                                                                                ),
+                                                                            )}
+                                                                        </select>
+                                                                    </label>
+
+                                                                    <label>
+                                                                        Pas
+                                                                        Besar/Kecil
+                                                                        <select
+                                                                            className="input-like"
+                                                                            value={
+                                                                                r.pasBesarKecil ||
+                                                                                ""
+                                                                            }
+                                                                            onChange={(
+                                                                                e,
+                                                                            ) =>
+                                                                                updateCell(
+                                                                                    r.id,
+                                                                                    "pasBesarKecil",
+                                                                                    e
+                                                                                        .target
+                                                                                        .value,
+                                                                                )
+                                                                            }
+                                                                        >
+                                                                            {PAS_OPTS.map(
+                                                                                (
+                                                                                    o,
+                                                                                ) => (
+                                                                                    <option
+                                                                                        key={
+                                                                                            o
+                                                                                        }
+                                                                                        value={
+                                                                                            o
+                                                                                        }
+                                                                                    >
+                                                                                        {
+                                                                                            o
+                                                                                        }
+                                                                                    </option>
+                                                                                ),
+                                                                            )}
+                                                                        </select>
+                                                                    </label>
+
+                                                                    <label>
+                                                                        Sertifikat
+                                                                        Keselamatan
+                                                                        <select
+                                                                            className="input-like"
+                                                                            value={
+                                                                                r.sertifikatKeselamatan ||
+                                                                                ""
+                                                                            }
+                                                                            onChange={(
+                                                                                e,
+                                                                            ) =>
+                                                                                updateCell(
+                                                                                    r.id,
+                                                                                    "sertifikatKeselamatan",
+                                                                                    e
+                                                                                        .target
+                                                                                        .value,
+                                                                                )
+                                                                            }
+                                                                        >
+                                                                            {SERTIF_KSL_OPTS.map(
+                                                                                (
+                                                                                    o,
+                                                                                ) => (
+                                                                                    <option
+                                                                                        key={
+                                                                                            o
+                                                                                        }
+                                                                                        value={
+                                                                                            o
+                                                                                        }
+                                                                                    >
+                                                                                        {
+                                                                                            o
+                                                                                        }
+                                                                                    </option>
+                                                                                ),
+                                                                            )}
+                                                                        </select>
+                                                                    </label>
+
+                                                                    <label>
+                                                                        Izin
+                                                                        Trayek
+                                                                        <select
+                                                                            className="input-like"
+                                                                            value={
+                                                                                r.izinTrayek ||
+                                                                                ""
+                                                                            }
+                                                                            onChange={(
+                                                                                e,
+                                                                            ) =>
+                                                                                updateCell(
+                                                                                    r.id,
+                                                                                    "izinTrayek",
+                                                                                    e
+                                                                                        .target
+                                                                                        .value,
+                                                                                )
+                                                                            }
+                                                                        >
+                                                                            {IZIN_TRAYEK_OPTS.map(
+                                                                                (
+                                                                                    o,
+                                                                                ) => (
+                                                                                    <option
+                                                                                        key={
+                                                                                            o
+                                                                                        }
+                                                                                        value={
+                                                                                            o
+                                                                                        }
+                                                                                    >
+                                                                                        {
+                                                                                            o
+                                                                                        }
+                                                                                    </option>
+                                                                                ),
+                                                                            )}
+                                                                        </select>
+                                                                    </label>
+
+                                                                    <label>
+                                                                        Tgl
+                                                                        Jatuh
+                                                                        Tempo
+                                                                        Sertifikat
+                                                                        Kapal
+                                                                        <input
+                                                                            type="date"
+                                                                            value={
+                                                                                r.tglJatuhTempoSertifikatKeselamatan ||
+                                                                                ""
+                                                                            }
+                                                                            onChange={(
+                                                                                e,
+                                                                            ) =>
+                                                                                updateCell(
+                                                                                    r.id,
+                                                                                    "tglJatuhTempoSertifikatKeselamatan",
+                                                                                    e
+                                                                                        .target
+                                                                                        .value,
+                                                                                )
+                                                                            }
+                                                                        />
+                                                                    </label>
+
+                                                                    <label>
+                                                                        Sistem
+                                                                        Pengutipan
+                                                                        IWKL
+                                                                        <select
+                                                                            className="input-like"
+                                                                            value={
+                                                                                r.sistemPengutipanIWKL ||
+                                                                                ""
+                                                                            }
+                                                                            onChange={(
+                                                                                e,
+                                                                            ) =>
+                                                                                updateCell(
+                                                                                    r.id,
+                                                                                    "sistemPengutipanIWKL",
+                                                                                    e
+                                                                                        .target
+                                                                                        .value,
+                                                                                )
+                                                                            }
+                                                                        >
+                                                                            {SISTEM_IWKL_OPTS.map(
+                                                                                (
+                                                                                    o,
+                                                                                ) => (
+                                                                                    <option
+                                                                                        key={
+                                                                                            o
+                                                                                        }
+                                                                                        value={
+                                                                                            o
+                                                                                        }
+                                                                                    >
+                                                                                        {
+                                                                                            o
+                                                                                        }
+                                                                                    </option>
+                                                                                ),
+                                                                            )}
+                                                                        </select>
+                                                                    </label>
+
+                                                                    <section>
+                                                                        <h4>
+                                                                            Perhitungan
+                                                                            Tarif
+                                                                        </h4>
+                                                                        <div className="detail-fields">
+                                                                            <label>
+                                                                                Seat
+                                                                                <input
+                                                                                    type="number"
+                                                                                    min={
+                                                                                        0
+                                                                                    }
+                                                                                    value={
+                                                                                        r.seat ||
+                                                                                        0
+                                                                                    }
+                                                                                    onChange={(
+                                                                                        e,
+                                                                                    ) =>
+                                                                                        updateCell(
+                                                                                            r.id,
+                                                                                            "seat",
+                                                                                            Number(
+                                                                                                e
+                                                                                                    .target
+                                                                                                    .value,
+                                                                                            ),
+                                                                                        )
+                                                                                    }
+                                                                                />
+                                                                            </label>
+
+                                                                            <label>
+                                                                                Rit
+                                                                                <input
+                                                                                    type="number"
+                                                                                    min={
+                                                                                        0
+                                                                                    }
+                                                                                    value={
+                                                                                        r.rit ||
+                                                                                        0
+                                                                                    }
+                                                                                    onChange={(
+                                                                                        e,
+                                                                                    ) =>
+                                                                                        updateCell(
+                                                                                            r.id,
+                                                                                            "rit",
+                                                                                            Number(
+                                                                                                e
+                                                                                                    .target
+                                                                                                    .value,
+                                                                                            ),
+                                                                                        )
+                                                                                    }
+                                                                                />
+                                                                            </label>
+
+                                                                            <label>
+                                                                                Tarif
+                                                                                Dasar
+                                                                                IWKL
+                                                                                <input
+                                                                                    type="number"
+                                                                                    min={
+                                                                                        0
+                                                                                    }
+                                                                                    value={
+                                                                                        r.tarifDasarIwkl ||
+                                                                                        0
+                                                                                    }
+                                                                                    onChange={(
+                                                                                        e,
+                                                                                    ) =>
+                                                                                        updateCell(
+                                                                                            r.id,
+                                                                                            "tarifDasarIwkl",
+                                                                                            Number(
+                                                                                                e
+                                                                                                    .target
+                                                                                                    .value,
+                                                                                            ),
+                                                                                        )
+                                                                                    }
+                                                                                />
+                                                                            </label>
+
+                                                                            <label>
+                                                                                Hari
+                                                                                <input
+                                                                                    type="number"
+                                                                                    min={
+                                                                                        0
+                                                                                    }
+                                                                                    value={
+                                                                                        r.hari ||
+                                                                                        0
+                                                                                    }
+                                                                                    onChange={(
+                                                                                        e,
+                                                                                    ) =>
+                                                                                        updateCell(
+                                                                                            r.id,
+                                                                                            "hari",
+                                                                                            Number(
+                                                                                                e
+                                                                                                    .target
+                                                                                                    .value,
+                                                                                            ),
+                                                                                        )
+                                                                                    }
+                                                                                />
+                                                                            </label>
+
+                                                                            <label>
+                                                                                Load
+                                                                                Factor
+                                                                                (%)
+                                                                                <input
+                                                                                    type="number"
+                                                                                    min={
+                                                                                        0
+                                                                                    }
+                                                                                    max={
+                                                                                        100
+                                                                                    }
+                                                                                    value={
+                                                                                        r.loadFactor ||
+                                                                                        0
+                                                                                    }
+                                                                                    onChange={(
+                                                                                        e,
+                                                                                    ) =>
+                                                                                        updateCell(
+                                                                                            r.id,
+                                                                                            "loadFactor",
+                                                                                            Number(
+                                                                                                e
+                                                                                                    .target
+                                                                                                    .value,
+                                                                                            ),
+                                                                                        )
+                                                                                    }
+                                                                                />
+                                                                            </label>
+
+                                                                            <div
+                                                                                style={{
+                                                                                    gridColumn:
+                                                                                        "1 / -1",
+                                                                                    marginTop: 8,
+                                                                                }}
+                                                                            >
+                                                                                Total:
+                                                                                <strong>
+                                                                                    {" "}
+                                                                                    {idr(
+                                                                                        (r.seat ||
+                                                                                            0) *
+                                                                                            (r.rit ||
+                                                                                                0) *
+                                                                                            (r.tarifDasarIwkl ||
+                                                                                                0) *
+                                                                                            (r.hari ||
+                                                                                                0) *
+                                                                                            ((r.loadFactor ||
+                                                                                                0) /
+                                                                                                100),
+                                                                                    )}
+                                                                                </strong>
+                                                                            </div>
+                                                                        </div>
+                                                                    </section>
+
+                                                                    <label>
+                                                                        Tarif
+                                                                        Borongan
+                                                                        Disepakati
+                                                                        (Rp)
+                                                                        <input
+                                                                            type="number"
+                                                                            min={
+                                                                                0
+                                                                            }
+                                                                            value={
+                                                                                r.tarifBoronganDisepakati ||
+                                                                                0
+                                                                            }
+                                                                            onChange={(
+                                                                                e,
+                                                                            ) =>
+                                                                                updateCell(
+                                                                                    r.id,
+                                                                                    "tarifBoronganDisepakati",
+                                                                                    Number(
+                                                                                        e
+                                                                                            .target
+                                                                                            .value,
+                                                                                    ),
+                                                                                )
+                                                                            }
+                                                                        />
+                                                                        <small className="hint">
+                                                                            {idr(
+                                                                                r.tarifBoronganDisepakati ||
+                                                                                    0,
+                                                                            )}
+                                                                        </small>
+                                                                    </label>
+
+                                                                    <label
+                                                                        style={{
+                                                                            gridColumn:
+                                                                                "1 / -1",
+                                                                        }}
+                                                                    >
+                                                                        Keterangan
+                                                                        <input
+                                                                            type="text"
+                                                                            value={
+                                                                                r.keterangan ||
+                                                                                ""
+                                                                            }
+                                                                            onChange={(
+                                                                                e,
+                                                                            ) =>
+                                                                                updateCell(
+                                                                                    r.id,
+                                                                                    "keterangan",
+                                                                                    e
+                                                                                        .target
+                                                                                        .value,
+                                                                                )
+                                                                            }
+                                                                        />
+                                                                    </label>
+                                                                </div>
+                                                            </section>
+
+                                                            <section>
+                                                                <h4>
+                                                                    Realisasi
+                                                                    per Bulan
+                                                                </h4>
+                                                                <div className="month-grid">
+                                                                    {monthKeys.map(
+                                                                        (k) => (
+                                                                            <label
+                                                                                key={
+                                                                                    k
+                                                                                }
+                                                                            >
+                                                                                {
+                                                                                    monthLabels[
+                                                                                        k
+                                                                                    ]
+                                                                                }
+                                                                                <input
+                                                                                    type="number"
+                                                                                    min={
+                                                                                        0
+                                                                                    }
+                                                                                    value={
+                                                                                        r[
+                                                                                            k
+                                                                                        ] ||
+                                                                                        0
+                                                                                    }
+                                                                                    onChange={(
+                                                                                        e,
+                                                                                    ) =>
+                                                                                        updateCell(
+                                                                                            r.id,
+                                                                                            k,
+                                                                                            Number(
+                                                                                                e
+                                                                                                    .target
+                                                                                                    .value,
+                                                                                            ),
+                                                                                        )
+                                                                                    }
+                                                                                />
+                                                                            </label>
+                                                                        ),
+                                                                    )}
+                                                                </div>
+
+                                                                <div
+                                                                    className="hint"
+                                                                    style={{
+                                                                        marginTop: 8,
+                                                                    }}
+                                                                >
+                                                                    Total
+                                                                    Jan–Des:{" "}
+                                                                    <strong>
+                                                                        {idr(
+                                                                            total,
+                                                                        )}
+                                                                    </strong>
+                                                                </div>
+                                                            </section>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </React.Fragment>
+                                    );
+                                })}
+
+                                {filtered.length === 0 && (
+                                    <tr>
+                                        <td className="empty" colSpan={15}>
+                                            Tidak ada data
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <datalist id="loket-list">
+                    {LOKET_FILTER_OPTS.map((o) => (
+                        <option key={o} value={o}>
+                            {o}
+                        </option>
+                    ))}
+                </datalist>
+
+                <Pagination
+                    page={page}
+                    totalPage={totalPage}
+                    setPage={setPage}
                 />
-              </label>
-              <datalist id="loket-list-modal">
-                {LOKET_OPTS.map((l) => (
-                  <option key={l} value={l} />
-                ))}
-              </datalist>
-
-              <label>
-                Kelas
-                <select
-                  className="input-like"
-                  value={newForm.kelas}
-                  onChange={(e) => setF("kelas", e.target.value)}
-                >
-                  {KELAS_OPTS.map((o) => (
-                    <option key={o} value={o}>
-                      {o}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label>
-                Nama Perusahaan
-                <input
-                  type="text"
-                  value={newForm.namaPerusahaan}
-                  onChange={(e) => setF("namaPerusahaan", e.target.value)}
-                />
-              </label>
-
-              <label>
-                Nama Kapal
-                <input
-                  type="text"
-                  value={newForm.namaKapal}
-                  onChange={(e) => setF("namaKapal", e.target.value)}
-                />
-              </label>
-
-              <label>
-                Nama Pemilik / Pengelola
-                <input
-                  type="text"
-                  value={newForm.namaPemilik}
-                  onChange={(e) => setF("namaPemilik", e.target.value)}
-                />
-              </label>
-
-              <label>
-                Alamat
-                <input
-                  type="text"
-                  value={newForm.alamat}
-                  onChange={(e) => setF("alamat", e.target.value)}
-                />
-              </label>
-
-              <label>
-                No. Kontak
-                <input
-                  type="tel"
-                  value={newForm.noKontak}
-                  onChange={(e) => setF("noKontak", e.target.value)}
-                  placeholder="08xx…"
-                />
-              </label>
-
-              <label>
-                Tanggal Lahir
-                <input
-                  type="date"
-                  value={newForm.tglLahir || ""}
-                  onChange={(e) => setF("tglLahir", e.target.value)}
-                />
-              </label>
-
-              <label>
-                Kapasitas Penumpang
-                <input
-                  type="number"
-                  min={0}
-                  value={newForm.kapasitasPenumpang}
-                  onChange={(e) =>
-                    setF("kapasitasPenumpang", Number(e.target.value))
-                  }
-                />
-              </label>
-
-              <label>
-                Tanggal PKS
-                <input
-                  type="date"
-                  value={newForm.tglPKS || ""}
-                  onChange={(e) => setF("tglPKS", e.target.value)}
-                />
-              </label>
-
-              <label>
-                Tanggal Berakhir PKS
-                <input
-                  type="date"
-                  value={newForm.tglBerakhirPKS || ""}
-                  onChange={(e) => setF("tglBerakhirPKS", e.target.value)}
-                />
-              </label>
-
-              <label>
-                Tanggal Addendum
-                <input
-                  type="date"
-                  value={newForm.tglAddendum || ""}
-                  onChange={(e) => setF("tglAddendum", e.target.value)}
-                />
-              </label>
-
-              <label>
-                Status PKS
-                <select
-                  className="input-like"
-                  value={newForm.statusPKS}
-                  onChange={(e) => setF("statusPKS", e.target.value)}
-                >
-                  {STATUS_PKS_OPTS.map((o) => (
-                    <option key={o} value={o}>
-                      {o}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label>
-                Status Pembayaran
-                <select
-                  className="input-like"
-                  value={newForm.statusPembayaran}
-                  onChange={(e) => setF("statusPembayaran", e.target.value)}
-                >
-                  {STATUS_PEMB_OPTS.map((o) => (
-                    <option key={o} value={o}>
-                      {o}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label>
-                Status Kapal
-                <select
-                  className="input-like"
-                  value={newForm.statusKapal}
-                  onChange={(e) => setF("statusKapal", e.target.value)}
-                >
-                  {STATUS_KAPAL_OPTS.map((o) => (
-                    <option key={o} value={o}>
-                      {o}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label>
-                Potensi Per Bulan (Rp)
-                <input
-                  type="number"
-                  min={0}
-                  value={newForm.potensiPerBulan}
-                  onChange={(e) =>
-                    setF("potensiPerBulan", Number(e.target.value))
-                  }
-                />
-                <small className="hint">
-                  {idr(newForm.potensiPerBulan || 0)}
-                </small>
-              </label>
-
-              <label>
-                Pas Besar / Kecil
-                <select
-                  className="input-like"
-                  value={newForm.pasBesarKecil}
-                  onChange={(e) => setF("pasBesarKecil", e.target.value)}
-                >
-                  {PAS_OPTS.map((o) => (
-                    <option key={o} value={o}>
-                      {o}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label>
-                Sertifikat Keselamatan
-                <select
-                  className="input-like"
-                  value={newForm.sertifikatKeselamatan}
-                  onChange={(e) =>
-                    setF("sertifikatKeselamatan", e.target.value)
-                  }
-                >
-                  {SERTIF_KSL_OPTS.map((o) => (
-                    <option key={o} value={o}>
-                      {o}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label>
-                Izin Trayek
-                <select
-                  className="input-like"
-                  value={newForm.izinTrayek}
-                  onChange={(e) => setF("izinTrayek", e.target.value)}
-                >
-                  {IZIN_TRAYEK_OPTS.map((o) => (
-                    <option key={o} value={o}>
-                      {o}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label>
-                Tgl Jatuh Tempo Sertifikat Kapal
-                <input
-                  type="date"
-                  value={newForm.tglJatuhTempoSertifikatKeselamatan || ""}
-                  onChange={(e) =>
-                    setF("tglJatuhTempoSertifikatKeselamatan", e.target.value)
-                  }
-                />
-              </label>
-
-              <label>
-                Rute Awal
-                <input
-                  type="text"
-                  value={newForm.ruteAwal}
-                  onChange={(e) => setF("ruteAwal", e.target.value)}
-                />
-              </label>
-
-              <label>
-                Rute Akhir
-                <input
-                  type="text"
-                  value={newForm.ruteAkhir}
-                  onChange={(e) => setF("ruteAkhir", e.target.value)}
-                />
-              </label>
-
-              <label>
-                Sistem Pengutipan IWKL
-                <select
-                  className="input-like"
-                  value={newForm.sistemPengutipanIWKL}
-                  onChange={(e) => setF("sistemPengutipanIWKL", e.target.value)}
-                >
-                  {SISTEM_IWKL_OPTS.map((o) => (
-                    <option key={o} value={o}>
-                      {o}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label>
-                Trayek
-                <input
-                  type="text"
-                  value={newForm.trayek}
-                  onChange={(e) => setF("trayek", e.target.value)}
-                />
-              </label>
-
-              <label>
-                Perhitungan Tarif
-                <select
-                  className="input-like"
-                  value={newForm.perhitunganTarif}
-                  onChange={(e) => setF("perhitunganTarif", e.target.value)}
-                >
-                  {PERHIT_TARIF_OPTS.map((o) => (
-                    <option key={o} value={o}>
-                      {o}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label>
-                Tarif Borongan Disepakati (Rp)
-                <input
-                  type="number"
-                  min={0}
-                  value={newForm.tarifBoronganDisepakati}
-                  onChange={(e) =>
-                    setF("tarifBoronganDisepakati", Number(e.target.value))
-                  }
-                />
-                <small className="hint">
-                  {idr(newForm.tarifBoronganDisepakati || 0)}
-                </small>
-              </label>
-
-              <label style={{ gridColumn: "1 / -1" }}>
-                Keterangan
-                <input
-                  type="text"
-                  value={newForm.keterangan}
-                  onChange={(e) => setF("keterangan", e.target.value)}
-                />
-              </label>
-            </form>
-
-            <div className="modal-actions" style={{ marginTop: 10 }}>
-              <button
-                className="btn ghost"
-                type="button"
-                onClick={() => setShowAddModal(false)}
-              >
-                Batal
-              </button>
-              <button className="btn primary" type="submit" onClick={addIwkl}>
-                Tambah
-              </button>
             </div>
-          </div>
+
+            {/* MODAL TAMBAH DATA */}
+            {showAddModal && (
+                <div
+                    className="modal-backdrop"
+                    onClick={() => setShowAddModal(false)}
+                >
+                    <div
+                        className="modal-card"
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                            maxHeight: "80vh",
+                            display: "flex",
+                            flexDirection: "column",
+                        }}
+                    >
+                        <h3>Tambah Data IWKL</h3>
+
+                        <form
+                            onSubmit={addIwkl}
+                            className="grid"
+                            style={{ overflow: "auto", paddingRight: 4 }}
+                        >
+                            <label>
+                                Loket
+                                <input
+                                    list="loket-list-modal"
+                                    type="text"
+                                    value={newForm.loket}
+                                    onChange={(e) =>
+                                        setF("loket", e.target.value)
+                                    }
+                                    onBlur={(e) => {
+                                        const val = normalizeLoket(
+                                            e.target.value,
+                                        );
+                                        if (!val) return;
+
+                                        updateCell(r.id, "loket", val);
+
+                                        setLoketOpts((prev) =>
+                                            prev.some(
+                                                (o) =>
+                                                    normalizeLoket(o) === val,
+                                            )
+                                                ? prev
+                                                : [...prev, val],
+                                        );
+
+                                        setLoketFilterOpts((prev) =>
+                                            prev.some(
+                                                (o) =>
+                                                    normalizeLoket(o) === val,
+                                            )
+                                                ? prev
+                                                : [...prev, val],
+                                        );
+                                    }}
+                                    placeholder="Pilih atau ketik loket"
+                                />
+                            </label>
+                            <datalist id="loket-list-modal">
+                                {LOKET_OPTS.map((l) => (
+                                    <option key={l} value={l} />
+                                ))}
+                            </datalist>
+
+                            <label>
+                                Kelas
+                                <select
+                                    className="input-like"
+                                    value={newForm.kelas}
+                                    onChange={(e) =>
+                                        setF("kelas", e.target.value)
+                                    }
+                                >
+                                    {KELAS_OPTS.map((o) => (
+                                        <option key={o} value={o}>
+                                            {o}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
+
+                            <label>
+                                Nama Perusahaan
+                                <input
+                                    type="text"
+                                    value={newForm.namaPerusahaan}
+                                    onChange={(e) =>
+                                        setF("namaPerusahaan", e.target.value)
+                                    }
+                                />
+                            </label>
+
+                            <label>
+                                Nama Kapal
+                                <input
+                                    type="text"
+                                    value={newForm.namaKapal}
+                                    onChange={(e) =>
+                                        setF("namaKapal", e.target.value)
+                                    }
+                                />
+                            </label>
+
+                            <label>
+                                Nama Pemilik / Pengelola
+                                <input
+                                    type="text"
+                                    value={newForm.namaPemilik}
+                                    onChange={(e) =>
+                                        setF("namaPemilik", e.target.value)
+                                    }
+                                />
+                            </label>
+
+                            <label>
+                                Alamat
+                                <input
+                                    type="text"
+                                    value={newForm.alamat}
+                                    onChange={(e) =>
+                                        setF("alamat", e.target.value)
+                                    }
+                                />
+                            </label>
+
+                            <label>
+                                No. Kontak
+                                <input
+                                    type="tel"
+                                    value={newForm.noKontak}
+                                    onChange={(e) =>
+                                        setF("noKontak", e.target.value)
+                                    }
+                                    placeholder="08xx…"
+                                />
+                            </label>
+
+                            <label>
+                                Tanggal Lahir
+                                <input
+                                    type="date"
+                                    value={newForm.tglLahir || ""}
+                                    onChange={(e) =>
+                                        setF("tglLahir", e.target.value)
+                                    }
+                                />
+                            </label>
+
+                            <label>
+                                Kapasitas Penumpang
+                                <input
+                                    type="number"
+                                    min={0}
+                                    value={newForm.kapasitasPenumpang}
+                                    onChange={(e) =>
+                                        setF(
+                                            "kapasitasPenumpang",
+                                            Number(e.target.value),
+                                        )
+                                    }
+                                />
+                            </label>
+
+                            <label>
+                                Tanggal PKS
+                                <input
+                                    type="date"
+                                    value={newForm.tglPKS || ""}
+                                    onChange={(e) =>
+                                        setF("tglPKS", e.target.value)
+                                    }
+                                />
+                            </label>
+
+                            <label>
+                                Tanggal Berakhir PKS
+                                <input
+                                    type="date"
+                                    value={newForm.tglBerakhirPKS || ""}
+                                    onChange={(e) =>
+                                        setF("tglBerakhirPKS", e.target.value)
+                                    }
+                                />
+                            </label>
+
+                            <label>
+                                Tanggal Addendum
+                                <input
+                                    type="date"
+                                    value={newForm.tglAddendum || ""}
+                                    onChange={(e) =>
+                                        setF("tglAddendum", e.target.value)
+                                    }
+                                />
+                            </label>
+
+                            <label>
+                                Status PKS
+                                <select
+                                    className="input-like"
+                                    value={newForm.statusPKS}
+                                    onChange={(e) =>
+                                        setF("statusPKS", e.target.value)
+                                    }
+                                >
+                                    {STATUS_PKS_OPTS.map((o) => (
+                                        <option key={o} value={o}>
+                                            {o}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
+
+                            <label>
+                                Status Pembayaran
+                                <select
+                                    className="input-like"
+                                    value={newForm.statusPembayaran}
+                                    onChange={(e) =>
+                                        setF("statusPembayaran", e.target.value)
+                                    }
+                                >
+                                    {STATUS_PEMB_OPTS.map((o) => (
+                                        <option key={o} value={o}>
+                                            {o}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
+
+                            <label>
+                                Status Kapal
+                                <select
+                                    className="input-like"
+                                    value={newForm.statusKapal}
+                                    onChange={(e) =>
+                                        setF("statusKapal", e.target.value)
+                                    }
+                                >
+                                    {STATUS_KAPAL_OPTS.map((o) => (
+                                        <option key={o} value={o}>
+                                            {o}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
+
+                            <label>
+                                Potensi Per Bulan (Rp)
+                                <input
+                                    type="number"
+                                    min={0}
+                                    value={newForm.potensiPerBulan}
+                                    onChange={(e) =>
+                                        setF(
+                                            "potensiPerBulan",
+                                            Number(e.target.value),
+                                        )
+                                    }
+                                />
+                                <small className="hint">
+                                    {idr(newForm.potensiPerBulan || 0)}
+                                </small>
+                            </label>
+
+                            <label>
+                                Pas Besar / Kecil
+                                <select
+                                    className="input-like"
+                                    value={newForm.pasBesarKecil}
+                                    onChange={(e) =>
+                                        setF("pasBesarKecil", e.target.value)
+                                    }
+                                >
+                                    {PAS_OPTS.map((o) => (
+                                        <option key={o} value={o}>
+                                            {o}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
+
+                            <label>
+                                Sertifikat Keselamatan
+                                <select
+                                    className="input-like"
+                                    value={newForm.sertifikatKeselamatan}
+                                    onChange={(e) =>
+                                        setF(
+                                            "sertifikatKeselamatan",
+                                            e.target.value,
+                                        )
+                                    }
+                                >
+                                    {SERTIF_KSL_OPTS.map((o) => (
+                                        <option key={o} value={o}>
+                                            {o}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
+
+                            <label>
+                                Izin Trayek
+                                <select
+                                    className="input-like"
+                                    value={newForm.izinTrayek}
+                                    onChange={(e) =>
+                                        setF("izinTrayek", e.target.value)
+                                    }
+                                >
+                                    {IZIN_TRAYEK_OPTS.map((o) => (
+                                        <option key={o} value={o}>
+                                            {o}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
+
+                            <label>
+                                Tgl Jatuh Tempo Sertifikat Kapal
+                                <input
+                                    type="date"
+                                    value={
+                                        newForm.tglJatuhTempoSertifikatKeselamatan ||
+                                        ""
+                                    }
+                                    onChange={(e) =>
+                                        setF(
+                                            "tglJatuhTempoSertifikatKeselamatan",
+                                            e.target.value,
+                                        )
+                                    }
+                                />
+                            </label>
+
+                            <label>
+                                Rute Awal
+                                <input
+                                    type="text"
+                                    value={newForm.ruteAwal}
+                                    onChange={(e) =>
+                                        setF("ruteAwal", e.target.value)
+                                    }
+                                />
+                            </label>
+
+                            <label>
+                                Rute Akhir
+                                <input
+                                    type="text"
+                                    value={newForm.ruteAkhir}
+                                    onChange={(e) =>
+                                        setF("ruteAkhir", e.target.value)
+                                    }
+                                />
+                            </label>
+
+                            <label>
+                                Sistem Pengutipan IWKL
+                                <select
+                                    className="input-like"
+                                    value={newForm.sistemPengutipanIWKL}
+                                    onChange={(e) =>
+                                        setF(
+                                            "sistemPengutipanIWKL",
+                                            e.target.value,
+                                        )
+                                    }
+                                >
+                                    {SISTEM_IWKL_OPTS.map((o) => (
+                                        <option key={o} value={o}>
+                                            {o}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
+
+                            <label>
+                                Trayek
+                                <input
+                                    type="text"
+                                    value={newForm.trayek}
+                                    onChange={(e) =>
+                                        setF("trayek", e.target.value)
+                                    }
+                                />
+                            </label>
+
+                            <label>
+                                Perhitungan Tarif
+                                <select
+                                    className="input-like"
+                                    value={newForm.perhitunganTarif}
+                                    onChange={(e) =>
+                                        setF("perhitunganTarif", e.target.value)
+                                    }
+                                >
+                                    {PERHIT_TARIF_OPTS.map((o) => (
+                                        <option key={o} value={o}>
+                                            {o}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
+
+                            <label>
+                                Tarif Borongan Disepakati (Rp)
+                                <input
+                                    type="number"
+                                    min={0}
+                                    value={newForm.tarifBoronganDisepakati}
+                                    onChange={(e) =>
+                                        setF(
+                                            "tarifBoronganDisepakati",
+                                            Number(e.target.value),
+                                        )
+                                    }
+                                />
+                                <small className="hint">
+                                    {idr(newForm.tarifBoronganDisepakati || 0)}
+                                </small>
+                            </label>
+
+                            <label style={{ gridColumn: "1 / -1" }}>
+                                Keterangan
+                                <input
+                                    type="text"
+                                    value={newForm.keterangan}
+                                    onChange={(e) =>
+                                        setF("keterangan", e.target.value)
+                                    }
+                                />
+                            </label>
+                        </form>
+
+                        <div
+                            className="modal-actions"
+                            style={{ marginTop: 10 }}
+                        >
+                            <button
+                                className="btn ghost"
+                                type="button"
+                                onClick={() => setShowAddModal(false)}
+                            >
+                                Batal
+                            </button>
+                            <button
+                                className="btn primary"
+                                type="submit"
+                                onClick={addIwkl}
+                            >
+                                Tambah
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
-      )}
-    </div>
-  );
+    );
 }
